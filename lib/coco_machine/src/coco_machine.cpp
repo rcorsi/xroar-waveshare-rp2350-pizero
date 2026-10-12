@@ -43,6 +43,7 @@ extern "C" {
 #include "delegate.h"
 #include "xroar.h"
 #include "cpu_prof.h"        // PIZERO-209: empty unless CPU_PROF
+#include "coco_fastbus.h"     // PIZERO-131: RAM and ROM read by the core itself
 }
 
 struct CocoMachine {
@@ -760,6 +761,30 @@ static void csg_bus_write(uint8_t d) {
     }
 }
 
+// PIZERO-131: the windows the 6809 core reads and writes itself (see
+// coco_fastbus.h). Zero tops until coco_machine_init, so every access goes
+// through coco_mem_cycle until RAM and ROM exist. fastbus_sync must follow
+// every change to RAM, ROM, the cartridge pointer or the SAM's TY bit.
+extern "C" { struct coco_fastbus coco_fastbus; }
+static const uint8_t k_open_bus = 0xFF;   // no cartridge: reads float high
+
+static inline void fastbus_sync(void) {
+    coco_fastbus.ram = g_m.ram;
+    coco_fastbus.rom = g_m.rom;
+    coco_fastbus.cart = g_m.cart_rom ? g_m.cart_rom : &k_open_bus;
+    coco_fastbus.cart_mask = g_m.cart_rom ? g_m.cart_mask : 0;
+    if (!g_m.ram || !g_m.rom) {
+        coco_fastbus.ram_top = coco_fastbus.rom_top = coco_fastbus.cart_top = 0;
+    } else if (g_m.sam_ty) {
+        // All-RAM mode: everything below the I/O page is RAM.
+        coco_fastbus.ram_top = coco_fastbus.rom_top = coco_fastbus.cart_top = 0xFF00;
+    } else {
+        coco_fastbus.ram_top  = 0x8000;
+        coco_fastbus.rom_top  = 0xC000;
+        coco_fastbus.cart_top = 0xFF00;
+    }
+}
+
 // What every bus cycle does after its data has moved: advance time (and run
 // any event now due), integrate the audio, refresh the CPU's interrupt lines
 // if a PIA may have changed them, and spend the frame's cycle budget. Shared
@@ -845,8 +870,8 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
         ncycles = mc6883_mem_cycle(g_m.sam, RnW, A);
         S = g_m.sam->S;
         // Shadow the TY bit for our fast decode.
-        if (A == 0xFFDE) g_m.sam_ty = false;
-        else if (A == 0xFFDF) g_m.sam_ty = true;
+        if (A == 0xFFDE) { g_m.sam_ty = false; fastbus_sync(); }
+        else if (A == 0xFFDF) { g_m.sam_ty = true; fastbus_sync(); }
         // PIZERO-140: shadow the V register (VDG address mode, $FFC0-$FFC5):
         // it, not the VDG mode, decides row stride and line repeats.
         if (A <= 0xFFC5) {
@@ -954,9 +979,10 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
 #endif
         else if ((A & 0xFFE0) == 0xFF40) {                               // cart I/O
             if (g_m.cart_banked) {
-                if (gmc_is_bank_register(A))                             // PIZERO-142
+                if (gmc_is_bank_register(A)) {                           // PIZERO-142
                     g_m.cart_rom = g_m.cart_base + gmc_bank_offset(g_m.cpu->D, g_m.cart_len);
-                else csg_bus_write(g_m.cpu->D);                          // PIZERO-143
+                    fastbus_sync();                                      // PIZERO-131
+                } else csg_bus_write(g_m.cpu->D);                          // PIZERO-143
             } else if (g_csg_always && csg_on_latch_mirror(A)) {
                 csg_bus_write(g_m.cpu->D);           // PIZERO-143: $FF41 with Disk BASIC in
             } else {
@@ -974,6 +1000,19 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     uint32_t pt0 = 0;
 #endif
     mem_cycle_tail(ncycles, pt0);
+}
+
+// PIZERO-131: a RAM or ROM cycle the core has already done itself
+// (coco_fastbus.h): only the per-cycle tail is left.
+extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
+    (void)sptr; (void)RnW; (void)A;
+    g_m.total_mem_cycles++;
+#if PROFILE_MEM_CYCLE
+    uint32_t pt0 = cpu_prof_now();
+#else
+    uint32_t pt0 = 0;
+#endif
+    mem_cycle_tail(16, pt0);
 }
 
 // PIZERO-131: a dummy cycle (VMA low, address $FFFF). The full decode always
@@ -1078,6 +1117,7 @@ extern "C" _Bool coco_machine_init(const uint8_t *rom, size_t rom_len) {
     if (!g_m.ram) return 0;
     memset(g_m.ram, 0, 64 * 1024);
     memset(g_m.vdg_buffer, 0, sizeof(g_m.vdg_buffer));
+    fastbus_sync();
 
     // Event list MUST exist before any part_create() that uses MACHINE_EVENT_LIST.
     machine_event_list_global = event_list_new();
@@ -1429,6 +1469,7 @@ extern "C" void coco_machine_install_cart_sized(const uint8_t *rom, uint32_t len
     g_m.cart_len = len;
     g_m.cart_rom = rom;
     g_m.cart_mask = (uint16_t)((len >= 2048 && len <= 16384) ? len - 1 : 0x1FFF);
+    fastbus_sync();
     g_m.cart_toggle_remaining = 88950;
 #ifdef GIME_TIMER
     gime_timer_reset(&g_gime);          // PIZERO-62: stopped until a guest programs it
@@ -1525,6 +1566,7 @@ extern "C" void coco_machine_cold_reset(void) {
     g_m.cart_toggle_remaining = 88950;
     g_m.cart_cb1_level = true;
     if (g_m.cart_banked) g_m.cart_rom = g_m.cart_base;   // PIZERO-142: bank 0
+    fastbus_sync();                                       // PIZERO-131: TY and the bank
     csg_reset();                                          // PIZERO-143: silent at power-on
     g_m.cpu->reset(g_m.cpu);
 }

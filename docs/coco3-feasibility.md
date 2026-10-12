@@ -110,7 +110,8 @@ only: its baseline is 180.6 clocks, where unit 10 measured 185.4.
 |---|---|---|---|
 | baseline (`b3f6808`) | 21.38 ms | 180.6 | 43 |
 | (e) 17 run-loop helpers from flash to RAM | 21.31 ms | 180.0 | 43 |
-| (a) dummy cycles skip the decode and data switch | 19.63 ms | **165.8** | 47 |
+| (a) dummy cycles skip the decode and data switch | 19.63 ms | 165.8 | 47 |
+| (d) the core reads RAM, ROM and cartridge, and writes RAM, itself | 18.53 ms | **156.6** | 49 |
 
 Target about 105.
 

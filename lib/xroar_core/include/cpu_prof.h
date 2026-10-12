@@ -67,7 +67,10 @@ static inline uint32_t cpu_prof_now(void) {
 #define CPU_PROF_BUS_BEGIN() do {} while (0)
 #define CPU_PROF_BUS_END(a) do {} while (0)
 #define CPU_PROF_INSN() do {} while (0)
-#define CPU_PROF_INLINE
+// PIZERO-131: the bus helpers now hold the RAM/ROM fast path, which made
+// them too big for the compiler to inline, and out of line they landed in
+// flash. Forced inline in every build.
+#define CPU_PROF_INLINE __attribute__((always_inline)) inline
 
 #endif
 

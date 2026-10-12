@@ -61,23 +61,38 @@ extern void coco_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 extern void coco_mem_nvma(void *sptr);
 
 #include "cpu_prof.h"   // PIZERO-209: empty unless CPU_PROF
+#include "coco_fastbus.h"  // PIZERO-131: RAM and ROM without the decode
 
+// PIZERO-131: RAM, BASIC ROM and cartridge ROM are read here, and RAM
+// written, without coco_mem_cycle's address decode; coco_mem_tick then does
+// the per-cycle work. I/O and the SAM registers still take the full hook.
 static CPU_PROF_INLINE uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a) {
 	CPU_PROF_BUS_BEGIN();
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
-	coco_mem_cycle(cpu->mem_cycle.sptr, 1, a);
+	if (a < coco_fastbus.ram_top) {
+		cpu->D = coco_fastbus.ram[a];
+		coco_mem_tick(cpu->mem_cycle.sptr, 1, a);
+	} else if (a < coco_fastbus.rom_top) {
+		cpu->D = coco_fastbus.rom[a & 0x3fff];
+		coco_mem_tick(cpu->mem_cycle.sptr, 1, a);
+	} else if (a < coco_fastbus.cart_top) {
+		cpu->D = coco_fastbus.cart[a & coco_fastbus.cart_mask];
+		coco_mem_tick(cpu->mem_cycle.sptr, 1, a);
+	} else {
+		coco_mem_cycle(cpu->mem_cycle.sptr, 1, a);
+	}
 	CPU_PROF_BUS_END(a);
 	return cpu->D;
 }
 
-static uint16_t fetch_word_notrace(struct MC6809 *cpu, uint16_t a) {
+static uint16_t HOT_FUNC(fetch_word_notrace)(struct MC6809 *cpu, uint16_t a) {
 	unsigned v = fetch_byte_notrace(cpu, a);
 	return (v << 8) | fetch_byte_notrace(cpu, a+1);
 }
 
-static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
+static CPU_PROF_INLINE uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	unsigned v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
 	cpu->trace_bytes[cpu->trace_nbytes++] = v;
@@ -86,7 +101,7 @@ static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	return v;
 }
 
-static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
+static uint16_t HOT_FUNC(fetch_word)(struct MC6809 *cpu, uint16_t a) {
 	unsigned v = fetch_byte(cpu, a);
 	return (v << 8) | fetch_byte(cpu, a + 1);
 }
@@ -97,7 +112,12 @@ static CPU_PROF_INLINE void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
 	cpu->D = d;
-	coco_mem_cycle(cpu->mem_cycle.sptr, 0, a);  // AMOLED-56
+	if (a < coco_fastbus.ram_top) {
+		coco_fastbus.ram[a] = d;
+		coco_mem_tick(cpu->mem_cycle.sptr, 0, a);
+	} else {
+		coco_mem_cycle(cpu->mem_cycle.sptr, 0, a);  // AMOLED-56
+	}
 	CPU_PROF_BUS_END(a);
 }
 

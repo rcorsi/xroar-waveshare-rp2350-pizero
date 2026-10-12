@@ -74,21 +74,21 @@ static uint16_t sex8(uint8_t v) {
 // Read & write various addressing modes.  Note: ea_*() functions should be
 // defined by the core (as they vary wildly).
 
-static uint8_t byte_immediate(STRUCT_CPU *cpu) {
+static uint8_t HOT_FUNC(byte_immediate)(STRUCT_CPU *cpu) {
 	return fetch_byte(cpu, REG_PC++);
 }
 
-static uint8_t byte_direct(STRUCT_CPU *cpu) {
+static uint8_t HOT_FUNC(byte_direct)(STRUCT_CPU *cpu) {
 	unsigned ea = ea_direct(cpu);
 	return fetch_byte_notrace(cpu, ea);
 }
 
-static uint8_t byte_extended(STRUCT_CPU *cpu) {
+static uint8_t HOT_FUNC(byte_extended)(STRUCT_CPU *cpu) {
 	unsigned ea = ea_extended(cpu);
 	return fetch_byte_notrace(cpu, ea);
 }
 
-static uint8_t byte_indexed(STRUCT_CPU *cpu) {
+static uint8_t HOT_FUNC(byte_indexed)(STRUCT_CPU *cpu) {
 	unsigned ea = ea_indexed(cpu);
 	return fetch_byte_notrace(cpu, ea);
 }
@@ -115,7 +115,7 @@ static uint16_t HOT_FUNC(word_indexed)(STRUCT_CPU *cpu) {
 	return fetch_word_notrace(cpu, ea);
 }
 
-static uint16_t short_relative(STRUCT_CPU *cpu) {
+static uint16_t HOT_FUNC(short_relative)(STRUCT_CPU *cpu) {
 	return sex8(byte_immediate(cpu));
 }
 
