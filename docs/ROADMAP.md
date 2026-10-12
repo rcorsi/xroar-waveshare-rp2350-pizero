@@ -63,7 +63,7 @@ the background and features are the focus again.
 
 ## In flight (waiting on a hardware step)
 
-Only four tickets are `in-progress`, and each needs the board or the user rather
+Only three tickets are `in-progress`, and each needs the board or the user rather
 than more code:
 
 - **`PIZERO-203`: the frame-pace recoveries.** The one live stability bug. A
@@ -74,7 +74,6 @@ than more code:
   write.
 - **`PIZERO-142`**: start a 32 KB and a 64 KB banked cart (Mind Roll, Dunjunz)
   once an image is found.
-- **`PIZERO-125`**: the case retrospective, waiting for the user's read.
 
 ## Now: features, starting with the CoCo 3 track
 
