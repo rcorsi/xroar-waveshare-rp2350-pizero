@@ -3,6 +3,7 @@
 #define LSR_CAT2(a, b) a##_##b
 #define LSR_CAT(a, b) LSR_CAT2(a, b)
 #define coco_mem_cycle   LSR_CAT(LS_PREFIX, mem_cycle)
+#define coco_mem_nvma    LSR_CAT(LS_PREFIX, mem_nvma)
 #define MC6809_HALT_SET  LSR_CAT(LS_PREFIX, MC6809_HALT_SET)
 #define MC6809_NMI_SET   LSR_CAT(LS_PREFIX, MC6809_NMI_SET)
 #define MC6809_FIRQ_SET  LSR_CAT(LS_PREFIX, MC6809_FIRQ_SET)

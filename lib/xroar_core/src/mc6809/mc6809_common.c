@@ -56,6 +56,9 @@
 // lacks). Calling coco_mem_cycle directly lets the compiler inline it
 // straight into the 6809 hot loop.
 extern void coco_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
+// PIZERO-131: the dummy cycle's own entry. Same bus cycle as a read of
+// $FFFF, without the address decode.
+extern void coco_mem_nvma(void *sptr);
 
 #include "cpu_prof.h"   // PIZERO-209: empty unless CPU_PROF
 
@@ -99,7 +102,18 @@ static CPU_PROF_INLINE void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d
 }
 
 #define peek_byte(c,a) ((void)fetch_byte_notrace(c,a))
-#define NVMA_CYCLE (peek_byte(cpu, 0xffff))
+
+// A dummy cycle samples the interrupt lines like any other.
+static CPU_PROF_INLINE void nvma_cycle(struct MC6809 *cpu) {
+	CPU_PROF_BUS_BEGIN();
+	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
+	cpu->firq_latch = cpu->firq;
+	cpu->irq_latch = cpu->irq;
+	coco_mem_nvma(cpu->mem_cycle.sptr);
+	CPU_PROF_BUS_END(0xffff);
+}
+
+#define NVMA_CYCLE (nvma_cycle(cpu))
 
 /*
  * Stack operations

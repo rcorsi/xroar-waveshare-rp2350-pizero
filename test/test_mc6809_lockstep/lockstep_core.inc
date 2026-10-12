@@ -43,6 +43,12 @@ void LS(mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     if (++LS(step_cycles) >= LS(cap)) cpu->running = 0;
 }
 
+// The live core's dummy cycle (PIZERO-131) is a read of $FFFF on the bus,
+// recorded the same way, so the lockstep still compares it cycle for cycle.
+void LS(mem_nvma)(void *sptr) {
+    LS(mem_cycle)(sptr, 1, 0xFFFF);
+}
+
 static void LS(posthook)(void *sptr) {
     struct MC6809 *cpu = (struct MC6809 *)sptr;
     cpu->running = 0;                         // one instruction per step

@@ -724,7 +724,9 @@ extern "C" { struct cpu_prof g_cpu_prof; }
 
 // PIZERO-18 audio: event-driven resampler hooks (defined in the audio section).
 static inline void audio_update_level(void);
-static inline void audio_integrate(uint32_t ticks);
+// Forced inline (PIZERO-131): with two callers, the hook and the dummy-cycle
+// entry, the compiler made it a real function and put it in flash.
+static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks);
 
 // PIZERO-143: the Games Master Cartridge's SN76489. Written from the bus
 // (odd $FF40-$FF5F with a banked cart in), rendered at each audio sample in
@@ -756,6 +758,57 @@ static void csg_bus_write(uint8_t d) {
     } else {
         g_csg_dropped++;
     }
+}
+
+// What every bus cycle does after its data has moved: advance time (and run
+// any event now due), integrate the audio, refresh the CPU's interrupt lines
+// if a PIA may have changed them, and spend the frame's cycle budget. Shared
+// by coco_mem_cycle and the dummy-cycle entry coco_mem_nvma (PIZERO-131).
+// pt0 is the profile timestamp, unused unless CPU_PROF=2.
+static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, uint32_t pt0) {
+    (void)pt0;
+    // AMOLED-30 fast path: ~96% of memory cycles have no event due, so
+    // skip the function-call overhead and just advance the tick counter.
+    // Only enter event_run_queue when something is actually pending.
+    event_ticks new_tick = event_current_tick + ncycles;
+    struct event *head = machine_event_list_global->events;
+    if (head && event_tick_delta(new_tick, head->at_tick) >= 0) {
+        event_run_queue(machine_event_list_global, ncycles);
+        // VDG event callbacks may toggle PIA CB1 inputs; assume any actual
+        // dispatch could have shifted PIA IRQ outputs.
+        g_m.pia_irq_dirty = true;
+    } else {
+        event_current_tick = new_tick;
+    }
+
+    // PIZERO-18: integrate the DAC level over this access and emit 32 kHz
+    // samples on tick boundaries (band-limited resampling at the source).
+    audio_integrate((uint32_t)ncycles);
+
+#if PROFILE_MEM_CYCLE
+    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[2] += pt1 - pt0; pt0 = pt1; }
+#endif
+
+    if (g_m.pia_irq_dirty) {
+#ifdef GIME_TIMER
+        // PIZERO-62: the timer shares the 6809's two lines with the PIAs, as
+        // it does on a CoCo 3. An unacknowledged status holds its line high.
+        uint8_t gl = gime_timer_lines(&g_gime);
+        MC6809_IRQ_SET(g_m.cpu,  g_m.pia0->a.irq || g_m.pia0->b.irq || (gl & GIME_LINE_IRQ));
+        MC6809_FIRQ_SET(g_m.cpu, g_m.pia1->a.irq || g_m.pia1->b.irq || (gl & GIME_LINE_FIRQ));
+#else
+        MC6809_IRQ_SET(g_m.cpu,  g_m.pia0->a.irq || g_m.pia0->b.irq);
+        MC6809_FIRQ_SET(g_m.cpu, g_m.pia1->a.irq || g_m.pia1->b.irq);
+#endif
+        g_m.pia_irq_dirty = false;
+    }
+
+    g_m.cycles_remaining -= ncycles;
+    if (g_m.cycles_remaining <= 0) g_m.cpu->running = 0;
+
+#if PROFILE_MEM_CYCLE
+    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[3] += pt1 - pt0; }
+#endif
 }
 
 extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
@@ -917,50 +970,28 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
 
 #if PROFILE_MEM_CYCLE
     { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[1] += pt1 - pt0; pt0 = pt1; }
-#endif
-
-    // AMOLED-30 fast path: ~96% of memory cycles have no event due, so
-    // skip the function-call overhead and just advance the tick counter.
-    // Only enter event_run_queue when something is actually pending.
-    event_ticks new_tick = event_current_tick + ncycles;
-    struct event *head = machine_event_list_global->events;
-    if (head && event_tick_delta(new_tick, head->at_tick) >= 0) {
-        event_run_queue(machine_event_list_global, ncycles);
-        // VDG event callbacks may toggle PIA CB1 inputs; assume any actual
-        // dispatch could have shifted PIA IRQ outputs.
-        g_m.pia_irq_dirty = true;
-    } else {
-        event_current_tick = new_tick;
-    }
-
-    // PIZERO-18: integrate the DAC level over this access and emit 32 kHz
-    // samples on tick boundaries (band-limited resampling at the source).
-    audio_integrate((uint32_t)ncycles);
-
-#if PROFILE_MEM_CYCLE
-    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[2] += pt1 - pt0; pt0 = pt1; }
-#endif
-
-    if (g_m.pia_irq_dirty) {
-#ifdef GIME_TIMER
-        // PIZERO-62: the timer shares the 6809's two lines with the PIAs, as
-        // it does on a CoCo 3. An unacknowledged status holds its line high.
-        uint8_t gl = gime_timer_lines(&g_gime);
-        MC6809_IRQ_SET(g_m.cpu,  g_m.pia0->a.irq || g_m.pia0->b.irq || (gl & GIME_LINE_IRQ));
-        MC6809_FIRQ_SET(g_m.cpu, g_m.pia1->a.irq || g_m.pia1->b.irq || (gl & GIME_LINE_FIRQ));
 #else
-        MC6809_IRQ_SET(g_m.cpu,  g_m.pia0->a.irq || g_m.pia0->b.irq);
-        MC6809_FIRQ_SET(g_m.cpu, g_m.pia1->a.irq || g_m.pia1->b.irq);
+    uint32_t pt0 = 0;
 #endif
-        g_m.pia_irq_dirty = false;
-    }
+    mem_cycle_tail(ncycles, pt0);
+}
 
-    g_m.cycles_remaining -= ncycles;
-    if (g_m.cycles_remaining <= 0) g_m.cpu->running = 0;
-
+// PIZERO-131: a dummy cycle (VMA low, address $FFFF). The full decode always
+// lands on the same answer, the vector window of BASIC ROM, so set what it
+// would set (S = 2, D = the ROM byte at $FFFF) and go straight to the
+// per-cycle tail: about a third of all cycles skip the decode and the data
+// switch. The CPU's interrupt latches are still sampled by the caller.
+extern "C" void HOT_FUNC(coco_mem_nvma)(void *sptr) {
+    (void)sptr;
+    g_m.total_mem_cycles++;
+    g_m.sam->S = 2;
+    g_m.cpu->D = g_m.rom[0xFFFF & 0x3FFF];
 #if PROFILE_MEM_CYCLE
-    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[3] += pt1 - pt0; }
+    uint32_t pt0 = cpu_prof_now();
+#else
+    uint32_t pt0 = 0;
 #endif
+    mem_cycle_tail(16, pt0);
 }
 
 // VDG sync signals on the real CoCo go to PIA0 control inputs:
@@ -1222,7 +1253,7 @@ static inline void audio_emit(int s) {
 // When a sample boundary falls inside this access we split EXACTLY at it (the
 // ticks past the boundary carry to the next sample) so each emitted sample is
 // the true time-average over its period -- no edge jitter, no residual aliasing.
-static inline void audio_integrate(uint32_t ticks) {
+static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks) {
     g_aud_acc  += g_dac_level * (int32_t)ticks;
     g_aud_tk   += ticks;
     g_aud_terr += ticks * g_aud_rate;

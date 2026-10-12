@@ -102,6 +102,18 @@ September), so the real overrun is 32%, not 25%. Render and blit take about
 room for GIME work and margin, the core needs about **105 clocks per cycle,
 a 1.77x speed-up**. That is PIZERO-131's target.
 
+**PIZERO-131 progress**, `pizero_cpu179` on the bench board `C58D06257AE30E85`,
+about 4 minutes each at the same boot workload. Compare steps on this board
+only: its baseline is 180.6 clocks, where unit 10 measured 185.4.
+
+| step | emulation per frame | host clocks per cycle | fps |
+|---|---|---|---|
+| baseline (`b3f6808`) | 21.38 ms | 180.6 | 43 |
+| (e) 17 run-loop helpers from flash to RAM | 21.31 ms | 180.0 | 43 |
+| (a) dummy cycles skip the decode and data switch | 19.63 ms | **165.8** | 47 |
+
+Target about 105.
+
 `docs/cpu-speed.md` reached the same conclusion from the other direction: a
 guest that flips the SAM into full high speed already runs ~18.8 ms of emulation
 per frame and goes over budget. CoCo 3 is not a special case of that problem, it
