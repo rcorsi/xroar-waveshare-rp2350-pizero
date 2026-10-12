@@ -42,6 +42,7 @@ extern "C" {
 #include "events.h"
 #include "delegate.h"
 #include "xroar.h"
+#include "cpu_prof.h"        // PIZERO-209: empty unless CPU_PROF
 }
 
 struct CocoMachine {
@@ -708,18 +709,17 @@ extern "C" void coco_machine_jump(uint16_t entry) {
 // AMOLED-32: declared in mc6883.c.
 extern "C" int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
-// AMOLED-52: per-region profiler for coco_mem_cycle. Set to 1 to capture
-// where the hot path spends its time, then revert to 0 for production.
-// Overhead is ~5-10% measured frame time (4 micros() calls per mem cycle).
+// PIZERO-209: where the time per emulated cycle goes, from the M33's cycle
+// counter (cpu_prof.h). This replaces AMOLED-52's micros() profiler, which
+// could not resolve a single cycle. CPU_PROF=2 splits the hook into its
+// sections; CPU_PROF=1 leaves the hook untouched.
+#if defined(CPU_PROF) && CPU_PROF >= 2
+#define PROFILE_MEM_CYCLE 1
+#else
 #define PROFILE_MEM_CYCLE 0
-
-#if PROFILE_MEM_CYCLE
-static uint64_t prof_sam_us       = 0;
-static uint64_t prof_data_us      = 0;
-static uint64_t prof_events_us    = 0;
-static uint64_t prof_irq_us       = 0;
-static uint64_t prof_calls        = 0;
-static uint32_t prof_last_log_ms  = 0;
+#endif
+#ifdef CPU_PROF
+extern "C" { struct cpu_prof g_cpu_prof; }
 #endif
 
 // PIZERO-18 audio: event-driven resampler hooks (defined in the audio section).
@@ -763,7 +763,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     g_m.total_mem_cycles++;
 
 #if PROFILE_MEM_CYCLE
-    uint32_t pt0 = micros();
+    uint32_t pt0 = cpu_prof_now();
 #endif
 
     // AMOLED-32 fast-path SAM decode. The generic mc6883_mem_cycle handles
@@ -823,7 +823,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     }
 
 #if PROFILE_MEM_CYCLE
-    { uint32_t pt1 = micros(); prof_sam_us += (uint32_t)(pt1 - pt0); pt0 = pt1; }
+    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[0] += pt1 - pt0; pt0 = pt1; }
 #endif
 
     // AMOLED-53 IRQ-dirty tightening: per the 6821 datasheet only writes
@@ -916,7 +916,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     }
 
 #if PROFILE_MEM_CYCLE
-    { uint32_t pt1 = micros(); prof_data_us += (uint32_t)(pt1 - pt0); pt0 = pt1; }
+    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[1] += pt1 - pt0; pt0 = pt1; }
 #endif
 
     // AMOLED-30 fast path: ~96% of memory cycles have no event due, so
@@ -938,7 +938,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     audio_integrate((uint32_t)ncycles);
 
 #if PROFILE_MEM_CYCLE
-    { uint32_t pt1 = micros(); prof_events_us += (uint32_t)(pt1 - pt0); pt0 = pt1; }
+    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[2] += pt1 - pt0; pt0 = pt1; }
 #endif
 
     if (g_m.pia_irq_dirty) {
@@ -959,8 +959,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     if (g_m.cycles_remaining <= 0) g_m.cpu->running = 0;
 
 #if PROFILE_MEM_CYCLE
-    { uint32_t pt1 = micros(); prof_irq_us += (uint32_t)(pt1 - pt0); }
-    prof_calls++;
+    { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[3] += pt1 - pt0; }
 #endif
 }
 
@@ -1342,28 +1341,51 @@ extern "C" void coco_machine_run_cycles(uint32_t cycles) {
         g_aud_servo_steps++;
     }
 
+#ifdef CPU_PROF
+    uint32_t prof_t = cpu_prof_now();
     run_cpu_with_audio(cycles);
-
-#if PROFILE_MEM_CYCLE
-    // AMOLED-52: per-second per-region breakdown.
-    uint32_t now_ms = millis();
-    if (now_ms - prof_last_log_ms >= 1000) {
-        uint64_t total = prof_sam_us + prof_data_us + prof_events_us + prof_irq_us;
-        if (total > 0 && prof_calls > 0) {
-            Serial.printf("[prof] calls=%lu  sam=%lu (%lu%%)  data=%lu (%lu%%)  events=%lu (%lu%%)  irq=%lu (%lu%%)  total=%lu us\n",
-                (unsigned long)prof_calls,
-                (unsigned long)prof_sam_us,    (unsigned long)((prof_sam_us    * 100) / total),
-                (unsigned long)prof_data_us,   (unsigned long)((prof_data_us   * 100) / total),
-                (unsigned long)prof_events_us, (unsigned long)((prof_events_us * 100) / total),
-                (unsigned long)prof_irq_us,    (unsigned long)((prof_irq_us    * 100) / total),
-                (unsigned long)total);
-        }
-        prof_sam_us = prof_data_us = prof_events_us = prof_irq_us = 0;
-        prof_calls = 0;
-        prof_last_log_ms = now_ms;
-    }
+    g_cpu_prof.run_clk += cpu_prof_now() - prof_t;
+#else
+    run_cpu_with_audio(cycles);
 #endif
 }
+
+#ifdef CPU_PROF
+// PIZERO-209: the cost of one bus timing window, measured once with the same
+// macros: 'in' is what a window adds to bus_clk, 'full' what it adds to the
+// run as a whole (the two reads plus the counting).
+static uint32_t g_prof_window_in, g_prof_window_full;
+
+static void __attribute__((noinline)) cpu_prof_calibrate(void) {
+    struct cpu_prof save = g_cpu_prof;
+    const uint32_t n = 4096;
+    uint32_t t = cpu_prof_now();
+    for (uint32_t i = 0; i < n; i++) {
+        CPU_PROF_BUS_BEGIN();
+        __asm volatile ("" ::: "memory");
+        CPU_PROF_BUS_END(0);
+    }
+    g_prof_window_full = (cpu_prof_now() - t) / n;
+    g_prof_window_in = g_cpu_prof.bus_clk / n;
+    g_cpu_prof = save;
+}
+
+extern "C" void coco_machine_cpu_prof(struct cpu_prof *out, uint32_t *window_in, uint32_t *window_full) {
+    static bool started;
+    if (!started) {
+        // Trace must be on before the cycle counter counts.
+        CPU_PROF_DEMCR |= CPU_PROF_DEMCR_TRCENA;
+        CPU_PROF_DWT_CTRL |= CPU_PROF_DWT_CYCCNTENA;
+        cpu_prof_calibrate();
+        started = true;
+        memset(&g_cpu_prof, 0, sizeof g_cpu_prof);
+    }
+    *out = g_cpu_prof;
+    *window_in = g_prof_window_in;
+    *window_full = g_prof_window_full;
+    memset(&g_cpu_prof, 0, sizeof g_cpu_prof);
+}
+#endif
 
 extern "C" void coco_machine_install_cart(const uint8_t *rom8k) {
     coco_machine_install_cart_sized(rom8k, 8192);

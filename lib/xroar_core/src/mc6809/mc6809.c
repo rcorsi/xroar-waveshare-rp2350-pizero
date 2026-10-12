@@ -329,6 +329,7 @@ static void HOT_FUNC(mc6809_run)(struct MC6809 *cpu) {
 
 		case mc6809_state_next_instruction: {
 			unsigned op;
+			CPU_PROF_INSN();
 			// Fetch op-code and process
 			op = byte_immediate(cpu);
 			op |= cpu->page;

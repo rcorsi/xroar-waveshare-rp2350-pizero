@@ -129,6 +129,14 @@ void coco_machine_jump(uint16_t entry);
  * queue is pumped as a side-effect of CPU memory cycles. */
 void coco_machine_run_cycles(uint32_t cycles);
 
+#ifdef CPU_PROF
+// PIZERO-209: copy and clear the profile counters (cpu_prof.h). The first
+// call enables the M33 cycle counter and measures what one timing window
+// costs: 'window_in' inside a bus window, 'window_full' in the run overall.
+struct cpu_prof;
+void coco_machine_cpu_prof(struct cpu_prof *out, uint32_t *window_in, uint32_t *window_full);
+#endif
+
 /* Audio (PIZERO-18). As the machine runs, the CoCo 6-bit DAC + single-bit
  * sound are sampled at coco_machine_audio_rate() Hz (mono, signed 16-bit)
  * into an internal ring. Drain up to `max` samples into `dst`; returns the

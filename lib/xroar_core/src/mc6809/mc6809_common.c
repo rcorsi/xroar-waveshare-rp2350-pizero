@@ -57,11 +57,15 @@
 // straight into the 6809 hot loop.
 extern void coco_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
-static uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a) {
+#include "cpu_prof.h"   // PIZERO-209: empty unless CPU_PROF
+
+static CPU_PROF_INLINE uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a) {
+	CPU_PROF_BUS_BEGIN();
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
 	coco_mem_cycle(cpu->mem_cycle.sptr, 1, a);
+	CPU_PROF_BUS_END(a);
 	return cpu->D;
 }
 
@@ -84,12 +88,14 @@ static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
 	return (v << 8) | fetch_byte(cpu, a + 1);
 }
 
-static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
+static CPU_PROF_INLINE void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
+	CPU_PROF_BUS_BEGIN();
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
 	cpu->D = d;
 	coco_mem_cycle(cpu->mem_cycle.sptr, 0, a);  // AMOLED-56
+	CPU_PROF_BUS_END(a);
 }
 
 #define peek_byte(c,a) ((void)fetch_byte_notrace(c,a))
