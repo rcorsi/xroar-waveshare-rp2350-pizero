@@ -673,6 +673,15 @@ static bool mount_sd() {
 #define FRAME_PERIOD_US  16762
 #endif
 
+// PIZERO-130: the 1.79 MHz benchmark. A CoCo 3 runs its 6809 at twice the
+// CoCo 2's clock, so CPU_SPEED_MUL=2 (env pizero_cpu179) runs twice the cycles
+// in each 60 Hz frame: the CPU load of a CoCo 3, before any GIME cost. The
+// whole machine runs fast, sound included (the ring overflows and counts
+// skips), so it is a measurement build, not one to play.
+#ifndef CPU_SPEED_MUL
+#define CPU_SPEED_MUL 1
+#endif
+
 #ifdef AUDIO_WAV_DUMP
 // ---- PIZERO-18 audio validation: WAV-over-USB-CDC --------------------------
 // Streams the emulator's PCM out the serial port as a base64-encoded WAV, framed
@@ -2001,8 +2010,8 @@ void loop() {
     hid_key_repeat();                  // PIZERO-167
     a = micros();
     wd_phase(WP_EMU);
-    coco_machine_run_cycles(CYCLES_PER_FRAME);
-    coco_boot_disk_tick();                        // PIZERO-66: sync an idle dirty drive
+    coco_machine_run_cycles(CYCLES_PER_FRAME * CPU_SPEED_MUL);
+    coco_boot_disk_tick();                       // PIZERO-66: sync an idle dirty drive
     b = micros();
     wd_phase(WP_RENDER);
     coco_machine_render_frame();                  // regenerate VDG buffer (SUPPRESS_RENDER_SCANLINE)

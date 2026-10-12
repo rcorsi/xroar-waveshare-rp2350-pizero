@@ -518,6 +518,36 @@ def parse_log(path: str) -> dict:
     }
 
 
+# PIZERO-130: frame period, 6809 cycles per frame and system clock per env,
+# from src/main.cpp (FRAME_PERIOD_US, CYCLES_PER_FRAME x CPU_SPEED_MUL).
+ENV_FRAME = {
+    "pizero_stream_60": (16667, 14915, 252),
+    "pizero_cpu179": (16667, 29830, 252),
+    "pizero_stream": (19250, 17226, None),
+}
+
+
+def frame_budget_pct(budget: dict, env: str) -> dict | None:
+    """Share of the frame the medians use, and host clocks per emulated
+    cycle, which the issues used to work out by hand."""
+    if env not in ENV_FRAME or not budget.get("cpu"):
+        return None
+    period, cycles, mhz = ENV_FRAME[env]
+    cpu = budget["cpu"]["median"]
+    used = sum(budget[k]["median"] for k in ("cpu", "render", "blit", "audio") if budget.get(k))
+    out = {
+        "period_us": period,
+        "used_us": round(used, 1),
+        "pct": round(100.0 * used / period, 1),
+        "cpu_pct": round(100.0 * cpu / period, 1),
+        "cycles": cycles,
+        "sysclk_mhz": mhz,
+    }
+    if mhz:
+        out["clocks_per_cycle"] = round(cpu * mhz / cycles, 1)
+    return out
+
+
 def cmd_analyse(args: argparse.Namespace) -> int:
     if not os.path.exists(args.log):
         print(f"no such log: {args.log}", file=sys.stderr)
@@ -568,6 +598,15 @@ def cmd_analyse(args: argparse.Namespace) -> int:
              f"ambiguous: {crash['freezes_ambiguous_first_boot']}"
              if crash["freezes_ambiguous_first_boot"] else ""))
     print(f"frame budget  {g['frame_budget_us']}")
+    fb = frame_budget_pct(g["frame_budget_us"], g.get("env_from_log") or args.env)
+    if fb:
+        g["frame_budget_pct"] = fb
+        line = (f"  budget      {fb['pct']}% of a {fb['period_us']} us frame (median cpu+render+blit+aud "
+                f"= {fb['used_us']} us); emulation alone {fb['cpu_pct']}%")
+        if fb.get("clocks_per_cycle"):
+            line += (f" | {fb['clocks_per_cycle']} host clocks per emulated cycle "
+                     f"({fb['cycles']} cycles at {fb['sysclk_mhz']} MHz)")
+        print(line)
     if crash.get("reset_reasons"):
         print(f"  resets      {crash['reset_reasons']} | crashes (software resets after the first boot) "
               f"{crash['crash_resets']}")
