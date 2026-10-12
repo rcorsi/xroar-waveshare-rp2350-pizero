@@ -1,0 +1,723 @@
+[13:38:21.563] === LOGGER START dev=/dev/cu.usbmodem2101 usb_serial=8DEF17616A6EA5F1 baud=115200 env=pizero_cpuprof git=ab1cc7e+dirty ===
+[13:38:21.564] === PORT OPENED ===
+[13:38:21.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:21.919] [run] fps=60 cpu=13011us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=77377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:22.919] [prof] cyc=894971 clk/cyc: bus=155.6 core=47.8 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:22.919] [aud] fill=4104 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:22.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:22.919] [run] fps=60 cpu=13006us render=518us blit=1535us aud=0us | ls=J/FS conn=1 sof=78377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:23.919] [prof] cyc=894979 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:23.919] [aud] fill=4109 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:23.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:23.919] [run] fps=60 cpu=13008us render=518us blit=1535us aud=1us | ls=J/FS conn=1 sof=79377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:24.919] [prof] cyc=894976 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:24.919] [aud] fill=4112 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:24.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:24.919] [run] fps=60 cpu=13020us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=80377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:25.919] [prof] cyc=894972 clk/cyc: bus=155.7 core=48.0 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:25.919] [aud] fill=4115 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:25.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:25.919] [run] fps=60 cpu=13008us render=518us blit=1536us aud=0us | ls=J/FS conn=1 sof=81377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:26.919] [prof] cyc=894960 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:26.919] [aud] fill=4117 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:26.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:26.919] [run] fps=60 cpu=13004us render=518us blit=1535us aud=1us | ls=J/FS conn=1 sof=82377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:27.919] [prof] cyc=894963 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:27.919] [aud] fill=4120 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:27.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:27.919] [run] fps=60 cpu=13005us render=518us blit=1536us aud=1us | ls=J/FS conn=1 sof=83377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:28.919] [prof] cyc=894956 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:28.919] [aud] fill=4122 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:28.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:28.919] [run] fps=60 cpu=13008us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=84377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:29.919] [prof] cyc=894976 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:29.919] [aud] fill=4126 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:29.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:29.919] [run] fps=60 cpu=13009us render=518us blit=1536us aud=0us | ls=J/FS conn=1 sof=85377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:29.919] [prof] cyc=894979 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:30.919] [aud] fill=4129 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:30.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:30.919] [run] fps=60 cpu=13006us render=518us blit=1534us aud=0us | ls=J/FS conn=1 sof=86377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:30.919] [prof] cyc=894975 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:31.919] [aud] fill=4133 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:31.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:31.919] [run] fps=60 cpu=13005us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=87377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:31.919] [prof] cyc=894960 clk/cyc: bus=155.7 core=47.7 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:32.919] [aud] fill=4135 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:32.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:32.919] [run] fps=60 cpu=13012us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=88377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:32.919] [prof] cyc=894974 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:33.919] [aud] fill=4138 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:33.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:33.919] [run] fps=60 cpu=13007us render=518us blit=1535us aud=1us | ls=J/FS conn=1 sof=89377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:33.919] [prof] cyc=894957 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:34.919] [aud] fill=4135 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:34.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:34.919] [run] fps=60 cpu=13008us render=518us blit=1571us aud=1us | ls=J/FS conn=1 sof=90377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:34.919] [prof] cyc=894960 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:35.919] [aud] fill=4138 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:35.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:35.919] [run] fps=60 cpu=13007us render=518us blit=1573us aud=0us | ls=J/FS conn=1 sof=91377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:36.919] [prof] cyc=894956 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:36.919] [aud] fill=4137 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:36.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:36.919] [run] fps=60 cpu=13044us render=482us blit=1571us aud=0us | ls=J/FS conn=1 sof=92377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:37.918] [prof] cyc=894963 clk/cyc: bus=155.7 core=48.1 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:37.918] [aud] fill=4139 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:37.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:37.919] [run] fps=60 cpu=13008us render=482us blit=1579us aud=1us | ls=J/FS conn=1 sof=93377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:38.919] [prof] cyc=894968 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:38.919] [aud] fill=4142 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:38.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:38.919] [run] fps=60 cpu=13009us render=482us blit=1572us aud=1us | ls=J/FS conn=1 sof=94377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:39.919] [prof] cyc=894972 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:39.919] [aud] fill=4144 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:39.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:39.919] [run] fps=60 cpu=13005us render=482us blit=1571us aud=0us | ls=J/FS conn=1 sof=95377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:40.919] [prof] cyc=894963 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:40.919] [aud] fill=4143 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:40.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:40.919] [run] fps=60 cpu=13004us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=96377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:41.918] [prof] cyc=894968 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:41.919] [aud] fill=4147 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:41.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:41.919] [run] fps=60 cpu=13007us render=480us blit=1572us aud=0us | ls=J/FS conn=1 sof=97377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:42.918] [prof] cyc=894964 clk/cyc: bus=155.7 core=48.0 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:42.919] [aud] fill=4147 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:42.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:42.919] [run] fps=60 cpu=13009us render=482us blit=1572us aud=1us | ls=J/FS conn=1 sof=98377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:43.919] [prof] cyc=894976 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:43.919] [aud] fill=4151 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:43.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:43.919] [run] fps=60 cpu=13007us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=99377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:43.919] [prof] cyc=894963 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:44.918] [aud] fill=4151 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:44.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:44.919] [run] fps=60 cpu=13007us render=481us blit=1571us aud=1us | ls=J/FS conn=1 sof=100377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:44.919] [prof] cyc=895007 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:45.919] [aud] fill=4154 prod=48004/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:45.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:45.919] [run] fps=60 cpu=13012us render=483us blit=1571us aud=0us | ls=J/FS conn=1 sof=101377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:45.919] [prof] cyc=894973 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:46.918] [aud] fill=4157 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:46.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:46.919] [run] fps=60 cpu=13011us render=482us blit=1573us aud=0us | ls=J/FS conn=1 sof=102377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:46.919] [prof] cyc=894975 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:47.918] [aud] fill=4159 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:47.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:47.919] [run] fps=60 cpu=13009us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=103377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:47.919] [prof] cyc=894963 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:48.918] [aud] fill=4159 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:48.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:48.919] [run] fps=60 cpu=13009us render=482us blit=1572us aud=1us | ls=J/FS conn=1 sof=104377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:48.919] [prof] cyc=894965 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:49.919] [aud] fill=4160 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:49.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:49.919] [run] fps=60 cpu=13009us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=105377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:50.918] [prof] cyc=894970 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:50.918] [aud] fill=4163 prod=47955/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:50.918] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:50.919] [run] fps=60 cpu=13005us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=106377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:51.918] [prof] cyc=894968 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:51.919] [aud] fill=4164 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:51.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:51.919] [run] fps=60 cpu=13006us render=483us blit=1572us aud=1us | ls=J/FS conn=1 sof=107377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:52.918] [prof] cyc=894968 clk/cyc: bus=155.7 core=48.0 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:52.919] [aud] fill=4167 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:52.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:52.919] [run] fps=60 cpu=13009us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=108377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:53.918] [prof] cyc=894980 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:53.919] [aud] fill=4168 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:53.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:53.919] [run] fps=60 cpu=13007us render=481us blit=1572us aud=1us | ls=J/FS conn=1 sof=109377 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:54.918] [prof] cyc=894955 clk/cyc: bus=155.5 core=48.3 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:54.919] [aud] fill=4169 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:54.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:54.919] [run] fps=60 cpu=13010us render=482us blit=1573us aud=0us | ls=J/FS conn=1 sof=110378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:55.918] [prof] cyc=894968 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:55.919] [aud] fill=4169 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:55.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:55.919] [run] fps=60 cpu=13005us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=111378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:56.918] [prof] cyc=894956 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:56.919] [aud] fill=4170 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:56.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:56.919] [run] fps=60 cpu=13007us render=481us blit=1573us aud=0us | ls=J/FS conn=1 sof=112378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:57.918] [prof] cyc=894968 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:57.919] [aud] fill=4171 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:57.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:57.919] [run] fps=60 cpu=13008us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=113378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:58.918] [prof] cyc=894970 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:58.919] [aud] fill=4172 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:58.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:58.919] [run] fps=60 cpu=13006us render=483us blit=1571us aud=1us | ls=J/FS conn=1 sof=114378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:58.919] [prof] cyc=894976 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:38:59.918] [aud] fill=4173 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:38:59.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:38:59.919] [run] fps=60 cpu=13006us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=115378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:38:59.919] [prof] cyc=894973 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:00.918] [aud] fill=4174 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:00.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:00.919] [run] fps=60 cpu=13006us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=116378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:00.919] [prof] cyc=894975 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:01.918] [aud] fill=4175 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:01.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:01.919] [run] fps=60 cpu=13008us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=117378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:01.919] [prof] cyc=894979 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:02.918] [aud] fill=4177 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:02.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:02.919] [run] fps=60 cpu=13016us render=520us blit=1535us aud=1us | ls=J/FS conn=1 sof=118378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:02.919] [prof] cyc=894965 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:03.918] [aud] fill=4177 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:03.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:03.919] [run] fps=60 cpu=13007us render=519us blit=1535us aud=1us | ls=J/FS conn=1 sof=119378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:03.919] [prof] cyc=894967 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:04.918] [aud] fill=4177 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:04.919] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:04.919] [run] fps=60 cpu=13004us render=518us blit=1536us aud=1us | ls=J/FS conn=1 sof=120378 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:05.922] [prof] cyc=894979 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:05.922] [aud] fill=4179 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:05.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:05.922] [run] fps=60 cpu=13008us render=518us blit=1535us aud=1us | ls=J/FS conn=1 sof=121381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:06.922] [prof] cyc=894968 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:06.922] [aud] fill=4001 prod=47862/s want=48000/s srv=48002 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:06.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:06.922] [run] fps=60 cpu=13010us render=518us blit=1534us aud=0us | ls=J/FS conn=1 sof=122381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:07.922] [prof] cyc=894956 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:07.922] [aud] fill=4011 prod=48005/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:07.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:07.922] [run] fps=60 cpu=13013us render=518us blit=1536us aud=0us | ls=J/FS conn=1 sof=123381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:08.922] [prof] cyc=894962 clk/cyc: bus=155.9 core=47.8 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:08.922] [aud] fill=4016 prod=48005/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:08.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:08.922] [run] fps=60 cpu=13019us render=518us blit=1573us aud=1us | ls=J/FS conn=1 sof=124381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:09.922] [prof] cyc=894970 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:09.922] [aud] fill=4020 prod=48005/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:09.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:09.922] [run] fps=60 cpu=13010us render=518us blit=1573us aud=0us | ls=J/FS conn=1 sof=125381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:10.922] [prof] cyc=894967 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:10.922] [aud] fill=4026 prod=48006/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:10.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:10.922] [run] fps=60 cpu=13044us render=482us blit=1571us aud=0us | ls=J/FS conn=1 sof=126381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:11.922] [prof] cyc=894963 clk/cyc: bus=155.5 core=48.3 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:11.922] [aud] fill=4030 prod=48005/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:11.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:11.922] [run] fps=60 cpu=13007us render=483us blit=1570us aud=1us | ls=J/FS conn=1 sof=127381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:12.922] [prof] cyc=894967 clk/cyc: bus=155.5 core=48.3 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:12.922] [aud] fill=4033 prod=48005/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:12.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:12.922] [run] fps=60 cpu=13010us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=128381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:13.922] [prof] cyc=894989 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:13.922] [aud] fill=4040 prod=48006/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:13.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:13.922] [run] fps=60 cpu=13008us render=483us blit=1571us aud=0us | ls=J/FS conn=1 sof=129381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:13.922] [prof] cyc=894984 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:14.922] [aud] fill=4044 prod=48006/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:14.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:14.922] [run] fps=60 cpu=13007us render=482us blit=1573us aud=0us | ls=J/FS conn=1 sof=130381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:14.922] [prof] cyc=894962 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:15.922] [aud] fill=4049 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:15.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:15.922] [run] fps=60 cpu=13017us render=482us blit=1570us aud=0us | ls=J/FS conn=1 sof=131381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:15.922] [prof] cyc=894973 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:16.922] [aud] fill=4051 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:16.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:16.922] [run] fps=60 cpu=13007us render=483us blit=1571us aud=1us | ls=J/FS conn=1 sof=132381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:16.922] [prof] cyc=894968 clk/cyc: bus=155.5 core=47.9 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:17.922] [aud] fill=4055 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:17.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:17.922] [run] fps=60 cpu=13007us render=482us blit=1571us aud=0us | ls=J/FS conn=1 sof=133381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:17.922] [prof] cyc=894983 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:18.922] [aud] fill=4060 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:18.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:18.922] [run] fps=60 cpu=13007us render=481us blit=1572us aud=0us | ls=J/FS conn=1 sof=134381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:18.922] [prof] cyc=894955 clk/cyc: bus=155.2 core=48.5 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:19.922] [aud] fill=4063 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:19.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:19.922] [run] fps=60 cpu=13006us render=482us blit=1571us aud=0us | ls=J/FS conn=1 sof=135381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:20.921] [prof] cyc=894988 clk/cyc: bus=155.5 core=47.9 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:20.922] [aud] fill=4068 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:20.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:20.922] [run] fps=60 cpu=13007us render=481us blit=1572us aud=1us | ls=J/FS conn=1 sof=136381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:21.921] [prof] cyc=894967 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:21.922] [aud] fill=4072 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:21.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:21.922] [run] fps=60 cpu=13005us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=137381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:22.921] [prof] cyc=894965 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:22.922] [aud] fill=4074 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:22.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:22.922] [run] fps=60 cpu=13008us render=481us blit=1571us aud=1us | ls=J/FS conn=1 sof=138381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:23.921] [prof] cyc=894963 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:23.922] [aud] fill=4079 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:23.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:23.922] [run] fps=60 cpu=13006us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=139381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:24.921] [prof] cyc=894959 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:24.922] [aud] fill=4081 prod=47956/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:24.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:24.922] [run] fps=60 cpu=13008us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=140381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:25.921] [prof] cyc=894957 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:25.922] [aud] fill=4086 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:25.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:25.922] [run] fps=60 cpu=13015us render=481us blit=1571us aud=1us | ls=J/FS conn=1 sof=141381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:26.921] [prof] cyc=894967 clk/cyc: bus=155.7 core=48.0 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:26.922] [aud] fill=4088 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:26.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:26.922] [run] fps=60 cpu=13008us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=142381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:27.921] [prof] cyc=895003 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:27.922] [aud] fill=4093 prod=48006/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:27.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:27.922] [run] fps=60 cpu=13011us render=481us blit=1572us aud=0us | ls=J/FS conn=1 sof=143381 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:28.921] [prof] cyc=894976 clk/cyc: bus=155.9 core=47.9 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:28.921] [aud] fill=4097 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:28.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:28.922] [run] fps=60 cpu=13019us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=144382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:28.922] [prof] cyc=894972 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:29.922] [aud] fill=4102 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:29.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:29.922] [run] fps=60 cpu=13009us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=145382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:29.922] [prof] cyc=894952 clk/cyc: bus=155.4 core=48.0 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:30.922] [aud] fill=4105 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:30.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:30.922] [run] fps=60 cpu=13009us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=146382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:30.922] [prof] cyc=894976 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:31.921] [aud] fill=4109 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:31.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:31.922] [run] fps=60 cpu=13012us render=481us blit=1572us aud=0us | ls=J/FS conn=1 sof=147382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:31.922] [prof] cyc=894971 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:32.921] [aud] fill=4111 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:32.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:32.922] [run] fps=60 cpu=13011us render=482us blit=1570us aud=1us | ls=J/FS conn=1 sof=148382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:32.922] [prof] cyc=894976 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:33.921] [aud] fill=4114 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:33.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:33.922] [run] fps=60 cpu=13010us render=481us blit=1571us aud=0us | ls=J/FS conn=1 sof=149382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:33.922] [prof] cyc=894963 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:34.921] [aud] fill=4117 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:34.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:34.922] [run] fps=60 cpu=13013us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=150382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:35.921] [prof] cyc=894964 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:35.922] [aud] fill=4119 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:35.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:35.922] [run] fps=60 cpu=13005us render=482us blit=1571us aud=0us | ls=J/FS conn=1 sof=151382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:36.921] [prof] cyc=894979 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:36.921] [aud] fill=4123 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:36.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:36.921] [run] fps=60 cpu=13010us render=518us blit=1534us aud=0us | ls=J/FS conn=1 sof=152382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:37.921] [prof] cyc=894976 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:37.922] [aud] fill=4125 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:37.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:37.922] [run] fps=60 cpu=13007us render=519us blit=1532us aud=1us | ls=J/FS conn=1 sof=153382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:38.921] [prof] cyc=894983 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:38.922] [aud] fill=4130 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:38.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:38.922] [run] fps=60 cpu=13009us render=518us blit=1535us aud=1us | ls=J/FS conn=1 sof=154382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:39.921] [prof] cyc=894965 clk/cyc: bus=155.2 core=48.5 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:39.922] [aud] fill=4131 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:39.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:39.922] [run] fps=60 cpu=13011us render=518us blit=1534us aud=0us | ls=J/FS conn=1 sof=155382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:40.921] [prof] cyc=894967 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:40.922] [aud] fill=4134 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:40.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:40.922] [run] fps=60 cpu=13008us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=156382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:41.921] [prof] cyc=894979 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:41.922] [aud] fill=4136 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:41.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:41.922] [run] fps=60 cpu=13008us render=518us blit=1543us aud=0us | ls=J/FS conn=1 sof=157382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:42.921] [prof] cyc=894968 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:42.921] [aud] fill=4139 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:42.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:42.922] [run] fps=60 cpu=13008us render=518us blit=1534us aud=1us | ls=J/FS conn=1 sof=158382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:43.921] [prof] cyc=894964 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:43.921] [aud] fill=4141 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:43.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:43.921] [run] fps=60 cpu=13008us render=519us blit=1533us aud=0us | ls=J/FS conn=1 sof=159382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:43.921] [prof] cyc=894963 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:44.921] [aud] fill=4142 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:44.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:44.922] [run] fps=60 cpu=13010us render=518us blit=1534us aud=0us | ls=J/FS conn=1 sof=160382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:44.922] [prof] cyc=894968 clk/cyc: bus=155.8 core=48.0 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:45.921] [aud] fill=4145 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:45.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:45.922] [run] fps=60 cpu=13011us render=519us blit=1534us aud=1us | ls=J/FS conn=1 sof=161382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:45.922] [prof] cyc=894956 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:46.921] [aud] fill=4146 prod=48001/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:46.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:46.921] [run] fps=60 cpu=13009us render=519us blit=1533us aud=1us | ls=J/FS conn=1 sof=162382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:46.921] [prof] cyc=894960 clk/cyc: bus=155.5 core=48.3 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:47.921] [aud] fill=4145 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:47.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:47.922] [run] fps=60 cpu=13008us render=518us blit=1535us aud=0us | ls=J/FS conn=1 sof=163382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:47.922] [prof] cyc=894963 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:48.921] [aud] fill=4147 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:48.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:48.922] [run] fps=60 cpu=13009us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=164382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:48.922] [prof] cyc=894975 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:49.921] [aud] fill=4149 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:49.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:49.922] [run] fps=60 cpu=13008us render=518us blit=1533us aud=1us | ls=J/FS conn=1 sof=165382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:49.922] [prof] cyc=894968 clk/cyc: bus=155.7 core=48.0 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:49.922] [aud] fill=4153 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:50.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:50.922] [run] fps=60 cpu=13010us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=166382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:51.921] [prof] cyc=894959 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:51.921] [aud] fill=4153 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:51.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:51.921] [run] fps=60 cpu=13008us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=167382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:52.922] [prof] cyc=894973 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:52.922] [aud] fill=4154 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:52.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:52.922] [run] fps=60 cpu=13010us render=519us blit=1533us aud=0us | ls=J/FS conn=1 sof=168382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:53.921] [prof] cyc=894979 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:53.921] [aud] fill=4155 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:53.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:53.922] [run] fps=60 cpu=13008us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=169382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:54.921] [prof] cyc=894956 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:54.922] [aud] fill=4158 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:54.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:54.922] [run] fps=60 cpu=13009us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=170382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:55.921] [prof] cyc=894987 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:55.921] [aud] fill=4159 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:55.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:55.922] [run] fps=60 cpu=13010us render=518us blit=1533us aud=1us | ls=J/FS conn=1 sof=171382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:56.921] [prof] cyc=894968 clk/cyc: bus=155.7 core=48.0 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:56.921] [aud] fill=4159 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:56.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:56.922] [run] fps=60 cpu=13008us render=519us blit=1534us aud=0us | ls=J/FS conn=1 sof=172382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:57.921] [prof] cyc=894988 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:57.922] [aud] fill=4161 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:57.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:57.922] [run] fps=60 cpu=13011us render=519us blit=1533us aud=1us | ls=J/FS conn=1 sof=173382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:58.921] [prof] cyc=894955 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:58.921] [aud] fill=4163 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:58.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:58.922] [run] fps=60 cpu=13008us render=519us blit=1569us aud=0us | ls=J/FS conn=1 sof=174382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:58.922] [prof] cyc=894968 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:39:59.921] [aud] fill=4164 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:39:59.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:39:59.921] [run] fps=60 cpu=13005us render=518us blit=1569us aud=1us | ls=J/FS conn=1 sof=175382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:39:59.921] [prof] cyc=894956 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:00.921] [aud] fill=4165 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:00.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:00.922] [run] fps=60 cpu=13044us render=481us blit=1570us aud=0us | ls=J/FS conn=1 sof=176382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:00.922] [prof] cyc=894968 clk/cyc: bus=155.6 core=48.2 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:01.921] [aud] fill=4167 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:01.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:01.922] [run] fps=60 cpu=13008us render=481us blit=1570us aud=1us | ls=J/FS conn=1 sof=177382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:01.922] [prof] cyc=894954 clk/cyc: bus=155.2 core=48.6 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:02.921] [aud] fill=4166 prod=48001/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:02.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:02.922] [run] fps=60 cpu=13008us render=482us blit=1570us aud=0us | ls=J/FS conn=1 sof=178382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:02.922] [prof] cyc=894960 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:03.921] [aud] fill=4167 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:03.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:03.922] [run] fps=60 cpu=13010us render=482us blit=1570us aud=1us | ls=J/FS conn=1 sof=179382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:03.922] [prof] cyc=894965 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:04.921] [aud] fill=4168 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:04.921] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:04.922] [run] fps=60 cpu=13007us render=482us blit=1570us aud=0us | ls=J/FS conn=1 sof=180382 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:04.922] [prof] cyc=894975 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:05.923] [aud] fill=4169 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:05.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:05.923] [run] fps=60 cpu=13002us render=517us blit=1569us aud=0us | ls=J/FS conn=1 sof=181384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:06.923] [prof] cyc=894972 clk/cyc: bus=155.0 core=48.6 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:06.923] [aud] fill=4141 prod=47907/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:06.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:06.923] [run] fps=60 cpu=13009us render=481us blit=1569us aud=1us | ls=J/FS conn=1 sof=182384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:07.923] [prof] cyc=894964 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:07.923] [aud] fill=4145 prod=48004/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:07.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:07.923] [run] fps=60 cpu=13007us render=480us blit=1569us aud=0us | ls=J/FS conn=1 sof=183384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:08.923] [prof] cyc=894979 clk/cyc: bus=155.2 core=48.4 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:08.923] [aud] fill=4148 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:08.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:08.923] [run] fps=60 cpu=13001us render=482us blit=1568us aud=1us | ls=J/FS conn=1 sof=184384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:09.923] [prof] cyc=894995 clk/cyc: bus=155.2 core=48.4 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:09.923] [aud] fill=4154 prod=48005/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:09.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:09.923] [run] fps=60 cpu=13007us render=480us blit=1570us aud=1us | ls=J/FS conn=1 sof=185384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:09.923] [prof] cyc=894964 clk/cyc: bus=155.1 core=48.5 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:10.923] [aud] fill=4157 prod=48003/s want=48000/s srv=47999 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:10.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:10.924] [run] fps=60 cpu=13002us render=481us blit=1568us aud=0us | ls=J/FS conn=1 sof=186384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:10.924] [prof] cyc=894963 clk/cyc: bus=155.4 core=48.2 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:11.923] [aud] fill=4160 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:11.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:11.924] [run] fps=60 cpu=13007us render=481us blit=1570us aud=0us | ls=J/FS conn=1 sof=187384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:11.924] [prof] cyc=894973 clk/cyc: bus=155.4 core=48.2 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:12.923] [aud] fill=4163 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:12.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:12.923] [run] fps=60 cpu=13006us render=480us blit=1569us aud=1us | ls=J/FS conn=1 sof=188384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:12.923] [prof] cyc=894967 clk/cyc: bus=155.6 core=48.0 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:13.923] [aud] fill=4166 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:13.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:13.923] [run] fps=60 cpu=13004us render=480us blit=1569us aud=1us | ls=J/FS conn=1 sof=189384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:13.923] [prof] cyc=894955 clk/cyc: bus=155.3 core=48.3 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:14.923] [aud] fill=4166 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:14.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:14.923] [run] fps=60 cpu=13000us render=481us blit=1570us aud=1us | ls=J/FS conn=1 sof=190384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:14.923] [prof] cyc=894981 clk/cyc: bus=155.4 core=47.9 sum=203.3 (raw 219.3) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:15.923] [aud] fill=4168 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:15.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:15.924] [run] fps=60 cpu=13002us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=191384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:15.924] [prof] cyc=894962 clk/cyc: bus=155.5 core=48.1 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:16.923] [aud] fill=4170 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:16.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:16.923] [run] fps=60 cpu=13003us render=481us blit=1570us aud=0us | ls=J/FS conn=1 sof=192384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:17.923] [prof] cyc=894980 clk/cyc: bus=155.5 core=47.8 sum=203.3 (raw 219.3) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:17.923] [aud] fill=4172 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:17.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:17.924] [run] fps=60 cpu=13002us render=481us blit=1568us aud=0us | ls=J/FS conn=1 sof=193384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:18.923] [prof] cyc=894973 clk/cyc: bus=155.2 core=48.4 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:18.923] [aud] fill=4175 prod=48003/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:18.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:18.923] [run] fps=60 cpu=13004us render=482us blit=1568us aud=0us | ls=J/FS conn=1 sof=194384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:19.923] [prof] cyc=894975 clk/cyc: bus=155.4 core=48.2 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:19.923] [aud] fill=4177 prod=47955/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:19.924] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:19.924] [run] fps=60 cpu=13007us render=481us blit=1568us aud=1us | ls=J/FS conn=1 sof=195384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:20.923] [prof] cyc=894971 clk/cyc: bus=155.5 core=48.1 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:20.923] [aud] fill=4177 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:20.924] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:20.924] [run] fps=60 cpu=13001us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=196384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:21.923] [prof] cyc=894965 clk/cyc: bus=155.4 core=48.2 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:21.923] [aud] fill=4180 prod=48002/s want=48000/s srv=47998 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:21.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:21.923] [run] fps=60 cpu=13002us render=481us blit=1568us aud=0us | ls=J/FS conn=1 sof=197384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:22.923] [prof] cyc=894983 clk/cyc: bus=155.5 core=48.1 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:22.923] [aud] fill=4182 prod=48004/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:22.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:22.924] [run] fps=60 cpu=12998us render=480us blit=1569us aud=1us | ls=J/FS conn=1 sof=198384 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:23.923] [prof] cyc=894971 clk/cyc: bus=155.5 core=48.1 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:23.923] [aud] fill=4182 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:23.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:23.923] [run] fps=60 cpu=13002us render=480us blit=1568us aud=1us | ls=J/FS conn=1 sof=199385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:24.923] [prof] cyc=894968 clk/cyc: bus=155.8 core=47.8 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:24.923] [aud] fill=4184 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:24.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:24.923] [run] fps=60 cpu=13000us render=482us blit=1568us aud=1us | ls=J/FS conn=1 sof=200385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:24.923] [prof] cyc=894972 clk/cyc: bus=155.6 core=48.0 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:25.923] [aud] fill=4186 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:25.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:25.923] [run] fps=60 cpu=13000us render=480us blit=1569us aud=1us | ls=J/FS conn=1 sof=201385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:25.923] [prof] cyc=894976 clk/cyc: bus=155.6 core=48.0 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:26.923] [aud] fill=4188 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:26.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:26.923] [run] fps=60 cpu=13001us render=481us blit=1568us aud=0us | ls=J/FS conn=1 sof=202385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:26.923] [prof] cyc=894971 clk/cyc: bus=155.3 core=48.3 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:27.923] [aud] fill=4188 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:27.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:27.923] [run] fps=60 cpu=13000us render=482us blit=1568us aud=1us | ls=J/FS conn=1 sof=203385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:27.923] [prof] cyc=894964 clk/cyc: bus=155.4 core=47.8 sum=203.2 (raw 219.2) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:28.923] [aud] fill=4188 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:28.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:28.923] [run] fps=60 cpu=12999us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=204385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:28.923] [prof] cyc=894971 clk/cyc: bus=155.2 core=48.4 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:29.923] [aud] fill=4189 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:29.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:29.923] [run] fps=60 cpu=13000us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=205385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:29.923] [prof] cyc=894968 clk/cyc: bus=155.6 core=47.9 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:30.923] [aud] fill=4190 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:30.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:30.923] [run] fps=60 cpu=12999us render=481us blit=1569us aud=1us | ls=J/FS conn=1 sof=206385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:30.923] [prof] cyc=894963 clk/cyc: bus=155.4 core=48.2 sum=203.6 (raw 219.6) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:31.923] [aud] fill=4191 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:31.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:31.923] [run] fps=60 cpu=12998us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=207385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:32.923] [prof] cyc=894976 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:32.923] [aud] fill=4192 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:32.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:32.923] [run] fps=60 cpu=13007us render=518us blit=1533us aud=0us | ls=J/FS conn=1 sof=208385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:33.923] [prof] cyc=894956 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:33.923] [aud] fill=4192 prod=48000/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:33.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:33.923] [run] fps=60 cpu=13000us render=516us blit=1532us aud=1us | ls=J/FS conn=1 sof=209385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:34.923] [prof] cyc=894971 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:34.923] [aud] fill=4195 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:34.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:34.923] [run] fps=60 cpu=13001us render=517us blit=1533us aud=0us | ls=J/FS conn=1 sof=210385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:35.923] [prof] cyc=894973 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:35.923] [aud] fill=4195 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:35.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:35.923] [run] fps=60 cpu=13010us render=517us blit=1532us aud=1us | ls=J/FS conn=1 sof=211385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:36.923] [prof] cyc=894978 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:36.923] [aud] fill=4196 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:36.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:36.923] [run] fps=60 cpu=12996us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=212385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:37.923] [prof] cyc=894968 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:37.923] [aud] fill=4195 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:37.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:37.923] [run] fps=60 cpu=12997us render=517us blit=1533us aud=1us | ls=J/FS conn=1 sof=213385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:38.923] [prof] cyc=894968 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:38.923] [aud] fill=4197 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:38.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:38.923] [run] fps=60 cpu=12997us render=517us blit=1533us aud=0us | ls=J/FS conn=1 sof=214385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:39.923] [prof] cyc=894967 clk/cyc: bus=155.6 core=47.9 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:39.923] [aud] fill=4197 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:39.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:39.923] [run] fps=60 cpu=12998us render=517us blit=1532us aud=1us | ls=J/FS conn=1 sof=215385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:39.923] [prof] cyc=894973 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:40.923] [aud] fill=4197 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:40.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:40.923] [run] fps=60 cpu=12994us render=517us blit=1534us aud=1us | ls=J/FS conn=1 sof=216385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:40.923] [prof] cyc=894955 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:41.923] [aud] fill=4198 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:41.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:41.923] [run] fps=60 cpu=12995us render=517us blit=1531us aud=1us | ls=J/FS conn=1 sof=217385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:41.923] [prof] cyc=894975 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:42.923] [aud] fill=4199 prod=48002/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:42.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:42.923] [run] fps=60 cpu=12998us render=517us blit=1532us aud=1us | ls=J/FS conn=1 sof=218385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:42.923] [prof] cyc=894965 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:43.923] [aud] fill=4198 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:43.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:43.923] [run] fps=60 cpu=13001us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=219385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:43.923] [prof] cyc=894967 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:44.923] [aud] fill=4198 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:44.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:44.923] [run] fps=60 cpu=12995us render=518us blit=1533us aud=0us | ls=J/FS conn=1 sof=220385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:44.923] [prof] cyc=894979 clk/cyc: bus=155.6 core=47.9 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:45.923] [aud] fill=4200 prod=48002/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:45.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:45.923] [run] fps=60 cpu=12997us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=221385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:45.923] [prof] cyc=894965 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:46.923] [aud] fill=4202 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:46.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:46.923] [run] fps=60 cpu=13001us render=517us blit=1533us aud=1us | ls=J/FS conn=1 sof=222385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:47.923] [prof] cyc=894959 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:47.923] [aud] fill=4200 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:47.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:47.923] [run] fps=60 cpu=12998us render=517us blit=1533us aud=0us | ls=J/FS conn=1 sof=223385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:48.923] [prof] cyc=894976 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:48.923] [aud] fill=4201 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:48.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:48.923] [run] fps=60 cpu=12995us render=517us blit=1532us aud=1us | ls=J/FS conn=1 sof=224385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:49.923] [prof] cyc=894955 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:49.923] [aud] fill=4200 prod=48000/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:49.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:49.923] [run] fps=60 cpu=12996us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=225385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:50.923] [prof] cyc=894984 clk/cyc: bus=155.2 core=48.3 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:50.923] [aud] fill=4202 prod=48002/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:50.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:50.923] [run] fps=60 cpu=12996us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=226385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:51.922] [prof] cyc=894975 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:51.922] [aud] fill=4201 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:51.922] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:51.923] [run] fps=60 cpu=12994us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=227385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:52.923] [prof] cyc=894965 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:52.923] [aud] fill=4198 prod=48000/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:52.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:52.923] [run] fps=60 cpu=12999us render=516us blit=1533us aud=1us | ls=J/FS conn=1 sof=228385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:53.923] [prof] cyc=894967 clk/cyc: bus=155.6 core=47.9 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:53.923] [aud] fill=4198 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:53.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:53.923] [run] fps=60 cpu=12999us render=517us blit=1532us aud=0us | ls=J/FS conn=1 sof=229385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:54.923] [prof] cyc=894963 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:54.923] [aud] fill=4199 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:54.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:54.923] [run] fps=60 cpu=12998us render=518us blit=1568us aud=1us | ls=J/FS conn=1 sof=230385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:54.924] [prof] cyc=894964 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:55.923] [aud] fill=4198 prod=48000/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:55.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:55.923] [run] fps=60 cpu=12999us render=517us blit=1570us aud=0us | ls=J/FS conn=1 sof=231385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:55.923] [prof] cyc=894979 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:56.923] [aud] fill=4198 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:56.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:56.923] [run] fps=60 cpu=12996us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=232385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:56.923] [prof] cyc=894973 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:57.922] [aud] fill=4199 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:57.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:57.923] [run] fps=60 cpu=13005us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=233385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:57.923] [prof] cyc=894975 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:58.923] [aud] fill=4199 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:58.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:58.923] [run] fps=60 cpu=12994us render=481us blit=1569us aud=1us | ls=J/FS conn=1 sof=234385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:58.923] [prof] cyc=894971 clk/cyc: bus=155.4 core=48.1 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:40:59.923] [aud] fill=4200 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:40:59.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:40:59.923] [run] fps=60 cpu=12999us render=481us blit=1569us aud=1us | ls=J/FS conn=1 sof=235385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:40:59.923] [prof] cyc=894968 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:00.923] [aud] fill=4199 prod=48001/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:00.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:00.923] [run] fps=60 cpu=12998us render=481us blit=1570us aud=1us | ls=J/FS conn=1 sof=236385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:00.923] [prof] cyc=894972 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:01.923] [aud] fill=4198 prod=48000/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:01.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:01.923] [run] fps=60 cpu=13000us render=481us blit=1570us aud=0us | ls=J/FS conn=1 sof=237385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:02.922] [prof] cyc=894955 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:02.923] [aud] fill=4198 prod=48000/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:02.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:02.923] [run] fps=60 cpu=12994us render=481us blit=1569us aud=0us | ls=J/FS conn=1 sof=238385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:03.923] [prof] cyc=894976 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:03.923] [aud] fill=4198 prod=48001/s want=48000/s srv=47997 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:03.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:03.923] [run] fps=60 cpu=12996us render=481us blit=1570us aud=0us | ls=J/FS conn=1 sof=239385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:04.923] [prof] cyc=894980 clk/cyc: bus=155.5 core=48.0 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:04.923] [aud] fill=4200 prod=48002/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:04.923] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:04.923] [run] fps=60 cpu=12999us render=480us blit=1571us aud=1us | ls=J/FS conn=1 sof=240385 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:05.924] [prof] cyc=894960 clk/cyc: bus=155.3 core=48.2 sum=203.5 (raw 219.5) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:05.925] [aud] fill=4199 prod=48000/s want=48000/s srv=47996 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:05.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:05.926] [run] fps=60 cpu=13013us render=482us blit=1573us aud=1us | ls=J/FS conn=1 sof=241389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:06.926] [prof] cyc=894965 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:06.926] [aud] fill=4028 prod=47813/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:06.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:06.926] [run] fps=60 cpu=13013us render=482us blit=1571us aud=1us | ls=J/FS conn=1 sof=242389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:07.926] [prof] cyc=894975 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:07.926] [aud] fill=4039 prod=48006/s want=48000/s srv=48001 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:07.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:07.926] [run] fps=60 cpu=13008us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=243389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:08.926] [prof] cyc=894954 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:08.926] [aud] fill=4043 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:08.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:08.926] [run] fps=60 cpu=13009us render=482us blit=1572us aud=0us | ls=J/FS conn=1 sof=244389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:09.926] [prof] cyc=894959 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:09.926] [aud] fill=4047 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:09.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:09.926] [run] fps=60 cpu=13009us render=481us blit=1572us aud=1us | ls=J/FS conn=1 sof=245389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:10.926] [prof] cyc=894957 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:10.926] [aud] fill=4049 prod=48003/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:10.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:10.926] [run] fps=60 cpu=13013us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=246389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:11.926] [prof] cyc=894976 clk/cyc: bus=155.6 core=48.1 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:11.926] [aud] fill=4054 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:11.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:11.926] [run] fps=60 cpu=13008us render=519us blit=1536us aud=0us | ls=J/FS conn=1 sof=247389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:12.925] [prof] cyc=894954 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:12.926] [aud] fill=4057 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:12.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:12.926] [run] fps=60 cpu=13005us render=519us blit=1534us aud=1us | ls=J/FS conn=1 sof=248389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:13.926] [prof] cyc=894984 clk/cyc: bus=155.4 core=48.0 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:13.926] [aud] fill=4061 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:13.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:13.926] [run] fps=60 cpu=13008us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=249389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:13.926] [prof] cyc=894968 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:14.926] [aud] fill=4065 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:14.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:14.926] [run] fps=60 cpu=13007us render=518us blit=1535us aud=1us | ls=J/FS conn=1 sof=250389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:14.926] [prof] cyc=894968 clk/cyc: bus=155.5 core=47.9 sum=203.4 (raw 219.4) | nvma=36.1% cyc/insn=4.09 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:15.926] [aud] fill=4069 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:15.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:15.926] [run] fps=60 cpu=13009us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=251389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:15.926] [prof] cyc=894968 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:16.926] [aud] fill=4071 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:16.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:16.926] [run] fps=60 cpu=13004us render=518us blit=1536us aud=1us | ls=J/FS conn=1 sof=252389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:16.926] [prof] cyc=894960 clk/cyc: bus=155.5 core=48.2 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:17.926] [aud] fill=4075 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:17.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:17.926] [run] fps=60 cpu=13008us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=253389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:17.926] [prof] cyc=894986 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:18.926] [aud] fill=4080 prod=48006/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:18.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:18.926] [run] fps=60 cpu=13006us render=519us blit=1535us aud=0us | ls=J/FS conn=1 sof=254389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:18.926] [prof] cyc=894957 clk/cyc: bus=155.6 core=48.2 sum=203.8 (raw 219.8) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:19.926] [aud] fill=4082 prod=48003/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:19.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:19.926] [run] fps=60 cpu=13008us render=518us blit=1536us aud=1us | ls=J/FS conn=1 sof=255389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:19.926] [prof] cyc=894963 clk/cyc: bus=155.4 core=48.3 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:20.926] [aud] fill=4087 prod=48005/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:20.926] [vdg] mode=alpha bits=00 sam=0 pb_writes=181 pb_last=00 lower=1
+[13:41:20.926] [run] fps=60 cpu=13004us render=519us blit=1535us aud=1us | ls=J/FS conn=1 sof=256389 usb=1 rpts=0 rfail=0 eperr=0 ints=0 | freezes=0 last=none badfps=1 tdrop=0
+[13:41:21.925] [prof] cyc=894975 clk/cyc: bus=155.3 core=48.4 sum=203.7 (raw 219.7) | nvma=36.5% cyc/insn=4.05 | win in=1 full=16 | hook dec=0.0 data=0.0 ev+aud=0.0 irq=0.0
+[13:41:21.926] [aud] fill=4090 prod=48004/s want=48000/s srv=48000 under=0/s short=0.0% tone=0/s skips=0 under_total=21108
+[13:41:21.926] === DURATION REACHED ===
