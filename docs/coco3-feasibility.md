@@ -85,6 +85,23 @@ scales with emulated cycles, and we have measured both points:
 | Today, measured | 0.895 MHz | **10.4 ms** of a 16.67 ms frame |
 | CoCo 3 at native speed | 1.79 MHz | **~20.8 ms**, i.e. 125% of the frame |
 
+**Measured 2026-10-12 (PIZERO-130)**, unit 10, product build against the
+`pizero_cpu179` build (twice the cycles per frame), both idle at the BASIC
+prompt, 3 minutes each (`docs/measurements/2026-10.jsonl`):
+
+| | cycles per frame | emulation per frame | whole frame | fps |
+|---|---|---|---|---|
+| 0.895 MHz (product) | 14,915 | **10.98 ms**, 65.8% | 13.0 ms, 78.1% | 60 |
+| 1.79 MHz (`pizero_cpu179`) | 29,830 | **21.95 ms**, 131.7% | 24.0 ms, 144.2% | 42 |
+
+Both cost **185.4 host clocks per emulated cycle**: emulation scales exactly
+with clock rate, so the 2x build is a fair stand-in for the CoCo 3's CPU load.
+The base has grown from 10.4 ms since the estimate above (features added since
+September), so the real overrun is 32%, not 25%. Render and blit take about
+2.1 ms at either speed. To fit 1.79 MHz in about 12.5 ms of emulation, leaving
+room for GIME work and margin, the core needs about **105 clocks per cycle,
+a 1.77x speed-up**. That is PIZERO-131's target.
+
 `docs/cpu-speed.md` reached the same conclusion from the other direction: a
 guest that flips the SAM into full high speed already runs ~18.8 ms of emulation
 per frame and goes over budget. CoCo 3 is not a special case of that problem, it

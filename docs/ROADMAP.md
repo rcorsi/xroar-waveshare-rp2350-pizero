@@ -81,7 +81,7 @@ The groundwork is done: `PIZERO-129`'s lockstep harness exists so the 6809 can
 be made faster without changing what it does. The plan and its reasoning are in
 `docs/coco3-plan.md`.
 
-1. **`PIZERO-130`**: benchmark the CoCo 2 machine at 1.79 MHz, the target.
+1. **`PIZERO-130`** (done 2026-10-12): 185.4 host clocks per emulated cycle; 1.79 MHz takes 131.7% of a frame. Numbers in `docs/coco3-feasibility.md`.
 2. **`PIZERO-131`**: the 6809 speed-up (about 1.7×) so 1.79 MHz fits in a frame.
    Its gate decides whether the CoCo 3 happens.
 3. **`PIZERO-135`**: the open decisions (how the mode is chosen, audio below
