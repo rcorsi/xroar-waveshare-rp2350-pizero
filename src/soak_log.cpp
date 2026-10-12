@@ -7,6 +7,7 @@
 #include "ff.h"
 #include "f_util.h"
 #include "hardware/watchdog.h"
+#include "pico/unique_id.h"
 
 #include "soak_log.h"
 #include "coco_boot.h"
@@ -57,17 +58,18 @@ extern "C" bool soak_log_begin(const char *fw, const char *env, bool watchdog_re
     if (fr != FR_OK) { Serial.printf("[soak] cannot open %s (%d)\r\n", path, fr); free(g_file); g_file = nullptr; return false; }
     g_open = true;
     g_lines = 0;
-    char clock[40], src[24], head[320];
+    char clock[40], src[24], head[352], board[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
     coco_boot_clock_text(clock, sizeof clock, src, sizeof src);
+    pico_get_unique_board_id_string(board, sizeof board);   // PIZERO-208
     // The first line names the format for scripts/soak.py; the rest reads
     // like the serial banner it already understands.
     snprintf(head, sizeof head,
              "=== CoCo Zero soak log, interval %us, clock %s from %s\r\n"
              "=== DATE %.10s\r\n"
-             "XRoar on RP2350-PiZero (soak log) fw=%s env=%s boot=%s freezes=%lu last=%s reset=%s\r\n",
+             "XRoar on RP2350-PiZero (soak log) fw=%s env=%s boot=%s freezes=%lu last=%s reset=%s board=%s\r\n",
              SOAK_INTERVAL_S, clock, src, clock, fw, env,
              watchdog_reboot ? "watchdog-reboot" : "power-on",
-             (unsigned long)freezes, freeze_phase, reset_reason);
+             (unsigned long)freezes, freeze_phase, reset_reason, board);
     if (!append(head)) return false;
     sync_now();
     Serial.printf("[soak] logging to %s every %u s, clock %s (%s)\r\n", path, SOAK_INTERVAL_S, clock, src);
@@ -99,3 +101,40 @@ extern "C" void soak_log_tick(const char *run_line, const char *aud_line) {
 }
 
 extern "C" bool soak_log_active(void) { return g_open; }
+
+// PIZERO-208: the card keeps a list of the boards it has been in. A line is
+// added only when this board differs from the last one listed, so a card
+// that stays put is never written; one that moves gains one short line.
+extern "C" void soak_log_note_board(const char *fw) {
+    static const char path[] = LOG_DIR "/boards.txt";
+    char board[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+    pico_get_unique_board_id_string(board, sizeof board);
+    FIL f;
+    char tail[128] = "";
+    if (f_open(&f, path, FA_READ) == FR_OK) {
+        // The last line fits in the final 127 bytes; take the last serial there.
+        FSIZE_t size = f_size(&f);
+        UINT got = 0;
+        f_lseek(&f, size > sizeof tail - 1 ? size - (sizeof tail - 1) : 0);
+        f_read(&f, tail, sizeof tail - 1, &got);
+        tail[got] = '\0';
+        f_close(&f);
+    }
+    // Each line is "<time> board=<serial> fw=<version>"; find the last board=.
+    const char *last = nullptr;
+    for (const char *p = strstr(tail, "board="); p; p = strstr(p + 1, "board=")) last = p + 6;
+    if (last && strncmp(last, board, strlen(board)) == 0) return;
+    FRESULT fr = f_mkdir(LOG_DIR);
+    if (fr != FR_OK && fr != FR_EXIST) return;
+    if (f_open(&f, path, FA_WRITE | FA_OPEN_APPEND) != FR_OK) {
+        Serial.printf("[boot] cannot write %s\r\n", path);
+        return;
+    }
+    char clock[40], src[24], line[128];
+    coco_boot_clock_text(clock, sizeof clock, src, sizeof src);
+    snprintf(line, sizeof line, "%s board=%s fw=%s\r\n", clock, board, fw);
+    UINT bw = 0;
+    f_write(&f, line, (UINT)strlen(line), &bw);
+    f_close(&f);
+    Serial.printf("[boot] card is new to this board: noted in %s\r\n", path);
+}

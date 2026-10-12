@@ -1428,6 +1428,14 @@ void setup() {
     g_run_button_reset = (chip_reset & POWMAN_CHIP_RESET_HAD_RUN_LOW_BITS) != 0;
     Serial.printf("[boot] chip_reset=0x%08lx%s\r\n", (unsigned long)chip_reset,
                   g_run_button_reset ? " (RUN button)" : "");
+    {
+        // PIZERO-208: which board this is, matching its USB serial number
+        // and the board_serial column of qc/qc-log.csv. Early, so it prints
+        // with no card in.
+        char board[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+        pico_get_unique_board_id_string(board, sizeof board);
+        Serial.printf("[boot] board %s\r\n", board);
+    }
     Serial.flush();
 
 #ifndef WATCHDOG_DISABLE
@@ -1755,7 +1763,8 @@ void setup() {
         Serial.print("[settings] no /coco/settings.txt: defaults\r\n");
     settings_apply();
     Serial.printf("[boot] reset reason: %s\r\n", reset_reason_name());   // PIZERO-203
-    if (g_settings.soak_log)                   // PIZERO-201
+    soak_log_note_board(FW_VERSION);           // PIZERO-208
+    if (g_settings.soak_log)                 // PIZERO-201
         soak_log_begin(FW_VERSION, FW_ENV, watchdog_caused_reboot(), g_freeze_count,
                        g_freeze_count ? wd_phase_name(g_last_freeze_phase) : "none",
                        reset_reason_name());

@@ -32,6 +32,10 @@ void soak_log_tick(const char *run_line, const char *aud_line);
 
 bool soak_log_active(void);
 
+// PIZERO-208: add this board to /coco/log/boards.txt when it is not the last
+// board listed there, so a card records which boards it has been in.
+void soak_log_note_board(const char *fw);
+
 #ifdef __cplusplus
 }
 #endif

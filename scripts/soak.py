@@ -74,6 +74,10 @@ RE_CARD_BOOT = re.compile(r"\bboot=(power-on|watchdog-reboot) freezes=(\d+) last
 # PIZERO-203: the chip's own reset reason (logs from 2026-10-10 on). A
 # "software" reset is a fault handler's: a crash, not a power-on.
 RE_RESET = re.compile(r"\breset=(\S+)")
+# PIZERO-208: the board serial, from a card header (board=), the boot line
+# ([boot] board ...) or the recorder's own start line (usb_serial=).
+RE_BOARD = re.compile(r"(?:\bboard[= ]|\busb_serial=)([0-9A-F]{16})\b")
+QC_LOG = os.path.join(REPO, "qc", "qc-log.csv")
 
 # 60 Hz, and how far off it may drift before a second counts as a bad window.
 FPS_TARGET = 60.0
@@ -122,10 +126,13 @@ def cmd_record(args: argparse.Namespace) -> int:
 
     os.makedirs(LOGDIR, exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y-%m-%d-%H%M")
-    path = args.log or os.path.join(LOGDIR, f"{stamp}-{args.env}.log")
+    usb_serial = port_serial(args.device)
+    unit = qc_unit(usb_serial) if usb_serial else None
+    who = f"-unit{unit}" if unit else (f"-{usb_serial}" if usb_serial else "")
+    path = args.log or os.path.join(LOGDIR, f"{stamp}-{args.env}{who}.log")
     deadline = time.monotonic() + args.hours * 3600 if args.hours else None
 
-    print(f"logging {args.device} at {args.baud} -> {path}")
+    print(f"logging {args.device} at {args.baud}, board {board_text(usb_serial)} -> {path}")
     print("stop with ctrl-c; the log is flushed line by line, so a kill is safe")
     if deadline:
         print(f"will stop on its own after {args.hours} h")
@@ -135,7 +142,7 @@ def cmd_record(args: argparse.Namespace) -> int:
             f.write(f"[{now_hms()}] === {msg} ===\n")
 
         git, dirty = git_state()
-        mark(f"LOGGER START dev={args.device} baud={args.baud} env={args.env} "
+        mark(f"LOGGER START dev={args.device} usb_serial={usb_serial} baud={args.baud} env={args.env} "
              f"git={git}{'+dirty' if dirty else ''}")
         last_rx: float | None = None
         try:
@@ -253,6 +260,7 @@ def parse_log(path: str) -> dict:
     source = "serial"
     clock_src = None
     env_from_log = None
+    boards: list[str] = []          # PIZERO-208: serials seen, in order
     day_offset = 0.0
     cur_date: dt.date | None = None
     badfps = Counter()
@@ -295,6 +303,10 @@ def parse_log(path: str) -> dict:
                         gaps.append(d)
                 last_abs = a
                 last_ts = ts
+
+            mbd = RE_BOARD.search(body)
+            if mbd and mbd.group(1) not in boards:
+                boards.append(mbd.group(1))
 
             if RE_BOOT.search(body):
                 reboots += 1
@@ -444,6 +456,7 @@ def parse_log(path: str) -> dict:
         "sample_interval_s": interval,
         "clock_source": clock_src,
         "env_from_log": env_from_log,
+        "boards": [{"serial": b, "unit": qc_unit(b)} for b in boards],
         "duration_s": round(duration, 1),
         "duration_h": round(duration / 3600, 2),
         "observed_h": round(observed / 3600, 2),
@@ -527,6 +540,38 @@ ENV_FRAME = {
 }
 
 
+def qc_unit(serial: str) -> str | None:
+    """PIZERO-208: the QC log's unit number for a board serial (PIZERO-189)."""
+    try:
+        import csv
+        with open(QC_LOG, newline="") as f:
+            for row in csv.DictReader(f):
+                if row.get("board_serial") == serial:
+                    return row.get("unit")
+    except OSError:
+        pass
+    return None
+
+
+def port_serial(device: str) -> str | None:
+    """The USB serial number of a port, which is the board serial."""
+    try:
+        from serial.tools import list_ports
+        for p in list_ports.comports():
+            if p.device == device:
+                return p.serial_number
+    except ImportError:
+        pass
+    return None
+
+
+def board_text(serial: str | None) -> str:
+    if not serial:
+        return "unknown"
+    unit = qc_unit(serial)
+    return serial + (f" (unit {unit})" if unit else " (not in the QC log)")
+
+
 def frame_budget_pct(budget: dict, env: str) -> dict | None:
     """Share of the frame the medians use, and host clocks per emulated
     cycle, which the issues used to work out by hand."""
@@ -566,6 +611,8 @@ def cmd_analyse(args: argparse.Namespace) -> int:
     }
 
     g = metrics
+    print("board         " + (", ".join(board_text(b["serial"]) for b in g["boards"])
+                              or "not named in this log (before PIZERO-208)"))
     print(f"duration      {g['duration_h']} h wall clock, {g['observed_h']} h observed"
           + (f" ({g['gaps']} gaps, {g['lost_h']} h lost: the HOST stopped listening,"
              f" the board did not stop running)" if g["gaps"] else "")
