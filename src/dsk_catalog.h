@@ -31,11 +31,11 @@
 #include <strings.h>
 
 // 128 entries (~8 KB). The double-buffered firmware builds (no
-// AV_DATA_ISLAND) carry two framebuffers and have no RAM to spare, so they
-// list 64. Decided here, in the one header every user includes, so the
-// struct is the same size in every translation unit.
+// AV_DATA_ISLAND or FB_SINGLE) carry two framebuffers and have no RAM to
+// spare, so they list 64. Decided here, in the one header every user
+// includes, so the struct is the same size in every translation unit.
 #ifndef DSK_CAT_MAX
-#if defined(ARDUINO) && !defined(AV_DATA_ISLAND)
+#if defined(ARDUINO) && !defined(AV_DATA_ISLAND) && !defined(FB_SINGLE)
 #define DSK_CAT_MAX      64
 #else
 #define DSK_CAT_MAX      128

@@ -93,24 +93,24 @@ static uint8_t byte_indexed(STRUCT_CPU *cpu) {
 	return fetch_byte_notrace(cpu, ea);
 }
 
-static uint16_t word_immediate(STRUCT_CPU *cpu) {
+static uint16_t HOT_FUNC(word_immediate)(STRUCT_CPU *cpu) {
 	unsigned v = fetch_byte(cpu, REG_PC++);
 	return (v << 8) |  fetch_byte(cpu, REG_PC++);
 }
 
 #define long_relative word_immediate
 
-static uint16_t word_direct(STRUCT_CPU *cpu) {
+static uint16_t HOT_FUNC(word_direct)(STRUCT_CPU *cpu) {
 	unsigned ea = ea_direct(cpu);
 	return fetch_word_notrace(cpu, ea);
 }
 
-static uint16_t word_extended(STRUCT_CPU *cpu) {
+static uint16_t HOT_FUNC(word_extended)(STRUCT_CPU *cpu) {
 	unsigned ea = ea_extended(cpu);
 	return fetch_word_notrace(cpu, ea);
 }
 
-static uint16_t word_indexed(STRUCT_CPU *cpu) {
+static uint16_t HOT_FUNC(word_indexed)(STRUCT_CPU *cpu) {
 	unsigned ea = ea_indexed(cpu);
 	return fetch_word_notrace(cpu, ea);
 }
@@ -298,7 +298,7 @@ static uint8_t op_daa_v(STRUCT_CPU *cpu, uint8_t in) {
 
 // 8-bit arithmetic operations
 
-static uint8_t op_sub(STRUCT_CPU *cpu, uint8_t a, uint8_t b) {
+static uint8_t HOT_FUNC(op_sub)(STRUCT_CPU *cpu, uint8_t a, uint8_t b) {
 	unsigned out = a - b;
 	CLR_NZVC;
 	SET_NZVC8(a, b, out);
@@ -458,7 +458,7 @@ static uint16_t op_clr16(STRUCT_CPU *cpu, uint16_t in) {
 
 // 16-bit arithmetic operations
 
-static uint16_t op_sub16(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
+static uint16_t HOT_FUNC(op_sub16)(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
 	unsigned out = a - b;
 	CLR_NZVC;
 	SET_NZVC16(a, b, out);
@@ -507,7 +507,7 @@ static uint16_t op_or16(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
 	return out;
 }
 
-static uint16_t op_add16(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
+static uint16_t HOT_FUNC(op_add16)(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
 	unsigned out = a + b;
 	CLR_NZVC;
 	SET_NZVC16(a, b, out);
@@ -516,7 +516,7 @@ static uint16_t op_add16(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
 
 // Determine branch condition from op-code
 
-static _Bool branch_condition(STRUCT_CPU const *cpu, unsigned op) {
+static _Bool HOT_FUNC(branch_condition)(STRUCT_CPU const *cpu, unsigned op) {
 	_Bool cond;
 	_Bool invert = op & 1;
 	switch ((op >> 1) & 7) {

@@ -431,7 +431,7 @@ static unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
 
 static void vcounter_set(struct MC6883_private *sam, int i, int val);
 
-static void vcounter_update(struct MC6883_private *sam, int i) {
+static void HOT_FUNC(vcounter_update)(struct MC6883_private *sam, int i) {
 	_Bool old_input = sam->vcounter[i].input;
 	_Bool new_input = sam->vcounter[sam->vcounter[i].input_from].output;
 	if (new_input != old_input) {
@@ -608,7 +608,7 @@ static void update_vcounter_inputs(struct MC6883_private *sam) {
 	}
 }
 
-static void update_from_register(struct MC6883_private *sam) {
+static void HOT_FUNC(update_from_register)(struct MC6883_private *sam) {
 	int old_ydiv = vdg_ydivs[sam->Vprev];
 	int old_xdiv = vdg_xdivs[sam->Vprev];
 

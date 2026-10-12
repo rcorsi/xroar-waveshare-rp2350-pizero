@@ -141,7 +141,7 @@ void mc6821_reset(struct MC6821 *pia) {
 	mc6821_update_b_state(pia);
 }
 
-void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
+void HOT_FUNC(mc6821_set_cx1)(struct MC6821_side *side, _Bool level) {
 	if (level == side->cx1)
 		return;
 	side->cx1 = level;
@@ -233,7 +233,7 @@ uint8_t HOT_FUNC(mc6821_read)(struct MC6821 *pia, uint16_t A) {
 	}
 }
 
-static void write_cr(struct MC6821_side *side, uint8_t D) {
+static void HOT_FUNC(write_cr)(struct MC6821_side *side, uint8_t D) {
 	side->control_register = D & 0x3f;
 	if (D & 0x20) {
 		side->irq2_received = 0;
@@ -346,7 +346,7 @@ static void do_restore_cx2(void *sptr) {
 	DELEGATE_SAFE_CALL(side->control_postwrite);
 }
 
-static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level) {
+static void HOT_FUNC(mc6821_update_cx2_state)(struct MC6821_side *side, _Bool level) {
 	// Bit 5 set configures Cx2 as output
 	if (side->control_register & 0x20) {
 		side->irq2_received = 0;

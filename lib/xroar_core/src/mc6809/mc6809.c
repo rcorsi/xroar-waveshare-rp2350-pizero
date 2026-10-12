@@ -1427,7 +1427,7 @@ static uint16_t HOT_FUNC(ea_indexed)(struct MC6809 *cpu) {
  * Interrupt handling, hooks
  */
 
-static void push_irq_registers(struct MC6809 *cpu) {
+static void HOT_FUNC(push_irq_registers)(struct MC6809 *cpu) {
 	NVMA_CYCLE;
 	push_s_word(cpu, REG_PC);
 	push_s_word(cpu, REG_U);
@@ -1455,7 +1455,7 @@ static void stack_firq_registers(struct MC6809 *cpu) {
 	push_firq_registers(cpu);
 }
 
-static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
+static void HOT_FUNC(take_interrupt)(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
 	cpu->state = mc6809_state_irq_reset_vector;

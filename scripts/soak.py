@@ -304,6 +304,13 @@ def parse_log(path: str) -> dict:
                 last_abs = a
                 last_ts = ts
 
+            # The logger names the env it was told; a boot banner later in the
+            # log overrides it (a run recorded after boot has no banner).
+            if "LOGGER START" in body and env_from_log is None:
+                me = RE_ENV.search(body)
+                if me:
+                    env_from_log = me.group(1)
+
             mbd = RE_BOARD.search(body)
             if mbd and mbd.group(1) not in boards:
                 boards.append(mbd.group(1))

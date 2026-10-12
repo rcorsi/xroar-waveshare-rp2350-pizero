@@ -24,6 +24,7 @@
 
 #include "events.h"
 #include "logging.h"
+#include "hot.h"  // PIZERO-131: the run loop queues events per scanline
 
 extern inline int event_tick_delta(event_ticks t0, event_ticks t1);
 extern inline _Bool event_pending(struct event_list *, event_ticks to_time);
@@ -67,7 +68,7 @@ void event_free(struct event *event) {
 	free(event);
 }
 
-void event_queue(struct event *event) {
+void HOT_FUNC(event_queue)(struct event *event) {
 	struct event **entry;
 	if (event->queued)
 		event_dequeue(event);
@@ -90,7 +91,7 @@ void event_queue_auto(struct event_list *list, DELEGATE_T0(void) delegate, int d
 	event_queue(e);
 }
 
-void event_dequeue(struct event *event) {
+void HOT_FUNC(event_dequeue)(struct event *event) {
 	if (!event->queued)
 		return;
 	event->queued = 0;

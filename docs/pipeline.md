@@ -79,8 +79,8 @@ Every shipping build defines `AV_DATA_ISLAND` and so **single-buffers**: one
 for the audio islands, trading tear-free for never-starving: core 1 may scan a line
 mid-blit and tear, but it never drops to a solid-color glitch.
 
-Only a build without `AV_DATA_ISLAND` double-buffers, and the one such env left is
-the diagnostic `pizero_wavmeas`. There core 0 blits into the back buffer, then
+Only a build with neither `AV_DATA_ISLAND` nor `FB_SINGLE` double-buffers, and no
+env does since PIZERO-131 made `pizero_wavmeas` single-buffered. There core 0 blits into the back buffer, then
 **publishes** `g_front = g_fb[g_back]` at the frame boundary and flips `g_back`.
 `g_front` is `volatile` so core 1 always reads the latest pointer; it samples it
 **once per frame**, so those swaps are tear-free.

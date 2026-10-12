@@ -39,8 +39,8 @@ a build flag.
   `pizero_stream_60` (PIZERO-45: true 640×480p60 + streaming data-island audio + USB), so a
   bare `pio run` builds it. `pizero_stream` (off-spec 52 Hz audio) is kept as the
   fallback; the rest are diagnostics tied to open issues. Before committing a
-  change that adds RAM, also build `pizero_stream` and the double-buffered
-  `pizero_wavmeas` (~99% RAM). Use a real env, never a
+  change that adds RAM, also build `pizero_stream` and `pizero_wavmeas` (every
+  env is single-buffered at 73-77% RAM since PIZERO-131). Use a real env, never a
   one-off `PLATFORMIO_BUILD_FLAGS` (it links stale objects, see BUILD.md §4b).
 
 ## Build gotchas to remember

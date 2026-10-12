@@ -206,7 +206,13 @@ static const struct dvi_timing dvi_timing_640x480p_57hz_240mhz = {
 
 // PIZERO-14: double-buffered. Core 0 renders into the back buffer, then swaps
 // g_front at a frame boundary; core 1 samples g_front once per frame -> no tearing.
-#ifdef AV_DATA_ISLAND
+// FB_SINGLE picks one framebuffer instead. Every data-island build needs it; a
+// build without data islands can ask for it too (PIZERO-131: pizero_wavmeas,
+// which shows no picture, so its second buffer was 150 KB spent on nothing).
+#if defined(AV_DATA_ISLAND) && !defined(FB_SINGLE)
+#define FB_SINGLE
+#endif
+#ifdef FB_SINGLE
 // PIZERO-30 (M1): Data-island audio builds SINGLE-buffer the framebuffer. The ~150 KB
 // freed is needed for the 43 per-vblank-line audio-island buffers (M2). Cost is
 // tearing (core 1 may scan g_fb mid-blit); acceptable per docs/audio-decision.md.
@@ -631,7 +637,7 @@ static void hid_keyboard_apply(const uint8_t *report) {
 static uint8_t g_coco_rom[16384];
 // PIZERO-139: room for a 16 KB cartridge. The double-buffered builds have
 // no RAM to spare (two framebuffers), so they keep the old 8 KB limit.
-#ifdef AV_DATA_ISLAND
+#ifdef FB_SINGLE
 #define COCO_CART_MAX 16384
 #else
 #define COCO_CART_MAX 8192
@@ -1183,7 +1189,7 @@ static void settings_apply(void) {
 // Put the finished card on screen. Shared by the boot pages and the F12
 // overlay (PIZERO-81), which both draw while the machine is not running.
 static void present_card(void) {
-#ifdef AV_DATA_ISLAND
+#ifdef FB_SINGLE
     coco_boot_card_present(g_fb);
 #else
     coco_boot_card_present(g_fb[0]);
@@ -2027,7 +2033,7 @@ void loop() {
     coco_machine_render_frame();                  // regenerate VDG buffer (SUPPRESS_RENDER_SCANLINE)
     c = micros();
     wd_phase(WP_BLIT);
-#ifdef AV_DATA_ISLAND
+#ifdef FB_SINGLE
     coco_boot_blit_vdg_pizero(g_fb);              // single buffer; g_front already points at it
 #else
     coco_boot_blit_vdg_pizero(g_fb[g_back]);      // render into the back buffer

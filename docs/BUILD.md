@@ -55,7 +55,7 @@ buildable on its own.
 | `pizero_cpuprof` | `pizero_stream_60` | `-DCPU_PROF=1` | single-buffered | product + the M33 cycle counter timing the 6809's bus path, with cycle, dummy-cycle and instruction counts: a `[prof]` line a second splits host clocks per emulated cycle into bus and core (PIZERO-209). The bus helpers are forced inline so the layout matches the product | ~77% |
 | `pizero_cpuprof_hook` | `pizero_stream_60` | `-DCPU_PROF=2` | single-buffered | `pizero_cpuprof` plus the hook split into its sections (decode, data, events and audio, irq and budget) | ~77% |
 | `pizero_wdtest` | `pizero_stream` | `-DWATCHDOG_SELFTEST` | single-buffered | wedges core 0 to prove watchdog recovery (PIZERO-33) | ~75% |
-| `pizero_wavmeas` | `pizero_base` | `-DAUDIO_WAV_DUMP` | double-buffered | no data-island audio: dumps the emulator's sound as WAV over USB (PIZERO-41) | ~99% |
+| `pizero_wavmeas` | `pizero_base` | `-DAUDIO_WAV_DUMP -DFB_SINGLE` | single-buffered | no data-island audio: dumps the emulator's sound as WAV over USB (PIZERO-41) | ~73% |
 | `native` | (none) | `platform = native`, Unity | n/a | host unit tests, no board (PIZERO-109): `pio test -e native`, 16 suites, 222 cases | n/a |
 
 PIZERO-150 retired `pizero` and `pizero_60hz` (silent, double-buffered, ~99%
@@ -75,18 +75,21 @@ see the comments by each `[env:…]` in `platformio.ini`.
 > audio path (especially the `__not_in_flash_func`/`PICO_NO_HARDWARE` trap and the
 > "verify RAM placement with `nm`" rule).
 
-### Why the audio builds use *less* RAM than `pizero_wavmeas`
+### Single-buffered everywhere
 `AV_DATA_ISLAND` switches the 320×240 framebuffer from double-buffered
 (2 × ~153 KB) to single-buffered, freeing ~150 KB for the per-line audio-island
-buffers (see `g_fb` in `src/main.cpp`, under `#ifdef AV_DATA_ISLAND`). The
-trade-off is possible tearing (core 1 may scan the framebuffer mid-blit),
-accepted per `docs/audio-decision.md`. Every shipping env defines
-`AV_DATA_ISLAND`, so every shipping build is single-buffered. The only
-double-buffered env left is the diagnostic `pizero_wavmeas`, which drops
-data-island audio to dump the sound over USB instead. Measured 2026-09-27: the audio envs
-sit at **~75%**, while `pizero_wavmeas` is nearly full at **~99%** (~5 KB
-spare). So a new static buffer that fits the product can still overflow
-`pizero_wavmeas`: build both when adding RAM, and watch the link report.
+buffers (see `g_fb` in `src/main.cpp`, under `#ifdef FB_SINGLE`, which
+`AV_DATA_ISLAND` turns on). The trade-off is possible tearing (core 1 may scan
+the framebuffer mid-blit), accepted per `docs/audio-decision.md`. Every shipping
+env defines `AV_DATA_ISLAND`, so every shipping build is single-buffered.
+
+`pizero_wavmeas` drops data-island audio to dump the sound over USB instead, and
+was the last double-buffered env, at ~99% RAM. PIZERO-131 overflowed it by 2 KB
+(17 core helpers moved to RAM), and since it shows no picture, it now sets
+`FB_SINGLE` directly (~73%). Without `FB_SINGLE` or `AV_DATA_ISLAND` a build is
+still double-buffered, with an 8 KB cartridge limit and a 64-entry disk catalog;
+no env uses that now. Every env sits at 73-77% RAM, so there is no near-full
+canary build any more: check the link report of the env you changed.
 
 ---
 
@@ -129,6 +132,7 @@ All flags are plain `-D` macros consumed in `src/main.cpp`. The **master switch 
 ### Source validation (no video link required)
 | Flag | Effect |
 |------|--------|
+| `FB_SINGLE` | One framebuffer instead of two. `AV_DATA_ISLAND` turns it on; set alone it single-buffers a build without data islands (`pizero_wavmeas`, PIZERO-131), which also gets the 16 KB cartridge limit and the 128-entry disk catalog. |
 | `AUDIO_WAV_DUMP` | Stream the CoCo audio ring as a **base64 WAV over USB-CDC** (markers `---WAV-BEGIN---` / `---WAV-END---`) with an autotyped tone program. Validates the audio **source** independent of data-island delivery. Skips the SD autorun boot. Works without `AV_DATA_ISLAND`. |
 | `AUDIO_DUMP_SECONDS` | Length (s) of the WAV-dump capture window. |
 | `AUDIO_SF_*`, `AUDIO_SS_*` | Audio sample-frequency / sample-size code overrides (advanced; default 48 kHz / 16-bit). |
@@ -187,8 +191,8 @@ in editor; they are **not** real build errors (the actual `pio run` is clean).
 
 - **Size:** the link report prints `RAM: … %`. Measured 2026-09-27: the audio
   envs (`pizero_stream_60`, `pizero_stream` and the diagnostics built on them)
-  **~75%**. `pizero_wavmeas` is double-buffered at **~99%** with ~5 KB spare, so
-  a new static buffer can overflow it; build it too when adding RAM. Check it.
+  **~75%**. Since PIZERO-131 every env is single-buffered and between 73% and 77%;
+  check the report of each env a change touches.
 - **Serial telemetry:** `pio device monitor` (115200). The running emulator prints
   `[run] fps cpu render blit aud …`. Confirm `fps≈60` on `pizero_stream_60`
   (`≈52` on the `pizero_stream` fallback), frame time under budget.
