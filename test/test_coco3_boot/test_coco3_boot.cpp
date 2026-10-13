@@ -213,12 +213,20 @@ static void render_run(int port, int vmode, int vres) {
         for (uint32_t z = 0; z < 0x8000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
         c3_set_pc(0x3000);
         for (int f = 0; f < 6; f++) c3_run_ticks(FRAME_TICKS);
+        // Change part of VRAM: the port renderer skips unchanged lines, so
+        // the changed ones must still be drawn.
+        for (uint32_t z = 0x800; z < 0x2000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
+        for (int f = 0; f < 2; f++) c3_run_ticks(FRAME_TICKS);
     }
 }
 
 static void check_port_render(int vmode, int vres, const char *what) {
     render_run(0, vmode, vres);
     memcpy(g_fb_ref, c3_fb(), sizeof g_fb_ref);
+    static uint16_t fb2[320 * 240];
+    render_run(2, vmode, vres);                 // through fetch_vram
+    memcpy(fb2, c3_fb(), sizeof fb2);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(g_fb_ref, fb2, sizeof fb2, what);
     render_run(1, vmode, vres);
     const uint16_t *fb = c3_fb();
     int bad = -1, n = 0;

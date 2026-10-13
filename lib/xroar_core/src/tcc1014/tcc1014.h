@@ -85,9 +85,17 @@ struct TCC1014 {
 	// 6-bit colour. The active area is drawn in one go with the state at its
 	// start (or at the first register change inside it), not pixel by pixel.
 	_Bool port_render;
+	// Where the port_render renderer reads video RAM directly: physical
+	// $00000-$0FFFF and $10000-$1FFFF of a 128 KB machine (addresses wrap at
+	// 128 KB). NULL: it uses fetch_vram. It passes render_line NULL for an
+	// active line whose inputs match the same scanline's last frame; setting
+	// port_redraw makes every line draw again (after the port drew over them).
+	const uint8_t *port_vram[2];
+	_Bool port_redraw;
 };
 
 #define TCC1014_PORT_W 320
+#define TCC1014_PORT_LINES 320
 
 void tcc1014_reset(struct TCC1014 *gimep);
 void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);

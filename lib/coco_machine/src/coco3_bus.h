@@ -151,9 +151,13 @@ static inline uint16_t coco3_bus_fetch_vram(const struct coco3_bus *b, uint32_t 
     return (uint16_t)((p[0] << 8) | p[1]);
 }
 
-static inline void coco3_bus_set_active_area(struct coco3_bus *b, int x, int y, int w, int h) {
+// True when the area moved, so the rows the lines land on changed.
+static inline bool coco3_bus_set_active_area(struct coco3_bus *b, int x, int y, int w, int h) {
     if (h > 225) h = 225;                      // LPF "infinite": show what fits
+    bool moved = x != b->act_x || y != b->act_y || w != b->act_w || h != b->act_h;
     b->act_x = x; b->act_y = y; b->act_w = w; b->act_h = h;
+    if (moved) coco3_bus_invalidate(b);
+    return moved;
 }
 
 static inline void coco3_bus_frame_sync(struct coco3_bus *b, bool level) {

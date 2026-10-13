@@ -138,7 +138,7 @@ static void render_line(void *sptr, unsigned burst, unsigned npixels, const uint
 }
 static void set_active_area(void *sptr, int x, int y, int w, int h) {
     (void)sptr;
-    coco3_bus_set_active_area(&bus, x, y, w, h);
+    if (coco3_bus_set_active_area(&bus, x, y, w, h)) gime->port_redraw = 1;
 }
 
 int c3_init(const uint8_t *rom32k, int fast_path) {
@@ -205,4 +205,8 @@ const uint16_t *c3_fb(void) { return fb; }
 uint8_t c3_phys(uint32_t Z) { return *coco3_ram_at(&bus, Z); }
 void c3_poke(uint32_t Z, uint8_t v) { *coco3_ram_at(&bus, Z) = v; }
 void c3_set_pc(uint16_t pc) { cpu->reg_pc = pc; }
-void c3_set_port_render(int on) { gime->port_render = on; }
+void c3_set_port_render(int on) {
+    gime->port_render = on;
+    gime->port_vram[0] = on == 1 ? ram[0] : NULL;   // 2: through fetch_vram
+    gime->port_vram[1] = on == 1 ? ram[1] : NULL;
+}

@@ -1258,7 +1258,8 @@ static void HOT_FUNC(coco3_render_line)(void *sptr, unsigned burst, unsigned npi
 }
 static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
     (void)sptr;
-    coco3_bus_set_active_area(&g_c3bus, x, y, w, h);
+    // PIZERO-218: lines land on other rows now; draw them all again.
+    if (coco3_bus_set_active_area(&g_c3bus, x, y, w, h)) coco_machine_video_invalidate();
 }
 
 // Where the CoCo 3 draws: the 320x240 RGB565 framebuffer core 1 scans out.
@@ -1266,13 +1267,14 @@ static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
 // blitted between frames.
 extern "C" void coco_machine_set_framebuffer(uint16_t *fb) {
     g_c3bus.fb = fb;
-    coco3_bus_invalidate(&g_c3bus);
+    coco_machine_video_invalidate();
 }
 
 // PIZERO-213: something else drew over the picture (the overlay); every row
 // is drawn again as its scanline comes round.
 extern "C" void coco_machine_video_invalidate(void) {
     coco3_bus_invalidate(&g_c3bus);
+    if (g_gime3) g_gime3->port_redraw = true;        // PIZERO-218: it skips unchanged lines too
 }
 
 extern "C" _Bool coco_machine_is_coco3(void) { return g_c3; }
@@ -1329,6 +1331,8 @@ static _Bool coco3_init(const uint8_t *rom) {
     g_gime3->set_active_area = DELEGATE_AS4(void, int, int, int, int, coco3_set_active_area, NULL);
     g_gime3->CPUD = &g_m.cpu->D;
     g_gime3->port_render = true;                     // PIZERO-218: 320 pixels a line
+    g_gime3->port_vram[0] = lo;
+    g_gime3->port_vram[1] = hi;
     tcc1014_notify_mode(g_gime3);
     tcc1014_reset(g_gime3);
     fastbus_sync();                                  // PIZERO-213: the GIME's map
