@@ -41,8 +41,9 @@
 #define PART_SER_DATA (2)
 
 /* RP2350 port: partdb pruned to only the parts we vendored. Machine, cart,
- * MC6801, MC10, TCC1014, mos6551, ay891x, hd6309, samx8 and friends are
- * intentionally absent — their .c files weren't brought in. */
+ * MC6801, MC10, mos6551, ay891x, hd6309, samx8 and friends are
+ * intentionally absent — their .c files weren't brought in. TCC1014 (the
+ * CoCo 3's GIME) came in with PIZERO-133. */
 
 extern const struct partdb_entry clock_group_part;
 extern const struct partdb_entry ram_part;
@@ -52,6 +53,8 @@ extern const struct partdb_entry mc6883_part;
 extern const struct partdb_entry sn74ls785_part;
 extern const struct partdb_entry mc6847_part;
 extern const struct partdb_entry mc6847t1_part;
+extern const struct partdb_entry tcc1014_1986_part;
+extern const struct partdb_entry tcc1014_1987_part;
 
 const struct partdb_entry *partdb[] = {
 	&clock_group_part,
@@ -62,6 +65,8 @@ const struct partdb_entry *partdb[] = {
 	&sn74ls785_part,
 	&mc6847_part,
 	&mc6847t1_part,
+	&tcc1014_1986_part,
+	&tcc1014_1987_part,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

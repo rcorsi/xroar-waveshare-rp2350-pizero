@@ -25,6 +25,7 @@ From `src/`:
 - `mc6847/mc6847.[ch]`, `font-6847.[ch]`, `font-6847t1.[ch]`
 - `mc6821.[ch]` (PIA)
 - `ram.[ch]`, `part.[ch]`, `serialise.[ch]`, `events.[ch]`
+- `tcc1014/tcc1014.[ch]`, `tcc1014/font-gime.[ch]` (the CoCo 3's GIME, PIZERO-133, copied 2026-10-13 at the same pinned commit). `tcc1014.c` has its serialisation removed, like the other parts here; nothing else changed.
 - `logging.h` (verbatim: its no-op path is used; `LOGGING` is never defined)
 - `breakpoint.h`, `dkbd.h`, `debug_cpu.h`, `fs.h` (declarations only)
 
@@ -34,6 +35,7 @@ From `portalib/`:
 ## Files explicitly NOT vendored
 
 - `rombank.c` / `crc32.c`: host file I/O. We embed ROMs as const arrays (see COCO-22).
+- `coco3.c`: the CoCo 3 machine glue. Its RAM, ROM, video-fetch and scanline handling are rewritten in `lib/coco_machine/src/coco3_bus.h` (PIZERO-133).
 - `dragon.c` / `coco.c` / `dragon32.c` etc.: XRoar machine glue. We write our own coco_machine.c (COCO-25).
 - Host backends (`sdl2/`, `gtk2/`, `alsa/`, `pulseaudio/`, `evdev/`, `joydev/`, `wasm/`, `macosx/`, etc.).
 - ROM loaders, cartridge code, disk/tape: deferred to later issues.

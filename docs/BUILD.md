@@ -204,6 +204,12 @@ in editor; they are **not** real build errors (the actual `pio run` is clean).
   `COCO_ROM_DIR=<folder with bas12.rom and extbas11.rom>` it also boots Color
   BASIC for three million instructions (skipped otherwise; the repo ships no
   ROMs). The whole native suite runs in about ten seconds.
+- **CoCo 3 boot (PIZERO-133):** `pio test -e native -f test_coco3_boot` boots
+  a 128 KB CoCo 3 on the host: the live 6809 core and PIAs, the vendored GIME
+  (`lib/xroar_core/src/tcc1014`) and `lib/coco_machine/src/coco3_bus.h`. It
+  needs `coco3.rom` (32 KB) in `COCO_ROM_DIR` and is skipped without it.
+  `COCO3_DUMP=<file>` also writes the last frame as raw RGB565 (320x240) to
+  look at.
 - **Soaking without a laptop (PIZERO-201):** put `soak_log = on` in
   `/coco/settings.txt` (F11 edits it on the board; it takes effect at the next
   power-on). Each boot then writes `/coco/log/soak-NNN.txt`: a header with the

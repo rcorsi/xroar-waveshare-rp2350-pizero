@@ -10,6 +10,7 @@
       "-<src/serialise.c>",
       "+<src/mc6809/mc6809.c>",
       "+<src/mc6847/*.c>",
+      "+<src/tcc1014/*.c>",
       "+<portalib/*.c>",
       "-<portalib/sdsx.c>",
       "-<portalib/sds.c>",
