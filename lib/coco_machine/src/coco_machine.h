@@ -176,6 +176,13 @@ const uint8_t *coco_machine_get_vdg_buffer(void);
  * via SUPPRESS_RENDER_SCANLINE in this build. */
 void coco_machine_render_frame(void);
 
+/* PIZERO-133: CoCo 3 mode, chosen by passing coco_machine_init a 32 KB
+ * Super Extended Color BASIC ROM. The GIME then draws each scanline straight
+ * into the 320x240 RGB565 framebuffer given here, so render_frame and the
+ * VDG blit are not used. */
+void coco_machine_set_framebuffer(uint16_t *fb);
+_Bool coco_machine_is_coco3(void);
+
 /* Diagnostic accessors: useful for smoke tests. */
 uint16_t coco_machine_get_pc(void);
 uint32_t coco_machine_get_total_mem_cycles(void);

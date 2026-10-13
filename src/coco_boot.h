@@ -48,6 +48,8 @@ bool coco_boot_load_autorun(struct coco_autorun *out);
 // System-ROM loader. Tries /coco/rom/{extbas11,bas12}.rom first, then
 // /coco/{extbas11,bas12}.rom.
 bool coco_boot_load_rom_from_sd(uint8_t *rom16k);
+// PIZERO-133: the CoCo 3's 32 KB Super Extended Color BASIC, coco3.rom.
+bool coco_boot_load_coco3_rom(uint8_t *rom32k);
 
 // Cart ROM loader. `name` is a bare filename; tried under /coco/rom/
 // then /coco/. Pass "disk11.rom" for default Disk BASIC.
@@ -162,6 +164,8 @@ struct coco_rom_status {
     uint32_t bas_bytes;      /* bytes read; 8192 is correct */
     bool     ecb_found;      /* extbas11.rom resolved */
     uint32_t ecb_bytes;
+    bool     c3_found;       /* PIZERO-133: coco3.rom resolved */
+    uint32_t c3_bytes;       /* bytes read; 32768 is correct */
 };
 const struct coco_rom_status *coco_boot_rom_status(void);
 

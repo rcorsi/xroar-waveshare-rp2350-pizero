@@ -544,6 +544,23 @@ extern "C" bool coco_boot_load_rom_from_sd(uint8_t *rom16k) {
     return true;
 }
 
+// PIZERO-133: coco3.rom, from /coco/roms/ then /coco/, exactly 32 KB.
+extern "C" bool coco_boot_load_coco3_rom(uint8_t *rom32k) {
+    char path[80];
+    g_rom_status = (struct coco_rom_status){};
+    g_rom_status.c3_found = coco_boot_resolve("rom", "coco3.rom", path, sizeof(path));
+    if (g_rom_status.c3_found)
+        g_rom_status.c3_bytes = (uint32_t)read_rom_file(path, rom32k, 32768);
+    if (g_rom_status.c3_bytes != 32768) {
+        Serial.printf("[rom] coco3.rom %s (looked in /coco/roms/ then /coco/)\r\n",
+                      g_rom_status.c3_found ? "is the wrong size" : "is required");
+        return false;
+    }
+    Serial.printf("[rom] coco3.rom, reset vector -> $%02X%02X\r\n",
+                  rom32k[0x7FFE], rom32k[0x7FFF]);
+    return true;
+}
+
 // AMOLED-58: cart loader takes a bare filename so autorun.txt can
 // pick an alternate cart (e.g. a game .ccc) via @CART.
 // PIZERO-142: where a cartridge name lives, in the loader's search order.

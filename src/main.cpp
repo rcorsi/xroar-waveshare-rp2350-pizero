@@ -634,7 +634,11 @@ static void hid_keyboard_apply(const uint8_t *report) {
 }
 
 // ---- ROM/boot (same flow as the AMOLED port) -----------------------------
+#ifdef COCO3
+static uint8_t g_coco_rom[32768];          // PIZERO-133: coco3.rom
+#else
 static uint8_t g_coco_rom[16384];
+#endif
 // PIZERO-139: room for a 16 KB cartridge. The double-buffered builds have
 // no RAM to spare (two framebuffers), so they keep the old 8 KB limit.
 #ifdef FB_SINGLE
@@ -1737,6 +1741,22 @@ void setup() {
         return;
     }
     coco_boot_clock_init();                    // PIZERO-201: before anything writes a file
+#ifdef COCO3
+    // PIZERO-133: the CoCo 3 build runs Super Extended Color BASIC only.
+    if (!coco_boot_load_coco3_rom(g_coco_rom)) {
+        const struct coco_rom_status *rs = coco_boot_rom_status();
+        static char detail[96];
+        if (rs->c3_found) {
+            snprintf(detail, sizeof detail,
+                     "FOUND COCO3.ROM BUT IT IS %lu BYTES. IT MUST BE 32768.",
+                     (unsigned long)rs->c3_bytes);
+            boot_page(MSG_BADROM_TITLE, MSG_BADROM3_BODY, detail);
+        } else {
+            boot_page(MSG_NOROM_TITLE, MSG_NOROM3_BODY, MSG_NOROM_DETAIL);
+        }
+        return;
+    }
+#else
     if (!coco_boot_load_rom_from_sd(g_coco_rom)) {
         Serial.print("ROM load FAILED (need /coco/roms/bas12.rom [+extbas11.rom])\r\n");
         // A present-but-wrong-size ROM is NOT the same problem as a missing
@@ -1755,6 +1775,8 @@ void setup() {
         }
         return;
     }
+#endif
+    Serial.printf("[mem] free heap %d bytes before the machine\r\n", rp2040.getFreeHeap());
     if (!coco_machine_init(g_coco_rom, sizeof(g_coco_rom))) {
         Serial.print("coco_machine_init failed\r\n");
         // Deliberately different wording from the missing-ROM case: this one
@@ -1763,6 +1785,11 @@ void setup() {
         boot_page(MSG_INIT_TITLE, MSG_INIT_BODY, MSG_INIT_DETAIL);
         return;
     }
+#ifdef COCO3
+    // PIZERO-133: the GIME draws straight into the one framebuffer.
+    coco_machine_set_framebuffer(g_fb);
+    Serial.printf("[mem] free heap %d bytes with the CoCo 3's 128 KB\r\n", rp2040.getFreeHeap());
+#endif
 
     // PIZERO-145: settings from the card, now that the machine exists to
     // take them and before AUTORUN, which reset_button governs.
@@ -1781,6 +1808,7 @@ void setup() {
     // Extended and Disk BASIC. Someone who notices DISK commands failing has
     // no way to connect that to a file they never copied, so say it once, on
     // the screen, before handing over to the machine.
+#ifndef COCO3                         // PIZERO-133: coco3.rom is the whole BASIC
     {
         const struct coco_rom_status *rs = coco_boot_rom_status();
         if (rs->ecb_bytes != 8192) {
@@ -1788,6 +1816,7 @@ void setup() {
             boot_wait(4000);      // long enough to read; a key skips it (PIZERO-152)
         }
     }
+#endif
 
     // PIZERO-81a: the disk catalogue the F12 overlay lists, dumped once so it
     // can be checked over serial before anything is drawn.
@@ -2030,6 +2059,10 @@ void loop() {
     coco_machine_run_cycles(CYCLES_PER_FRAME * CPU_SPEED_MUL);
     coco_boot_disk_tick();                       // PIZERO-66: sync an idle dirty drive
     b = micros();
+#ifdef COCO3
+    // PIZERO-133: the GIME drew each scanline into g_fb as it went.
+    c = d = b;
+#else
     wd_phase(WP_RENDER);
     coco_machine_render_frame();                  // regenerate VDG buffer (SUPPRESS_RENDER_SCANLINE)
     c = micros();
@@ -2042,6 +2075,7 @@ void loop() {
     g_back ^= 1;
 #endif
     d = micros();
+#endif
     }
     if (g_shot_request) {
         // PIZERO-165: save what is on the screen now. The machine and its

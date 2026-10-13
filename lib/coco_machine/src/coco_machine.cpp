@@ -24,6 +24,7 @@
 #include "audio_servo.h"
 #include "audio_integ.h"       // PIZERO-131, host-tested
 #include "audio_lowpass.h"     // PIZERO-212, host-tested
+#include "coco3_bus.h"         // PIZERO-133, host-tested
 #ifdef GIME_TIMER
 #include "gime_timer.h"
 #endif
@@ -46,6 +47,7 @@ extern "C" {
 #include "xroar.h"
 #include "cpu_prof.h"        // PIZERO-209: empty unless CPU_PROF
 #include "coco_fastbus.h"     // PIZERO-131: RAM and ROM read by the core itself
+#include "tcc1014/tcc1014.h"   // PIZERO-133: the CoCo 3's GIME
 }
 
 struct CocoMachine {
@@ -116,11 +118,31 @@ struct CocoMachine {
     // alignas(4): the alpha and RG6 renderers write it a 32-bit word at a
     // time (8 packed pixels per store), which was already assumed before
     // PIZERO-119 and is now relied on by three paths. Make it explicit.
+#ifdef COCO3
+    // PIZERO-133: the CoCo 3 build draws straight into the framebuffer, and
+    // needs these 24 KB for its ROM and the second 64 KB of RAM.
+    alignas(4) uint8_t vdg_buffer[4];
+#else
     alignas(4) uint8_t vdg_buffer[COCO_VDG_H * (COCO_VDG_W / 2)];
+#endif
 };
 static_assert((COCO_VDG_W & 1) == 0, "COCO_VDG_W must be even for nibble packing");
 
 static CocoMachine g_m;
+
+// PIZERO-133: CoCo 3 mode, chosen by giving coco_machine_init a 32 KB ROM.
+// The GIME is then the bus: the 6809's cycles go to tcc1014_mem_cycle, which
+// decodes them through its MMU and calls coco3_cpu_cycle with the result.
+// coco3_bus.h holds the portable half (RAM, ROM, video fetch, scanlines).
+// Only the CoCo 3 build (-DCOCO3, env pizero_coco3) carries it; elsewhere
+// g_c3 is a constant false and the compiler drops every CoCo 3 branch.
+#ifdef COCO3
+static bool g_c3 = false;
+#else
+static const bool g_c3 = false;
+#endif
+static struct TCC1014 *g_gime3 = nullptr;
+static struct coco3_bus g_c3bus;
 
 // PIZERO-55/85: the palette register file. A real 6847 has no palette at all,
 // but this port already looks every pixel up in a 16-entry table on its way to
@@ -690,6 +712,13 @@ extern "C" unsigned coco_machine_fdc_drive(void) {
 
 extern "C" void coco_machine_loadm_write(uint16_t addr, const uint8_t *src, uint16_t len) {
     if (!g_m.ram) return;
+    if (g_c3) {
+        // PIZERO-133: through the map BASIC sets up, logical $0000-$FFFF on
+        // physical $70000-$7FFFF. A program that remaps first is not handled.
+        for (uint16_t i = 0; i < len; i++)
+            *coco3_ram_at(&g_c3bus, 0x70000u + (uint16_t)(addr + i)) = src[i];
+        return;
+    }
     for (uint16_t i = 0; i < len; i++) {
         g_m.ram[(uint16_t)(addr + i)] = src[i];
     }
@@ -774,6 +803,14 @@ extern "C" { struct coco_fastbus coco_fastbus; }
 static const uint8_t k_open_bus = 0xFF;   // no cartridge: reads float high
 
 static inline void fastbus_sync(void) {
+    if (g_c3) {
+        // PIZERO-133: every cycle goes through the GIME for now (the MMU
+        // fast path is a later step). The cartridge is still kept current.
+        g_c3bus.cart = g_m.cart_rom;
+        g_c3bus.cart_mask = g_m.cart_mask;
+        coco_fastbus.ram_top = coco_fastbus.rom_top = coco_fastbus.cart_top = 0;
+        return;
+    }
     coco_fastbus.ram = g_m.ram;
     coco_fastbus.rom = g_m.rom;
     coco_fastbus.cart = g_m.cart_rom ? g_m.cart_rom : &k_open_bus;
@@ -787,6 +824,21 @@ static inline void fastbus_sync(void) {
         coco_fastbus.ram_top  = 0x8000;
         coco_fastbus.rom_top  = 0xC000;
         coco_fastbus.cart_top = 0xFF00;
+    }
+}
+
+// A write to the cartridge's I/O window, $FF40-$FF5F: a bank-switched
+// cart's bank register or its SN76489, else the disk controller.
+static inline void cart_io_write(uint16_t A, uint8_t D) {
+    if (g_m.cart_banked) {
+        if (gmc_is_bank_register(A)) {                           // PIZERO-142
+            g_m.cart_rom = g_m.cart_base + gmc_bank_offset(D, g_m.cart_len);
+            fastbus_sync();                                      // PIZERO-131
+        } else csg_bus_write(D);                                 // PIZERO-143
+    } else if (g_csg_always && csg_on_latch_mirror(A)) {
+        csg_bus_write(D);                    // PIZERO-143: $FF41 with Disk BASIC in
+    } else {
+        fdc_io_write(A, D);
     }
 }
 
@@ -819,7 +871,13 @@ static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, ui
     { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[2] += pt1 - pt0; pt0 = pt1; }
 #endif
 
-    if (g_m.pia_irq_dirty) {
+    if (g_c3) {
+        // PIZERO-133: the GIME's own IRQ and FIRQ join the PIAs'. They change
+        // in its events and on register accesses, so refresh every cycle.
+        MC6809_IRQ_SET(g_m.cpu,  g_m.pia0->a.irq || g_m.pia0->b.irq || g_gime3->IRQ);
+        MC6809_FIRQ_SET(g_m.cpu, g_m.pia1->a.irq || g_m.pia1->b.irq || g_gime3->FIRQ);
+        g_m.pia_irq_dirty = false;
+    } else if (g_m.pia_irq_dirty) {
 #ifdef GIME_TIMER
         // PIZERO-62: the timer shares the 6809's two lines with the PIAs, as
         // it does on a CoCo 3. An unacknowledged status holds its line high.
@@ -846,6 +904,7 @@ static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, ui
 
 extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr;
+    if (g_c3) { tcc1014_mem_cycle(g_gime3, RnW, A); return; }   // PIZERO-133
     audio_catch_up();     // before a PIA1 write can change the level
     g_m.total_mem_cycles++;
 
@@ -986,18 +1045,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
             g_m.pia_irq_dirty = true;
         }
 #endif
-        else if ((A & 0xFFE0) == 0xFF40) {                               // cart I/O
-            if (g_m.cart_banked) {
-                if (gmc_is_bank_register(A)) {                           // PIZERO-142
-                    g_m.cart_rom = g_m.cart_base + gmc_bank_offset(g_m.cpu->D, g_m.cart_len);
-                    fastbus_sync();                                      // PIZERO-131
-                } else csg_bus_write(g_m.cpu->D);                          // PIZERO-143
-            } else if (g_csg_always && csg_on_latch_mirror(A)) {
-                csg_bus_write(g_m.cpu->D);           // PIZERO-143: $FF41 with Disk BASIC in
-            } else {
-                fdc_io_write(A, g_m.cpu->D);
-            }
-        }
+        else if ((A & 0xFFE0) == 0xFF40) cart_io_write(A, g_m.cpu->D);   // cart I/O
         else if (A < 0x8000)             g_m.ram[A] = g_m.cpu->D;
         else if (g_m.sam_ty && A < 0xFF00) g_m.ram[A] = g_m.cpu->D;  // all-RAM mode
         // ROM and other I/O writes ignored
@@ -1031,6 +1079,7 @@ extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
 // per-cycle tail: about a third of all cycles skip the decode and the data
 // switch. The CPU's interrupt latches are still sampled by the caller.
 extern "C" void HOT_FUNC(coco_mem_nvma)(void *sptr) {
+    if (g_c3) { coco_mem_cycle(sptr, 1, 0xFFFF); return; }       // PIZERO-133
     (void)sptr;
     audio_catch_up();
     g_m.total_mem_cycles++;
@@ -1117,9 +1166,139 @@ extern "C" void HOT_FUNC(coco_vdg_render)(void *sptr, unsigned burst, unsigned n
     }
 }
 
+// - - - CoCo 3 (PIZERO-133) -----------------------------------------
+#ifdef COCO3
+
+// The GIME's call-back for every cycle, after its decode: move the byte,
+// give the PIAs and the cartridge I/O their side effects as the CoCo 2 path
+// does, then the shared per-cycle tail. Upstream's equivalent is cpu_cycle
+// in src/coco3.c.
+static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_t A) {
+    (void)sptr;
+    audio_catch_up();     // before a PIA1 write can change the level
+    g_m.total_mem_cycles++;
+    uint8_t *D = &g_m.cpu->D;
+    switch (coco3_bus_cycle(&g_c3bus, g_gime3->S, g_gime3->RAS, g_gime3->Z, RnW, A, D)) {
+    case C3_BUS_PIA0:
+        if (RnW) *D = mc6821_read(g_m.pia0, A);
+        else     mc6821_write(g_m.pia0, A, *D);
+        break;
+    case C3_BUS_PIA1:
+        if (RnW) *D = mc6821_read(g_m.pia1, A);
+        else   { mc6821_write(g_m.pia1, A, *D); audio_update_level(); }
+        break;
+    case C3_BUS_CARTIO:
+        if (RnW) *D = g_m.cart_banked ? 0xFF : fdc_io_read(A);
+        else     cart_io_write(A, *D);
+        break;
+    default:
+        break;
+    }
+    // The keyboard interrupt: any row pulled low (upstream does this every
+    // cycle; the GIME edge-detects it at the start of the next).
+    g_gime3->IL1 = (PIA_VALUE_A(g_m.pia0) | 0x80) != 0xff;
+    mem_cycle_tail(ncycles, 0);
+}
+
+static uint16_t coco3_fetch_vram(void *sptr, uint32_t A) {
+    (void)sptr;
+    return coco3_bus_fetch_vram(&g_c3bus, A);
+}
+static void coco3_signal_hs(void *sptr, bool level) {
+    (void)sptr;
+    mc6821_set_cx1(&g_m.pia0->a, level);
+}
+static void coco3_signal_fs(void *sptr, bool level) {
+    (void)sptr;
+    mc6821_set_cx1(&g_m.pia0->b, level);
+    coco3_bus_frame_sync(&g_c3bus, level);
+}
+static void HOT_FUNC(coco3_render_line)(void *sptr, unsigned burst, unsigned npixels,
+                                        const uint8_t *data) {
+    (void)sptr; (void)burst; (void)npixels;
+    coco3_bus_render_line(&g_c3bus, data);
+}
+static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
+    (void)sptr;
+    coco3_bus_set_active_area(&g_c3bus, x, y, w, h);
+}
+
+// Where the CoCo 3 draws: the 320x240 RGB565 framebuffer core 1 scans out.
+// The GIME writes each scanline as it finishes, so nothing is rendered or
+// blitted between frames.
+extern "C" void coco_machine_set_framebuffer(uint16_t *fb) {
+    g_c3bus.fb = fb;
+}
+
+extern "C" _Bool coco_machine_is_coco3(void) { return g_c3; }
+
+static _Bool coco3_init(const uint8_t *rom) {
+    g_m.rom = rom;
+    g_m.rom_len = COCO3_ROM_SIZE;
+    // 128 KB: the 64 KB pool the CoCo 2 uses, and 64 KB more from the heap.
+    uint8_t *lo = (uint8_t *)rp_mem_malloc(64 * 1024);
+    uint8_t *hi = (uint8_t *)malloc(64 * 1024);
+    if (!lo || !hi) return 0;
+    memset(lo, 0, 64 * 1024);
+    memset(hi, 0, 64 * 1024);
+    g_m.ram = lo;
+    coco3_bus_init(&g_c3bus, lo, hi, rom, nullptr);
+    g_c3 = true;
+    fastbus_sync();
+
+    machine_event_list_global = event_list_new();
+    if (!machine_event_list_global) return 0;
+    event_current_tick = 0;
+
+    struct part *p = part_create("MC6809", NULL);
+    if (!p) return 0;
+    g_m.cpu = (struct MC6809 *)p;
+
+    p = part_create("MC6821", NULL);
+    if (!p) return 0;
+    g_m.pia0 = (struct MC6821 *)p;
+    mc6821_reset(g_m.pia0);
+    g_m.pia0->a.data_preread = DELEGATE_AS0(void, coco_pia0_preread_a, NULL);
+
+    p = part_create("MC6821", NULL);
+    if (!p) return 0;
+    g_m.pia1 = (struct MC6821 *)p;
+    mc6821_reset(g_m.pia1);
+
+    // As upstream's coco3_finish: nothing driving the ports, and the serial
+    // input (PIA1 PB0) held low.
+    g_m.pia0->b.in_source = 0;
+    g_m.pia1->b.in_source = 0;
+    g_m.pia0->a.in_sink = g_m.pia0->b.in_sink = 0xFF;
+    g_m.pia1->a.in_sink = g_m.pia1->b.in_sink = 0xFF;
+    g_m.pia1->b.in_sink &= (uint8_t)~(1u << 0);
+
+    p = part_create("TCC1014-1987", NULL);
+    if (!p) return 0;
+    g_gime3 = (struct TCC1014 *)p;
+    g_gime3->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, coco3_cpu_cycle, NULL);
+    g_gime3->fetch_vram = DELEGATE_AS1(uint16, uint32, coco3_fetch_vram, NULL);
+    g_gime3->signal_hs = DELEGATE_AS1(void, bool, coco3_signal_hs, NULL);
+    g_gime3->signal_fs = DELEGATE_AS1(void, bool, coco3_signal_fs, NULL);
+    g_gime3->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, coco3_render_line, NULL);
+    g_gime3->set_active_area = DELEGATE_AS4(void, int, int, int, int, coco3_set_active_area, NULL);
+    g_gime3->CPUD = &g_m.cpu->D;
+    tcc1014_notify_mode(g_gime3);
+    tcc1014_reset(g_gime3);
+    g_m.cpu->reset(g_m.cpu);
+    return 1;
+}
+#else
+extern "C" void coco_machine_set_framebuffer(uint16_t *fb) { (void)fb; }
+extern "C" _Bool coco_machine_is_coco3(void) { return 0; }
+#endif
+
 // - - - init / run ------------------------------------------------
 
 extern "C" _Bool coco_machine_init(const uint8_t *rom, size_t rom_len) {
+#ifdef COCO3
+    if (rom_len == COCO3_ROM_SIZE) return coco3_init(rom);    // PIZERO-133
+#endif
     if (rom_len != 16384) return 0;
     g_m.rom = rom;
     g_m.rom_len = rom_len;
@@ -1327,6 +1506,7 @@ static inline __attribute__((always_inline)) void audio_catch_up(void) {
 static inline __attribute__((always_inline)) void fastbus_deadline(void) {
     uint32_t now = event_current_tick;
     g_aud_tick = now;
+    if (g_c3) { coco_fastbus.deadline = now; return; }   // PIZERO-133: no skipping yet
     uint32_t dl = now + 16u * audio_integ_accesses_to_boundary(&g_aud, g_aud_rate, 16);
     struct event *head = machine_event_list_global->events;
     if (head && event_tick_delta(head->at_tick, dl) < 0) dl = head->at_tick;
@@ -1585,6 +1765,25 @@ extern "C" void coco_machine_set_gime_timer(bool on) {
 extern "C" void coco_machine_cold_reset(void) {
     if (!g_m.cpu) return;
     coco_machine_release_all_keys();
+    if (g_c3) {
+        // PIZERO-133: the GIME's reset clears INIT0, so the MMU is off and
+        // the ROM back at $8000-$FFFF, as at power-on.
+        memset(g_c3bus.ram_lo, 0, 64 * 1024);
+        memset(g_c3bus.ram_hi, 0, 64 * 1024);
+        g_m.fdc_status = 0x04;
+        g_m.fdc_track = g_m.fdc_sector = g_m.fdc_data = g_m.fdc_command = 0;
+        g_m.fdc_latch = 0;
+        g_m.fdc_drive = 0;
+        g_m.fdc_busy = false;
+        g_m.fdc_writing = false;
+        g_m.fdc_buf_pos = g_m.fdc_buf_len = 0;
+        if (g_m.cart_banked) g_m.cart_rom = g_m.cart_base;
+        fastbus_sync();
+        csg_reset();
+        tcc1014_reset(g_gime3);
+        g_m.cpu->reset(g_m.cpu);
+        return;
+    }
     memset(g_m.ram, 0, 64 * 1024);
     g_m.sam->reset(g_m.sam);
     g_m.sam_ty = false;
@@ -1817,7 +2016,7 @@ static void HOT_FUNC(render_graphics_frame)(uint16_t base, uint8_t gm, bool css)
 }
 
 extern "C" void HOT_FUNC(coco_machine_render_frame)(void) {
-    if (!g_m.pia1) return;
+    if (!g_m.pia1 || g_c3) return;     // PIZERO-133: the GIME draws as it goes
     const uint8_t pb = (g_m.pia1->b.out_source & g_m.pia1->b.out_sink) & 0xFF;
     const uint16_t base = g_m.sam_f ? g_m.sam_f : 0x0400;
     const uint8_t gm = (pb >> 4) & 7;
