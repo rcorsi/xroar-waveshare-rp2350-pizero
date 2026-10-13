@@ -10,6 +10,7 @@
 //   # comment lines start with '#'
 //   sn76489           = on | off              SN76489 at $FF41 without a GMC
 //   volume            = 0-15                  10 is the old fixed level
+//   audio_lowpass     = 1000-20000 | on | off PIZERO-212: output low-pass cutoff, Hz
 //   artifact_colors   = on | off | swapped    PMODE 4 color, or plain mono
 //   gime_palette      = on | off              CoCo 3-style palette at $FFB0
 //   gime_timer        = on | off              CoCo 3-style timer at $FF90
@@ -62,6 +63,7 @@ enum { FONT_CLASSIC = 0, FONT_6847T1 = 1, FONT_6847T2 = 2 };
 struct coco_settings {
     bool    sn76489;
     uint8_t volume;                   // 0-15
+    uint16_t lowpass_hz;              // PIZERO-212: 0 off, else 1000-20000
     uint8_t artifact;                 // ART_*
     bool    gime_palette;
     bool    gime_timer;
@@ -91,6 +93,7 @@ static inline void settings_defaults(struct coco_settings *s) {
     memset(s, 0, sizeof *s);
     s->sn76489 = true;
     s->volume = 10;
+    s->lowpass_hz = 8000;             // improvements are on by default
     s->artifact = ART_ON;
     s->gime_palette = true;
     s->gime_timer = true;
@@ -212,6 +215,11 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
         char *end; long n = strtol(v, &end, 10);
         if (*end || n < 0 || n > 15) return SET_BAD_VALUE;
         s->volume = (uint8_t)n;
+    } else if (!strcmp(name, "audio_lowpass")) {
+        if (settings_bool(v, &b)) { s->lowpass_hz = b ? 8000 : 0; return SET_OK; }   // on: the default
+        char *end; long n = strtol(v, &end, 10);
+        if (*end || n < 1000 || n > 20000) return SET_BAD_VALUE;
+        s->lowpass_hz = (uint16_t)n;
     } else if (!strcmp(name, "font")) {
         if (!strcmp(v, "classic"))     s->font = FONT_CLASSIC;
         else if (!strcmp(v, "6847t1")) s->font = FONT_6847T1;
@@ -384,6 +392,7 @@ static inline int settings_template(char *out, size_t n) {
         "# COCO ZERO SETTINGS. SEE SETTINGS.MD\n"
         "sn76489 = %s\n"
         "volume = %u\n"
+        "audio_lowpass = %u\n"
         "artifact_colors = %s\n"
         "gime_palette = %s\n"
         "gime_timer = %s\n"
@@ -400,7 +409,7 @@ static inline int settings_template(char *out, size_t n) {
         "soak_log = %s\n"
         "# color_green = #00FF00\n"
         "# color_dark_green = #006500\n",
-        d.sn76489 ? "on" : "off", d.volume,
+        d.sn76489 ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
         d.artifact == ART_OFF ? "off" : d.artifact == ART_SWAPPED ? "swapped" : "on",
         d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
         d.autorun ? "on" : "off", d.reset_to_basic ? "basic" : "autorun", d.serial_keyboard ? "on" : "off",

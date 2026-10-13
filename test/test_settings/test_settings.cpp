@@ -21,6 +21,7 @@ static void test_defaults_match_todays_behaviour(void) {
     settings_defaults(&s);
     TEST_ASSERT_TRUE(s.sn76489);
     TEST_ASSERT_EQUAL_UINT8(10, s.volume);
+    TEST_ASSERT_EQUAL_UINT16(8000, s.lowpass_hz);   // PIZERO-212: improvements default on
     TEST_ASSERT_EQUAL_UINT8(ART_ON, s.artifact);
     TEST_ASSERT_TRUE(s.gime_palette);
     TEST_ASSERT_TRUE(s.gime_timer);
@@ -41,6 +42,11 @@ static void test_every_setting(void) {
     settings_defaults(&s);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("sn76489 = off"));            TEST_ASSERT_FALSE(s.sn76489);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("volume = 3"));               TEST_ASSERT_EQUAL_UINT8(3, s.volume);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("audio_lowpass = off"));      TEST_ASSERT_EQUAL_UINT16(0, s.lowpass_hz);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("audio_lowpass = on"));       TEST_ASSERT_EQUAL_UINT16(8000, s.lowpass_hz);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("audio_lowpass = 12000"));    TEST_ASSERT_EQUAL_UINT16(12000, s.lowpass_hz);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("audio_lowpass = 1000"));     TEST_ASSERT_EQUAL_UINT16(1000, s.lowpass_hz);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("audio_lowpass = 20000"));    TEST_ASSERT_EQUAL_UINT16(20000, s.lowpass_hz);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("artifact_colors = swapped")); TEST_ASSERT_EQUAL_UINT8(ART_SWAPPED, s.artifact);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("artifact_colors = off"));    TEST_ASSERT_EQUAL_UINT8(ART_OFF, s.artifact);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("gime_palette = off"));       TEST_ASSERT_FALSE(s.gime_palette);
@@ -107,6 +113,9 @@ static void test_bad_lines_are_reported_and_change_nothing(void) {
     TEST_ASSERT_EQUAL_STRING("turbo", name);
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("volume = 16"));
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("volume = loud"));
+    TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("audio_lowpass = 999"));      // PIZERO-212
+    TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("audio_lowpass = 20001"));
+    TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("audio_lowpass = 8khz"));
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("sn76489 = maybe"));
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("artifact_colors = blue"));
     // American spellings only: one way to write each setting.

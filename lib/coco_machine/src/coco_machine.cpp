@@ -23,6 +23,7 @@
 #include "coco_palette.h"
 #include "audio_servo.h"
 #include "audio_integ.h"       // PIZERO-131, host-tested
+#include "audio_lowpass.h"     // PIZERO-212, host-tested
 #ifdef GIME_TIMER
 #include "gime_timer.h"
 #endif
@@ -1244,11 +1245,11 @@ static uint32_t          g_audio_err = 0;              // Bresenham accumulator
 // audio_integrate() accumulates level*ticks per memory access; at each sample
 // boundary (Bresenham on the 14.3181 MHz tick clock) we emit the time-average.
 // This captures edge timing to ~1 memory access (~16 ticks) instead of a whole
-// 447-tick sample, removing the jitter aliasing at the source. A gentle 2-pole
-// IIR then matches the OEM CoCo's TV-bandwidth sound.
+// 447-tick sample, removing the jitter aliasing at the source. The
+// audio_lowpass setting (PIZERO-212) then softens the DAC's hard steps.
 static int32_t  g_dac_level = 0;                       // current DAC+1bit level (set on PIA1 write)
 static struct audio_integ g_aud;                       // the sample being integrated (audio_integ.h)
-static int32_t  g_lp1 = 0, g_lp2 = 0;                  // 2-pole TV-bandwidth LPF state
+static struct audio_lp g_lp;                           // PIZERO-212: the output low-pass (audio_lowpass.h)
 
 // Recompute the cached audio level from PIA1 (called right after a PIA1 write).
 // Output gain. The 6-bit DAC swings 64 steps; a square wave's RMS == its peak,
@@ -1269,17 +1270,11 @@ static inline void audio_update_level(void) {
 }
 
 static inline void audio_emit(int s) {
+    // PIZERO-212: the audio_lowpass setting. Clamped after it, since a
+    // band-limited edge overshoots. (It replaces PIZERO-30's fixed 2-pole IIR,
+    // which was built out because it dulled the tone at the default level.)
+    s = audio_lp_run(&g_lp, s);
     if (s > 32767) s = 32767; else if (s < -32768) s = -32768;
-    // PIZERO-30: output LPF BYPASSED by default -- the integrate-and-dump already
-    // band-limits the square at the source, so the extra IIR was just dulling the
-    // tone vs desktop xroar. Build with -DAUDIO_OUTPUT_LPF to re-enable it.
-#ifdef AUDIO_OUTPUT_LPF
-    g_lp1 += (((int32_t)s    - g_lp1) * 14) >> 4;
-    g_lp2 += (((int32_t)g_lp1 - g_lp2) * 14) >> 4;
-    s = (int)g_lp2;
-#else
-    (void)g_lp1; (void)g_lp2;
-#endif
     // PIZERO-39: single-producer/single-consumer. The writer (core 0) owns ONLY
     // g_audio_w; the reader (which may be the core-1 DMA IRQ in the streaming
     // build) owns g_audio_r and handles overflow on its side. The __dmb publishes
@@ -1545,6 +1540,12 @@ extern "C" void coco_machine_set_volume(int v) {
     g_volume = v;
     g_dac_gain = AUDIO_DAC_GAIN * v / 10;
     audio_update_level();
+}
+
+// PIZERO-212: the output low-pass cutoff in Hz, 0 for off. Coefficients are
+// for the nominal rate; the servo moves the real one by under 0.3%.
+extern "C" void coco_machine_set_lowpass(int hz) {
+    audio_lp_set(&g_lp, hz > 0 ? (uint32_t)hz : 0u, COCO_AUDIO_RATE);
 }
 
 extern "C" void coco_machine_set_artifact(int mode) {

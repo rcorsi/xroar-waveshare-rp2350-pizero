@@ -115,7 +115,7 @@ All flags are plain `-D` macros consumed in `src/main.cpp`. The **master switch 
 | `AV_STREAM_AUDIO` | **(PIZERO-38, CURRENT)** Streaming per-active-line delivery: one metered island/line in the core-1 IRQ (rotating pool + 16.16 sample meter). **This is the warble fix**, and every audio env uses it; the product is `pizero_stream_60` (it inherits the flag from `pizero_stream`). Unset = the legacy bursty 77-line bank path. |
 | `AV_EVEN_AUDIO` | **Abandoned (PIZERO-34).** Even delivery via vblank back-porch islands. It **breaks video sync on the dev sink**. Kept off behind the flag; do not enable. |
 | `AV_ACR_CTS=<n>` | ACR CTS value (default 25176). **Monitor-dependent** (PIZERO-32); inert on sinks that ignore ACR (like the dev monitor). See video-audio-notes.md. |
-| `AUDIO_WAV_DUMP` / `AUDIO_OUTPUT_LPF` | Stream the source ring as base64 WAV over USB-CDC (source measurement, no video link) / re-enable the 2-pole TV-bandwidth output LPF (no build uses the LPF since PIZERO-42 retired `pizero_stream_lpf`). Diagnostics for PIZERO-41. |
+| `AUDIO_WAV_DUMP` | Stream the source ring as base64 WAV over USB-CDC (source measurement, no video link). Diagnostic for PIZERO-41. The old `AUDIO_OUTPUT_LPF` flag is gone: the output low-pass is the `audio_lowpass` setting since PIZERO-212. |
 
 ### Display & stability
 | Flag | Effect |

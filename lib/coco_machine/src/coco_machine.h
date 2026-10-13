@@ -53,6 +53,7 @@ void coco_machine_csg_always(_Bool on);
  * else entries with their mask bit set take the given RGB565 color; it
  * becomes what a reset and the cold reset restore. */
 void coco_machine_set_volume(int v);
+void coco_machine_set_lowpass(int hz);      /* PIZERO-212: cutoff in Hz, 0 off */
 void coco_machine_set_artifact(int mode);
 void coco_machine_set_gime_palette(_Bool on);
 void coco_machine_set_gime_timer(_Bool on);
