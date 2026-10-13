@@ -182,6 +182,9 @@ void coco_machine_render_frame(void);
  * VDG blit are not used. */
 void coco_machine_set_framebuffer(uint16_t *fb);
 _Bool coco_machine_is_coco3(void);
+/* PIZERO-213: the CoCo 3 only rewrites rows whose pixels changed; call this
+ * after drawing anything else into the framebuffer so every row is redrawn. */
+void coco_machine_video_invalidate(void);
 
 /* Diagnostic accessors: useful for smoke tests. */
 uint16_t coco_machine_get_pc(void);

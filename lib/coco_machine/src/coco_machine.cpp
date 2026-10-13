@@ -1238,7 +1238,7 @@ static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_
     mem_cycle_tail(ncycles, 0);
 }
 
-static uint16_t coco3_fetch_vram(void *sptr, uint32_t A) {
+static uint16_t HOT_FUNC(coco3_fetch_vram)(void *sptr, uint32_t A) {
     (void)sptr;
     return coco3_bus_fetch_vram(&g_c3bus, A);
 }
@@ -1266,6 +1266,13 @@ static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
 // blitted between frames.
 extern "C" void coco_machine_set_framebuffer(uint16_t *fb) {
     g_c3bus.fb = fb;
+    coco3_bus_invalidate(&g_c3bus);
+}
+
+// PIZERO-213: something else drew over the picture (the overlay); every row
+// is drawn again as its scanline comes round.
+extern "C" void coco_machine_video_invalidate(void) {
+    coco3_bus_invalidate(&g_c3bus);
 }
 
 extern "C" _Bool coco_machine_is_coco3(void) { return g_c3; }
@@ -1329,6 +1336,7 @@ static _Bool coco3_init(const uint8_t *rom) {
 }
 #else
 extern "C" void coco_machine_set_framebuffer(uint16_t *fb) { (void)fb; }
+extern "C" void coco_machine_video_invalidate(void) {}
 extern "C" _Bool coco_machine_is_coco3(void) { return 0; }
 #endif
 

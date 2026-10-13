@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "c3host.h"
+#include "../../lib/coco_machine/src/coco3_bus.h"
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -158,8 +159,39 @@ static void test_fast_path_remap(void) {
     TEST_ASSERT_EQUAL_MEMORY(ram_slow, ram_fast, sizeof ram_slow);
 }
 
+// PIZERO-213: a row is only rewritten when its GIME pixels change, and
+// coco3_bus_invalidate makes every row draw again.
+static void test_row_skip(void) {
+    static uint8_t lo[65536], hi[65536], rom[COCO3_ROM_SIZE], line[912];
+    static uint16_t fb[COCO3_FB_W * COCO3_FB_H];
+    static struct coco3_bus b;
+    coco3_bus_init(&b, lo, hi, rom, fb);
+    int first = coco3_bus_first_pixel(&b);
+    int y = b.act_y;                              // lands on row (240 - 192) / 2
+    int row = coco3_bus_row(&b, y);
+    TEST_ASSERT_EQUAL_INT(24, row);
+    uint16_t *r = fb + row * COCO3_FB_W;
+
+    memset(line, 0x12, sizeof line);
+    b.line = y; coco3_bus_render_line(&b, line);
+    TEST_ASSERT_EQUAL_HEX16(b.rgb[0x12], r[0]);
+
+    r[0] = 0xBEEF;                                // drawn over (the overlay)
+    b.line = y; coco3_bus_render_line(&b, line);
+    TEST_ASSERT_EQUAL_HEX16(0xBEEF, r[0]);        // same pixels: left alone
+
+    coco3_bus_invalidate(&b);
+    b.line = y; coco3_bus_render_line(&b, line);
+    TEST_ASSERT_EQUAL_HEX16(b.rgb[0x12], r[0]);   // redrawn
+
+    line[first + 2 * 100] = 0x2D;                 // one shown pixel changes
+    b.line = y; coco3_bus_render_line(&b, line);
+    TEST_ASSERT_EQUAL_HEX16(b.rgb[0x2D], r[100]);
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
+    RUN_TEST(test_row_skip);
     RUN_TEST(test_boots_to_ok);
     RUN_TEST(test_fast_path_matches);
     RUN_TEST(test_fast_path_remap);

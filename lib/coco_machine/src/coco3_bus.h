@@ -26,12 +26,19 @@
 // a 640-wide one (80 columns) loses every other pixel until PIZERO-134. The
 // active area is centred vertically: 192 lines start at row 24, as the
 // CoCo 2 picture does, and 225 lines at row 7.
+//
+// PIZERO-213: a row is only rewritten when its pixels changed. Writing the
+// framebuffer that core 1 is scanning out costs 3.5-7 ms a frame on the
+// board, so each row keeps a hash of the GIME pixels it last showed, and a
+// row whose hash matches is left alone. Anything else that draws into the
+// framebuffer (the overlay) must call coco3_bus_invalidate afterwards.
 
 #ifndef COCO3_BUS_H
 #define COCO3_BUS_H
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "coco_palette.h"       // coco_pal_gime_to_rgb565
 
@@ -54,7 +61,13 @@ struct coco3_bus {
     uint16_t rgb[64];             // GIME colour to RGB565
     int line;                     // scanlines since the frame-sync pulse rose
     int act_x, act_y, act_w, act_h;   // the GIME's last set_active_area
+    uint32_t row_sum[COCO3_FB_H];      // hash of what each row shows; 0 = redraw
 };
+
+// Every row is drawn again at its next scanline.
+static inline void coco3_bus_invalidate(struct coco3_bus *b) {
+    memset(b->row_sum, 0, sizeof b->row_sum);
+}
 
 static inline void coco3_bus_init(struct coco3_bus *b, uint8_t *lo, uint8_t *hi,
                                   const uint8_t *rom, uint16_t *fb) {
@@ -67,6 +80,7 @@ static inline void coco3_bus_init(struct coco3_bus *b, uint8_t *lo, uint8_t *hi,
     for (int i = 0; i < 64; i++) b->rgb[i] = coco_pal_gime_to_rgb565((uint8_t)i);
     b->line = 0;
     b->act_x = 239; b->act_y = 39; b->act_w = 512; b->act_h = 192;   // 32 columns
+    coco3_bus_invalidate(b);
 }
 
 static inline uint8_t *coco3_ram_at(const struct coco3_bus *b, uint32_t Z) {
@@ -157,10 +171,26 @@ static inline int coco3_bus_first_pixel(const struct coco3_bus *b) {
     return b->act_x + b->act_w / 2 - COCO3_FB_W;
 }
 
+// A hash of the 640 GIME pixels a row shows, never 0. Read a word at a time:
+// cheaper than the copy it saves by a factor of about seven.
+static inline uint32_t coco3_bus_line_sum(const uint8_t *src) {
+    uint32_t h = 0x811C9DC5u;
+    for (int i = 0; i < 2 * COCO3_FB_W; i += 4) {
+        uint32_t w;
+        memcpy(&w, src + i, 4);
+        h ^= w;
+        h = ((h << 5) | (h >> 27)) * 0x9E3779B1u;
+    }
+    return h | 1u;
+}
+
 static inline void coco3_bus_render_line(struct coco3_bus *b, const uint8_t *data) {
     int row = coco3_bus_row(b, b->line++);
     if (row < 0 || !b->fb || !data) return;
     const uint8_t *src = data + coco3_bus_first_pixel(b);
+    uint32_t sum = coco3_bus_line_sum(src);
+    if (b->row_sum[row] == sum) return;
+    b->row_sum[row] = sum;
     uint16_t *dst = b->fb + row * COCO3_FB_W;
     for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[src[2 * x] & 63];
 }

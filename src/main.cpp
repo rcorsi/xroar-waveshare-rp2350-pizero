@@ -2041,6 +2041,7 @@ void loop() {
         a = b = c = micros();
         wd_phase(WP_RENDER);
         disk_overlay_frame(g_frame_count);
+        coco_machine_video_invalidate();         // PIZERO-213: the CoCo 3 redraws under it
         // PIZERO-165: the serial pump is paused, but a Ctrl-P waiting at the
         // front of the queue still takes a screenshot of the list.
         if (g_settings.serial_keyboard && Serial.available() && Serial.peek() == 0x10) {
