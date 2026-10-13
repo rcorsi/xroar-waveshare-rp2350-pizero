@@ -1253,8 +1253,8 @@ static void coco3_signal_fs(void *sptr, bool level) {
 }
 static void HOT_FUNC(coco3_render_line)(void *sptr, unsigned burst, unsigned npixels,
                                         const uint8_t *data) {
-    (void)sptr; (void)burst; (void)npixels;
-    coco3_bus_render_line(&g_c3bus, data);
+    (void)sptr; (void)burst;
+    coco3_bus_render_line(&g_c3bus, data, npixels);
 }
 static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
     (void)sptr;
@@ -1328,6 +1328,7 @@ static _Bool coco3_init(const uint8_t *rom) {
     g_gime3->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, coco3_render_line, NULL);
     g_gime3->set_active_area = DELEGATE_AS4(void, int, int, int, int, coco3_set_active_area, NULL);
     g_gime3->CPUD = &g_m.cpu->D;
+    g_gime3->port_render = true;                     // PIZERO-218: 320 pixels a line
     tcc1014_notify_mode(g_gime3);
     tcc1014_reset(g_gime3);
     fastbus_sync();                                  // PIZERO-213: the GIME's map

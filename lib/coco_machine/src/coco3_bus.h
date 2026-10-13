@@ -171,11 +171,11 @@ static inline int coco3_bus_first_pixel(const struct coco3_bus *b) {
     return b->act_x + b->act_w / 2 - COCO3_FB_W;
 }
 
-// A hash of the 640 GIME pixels a row shows, never 0. Read a word at a time:
-// cheaper than the copy it saves by a factor of about seven.
-static inline uint32_t coco3_bus_line_sum(const uint8_t *src) {
+// A hash of n bytes of GIME pixels (n a multiple of 4), never 0. Read a
+// word at a time: much cheaper than the copy it saves.
+static inline uint32_t coco3_bus_line_sum(const uint8_t *src, int n) {
     uint32_t h = 0x811C9DC5u;
-    for (int i = 0; i < 2 * COCO3_FB_W; i += 4) {
+    for (int i = 0; i < n; i += 4) {
         uint32_t w;
         memcpy(&w, src + i, 4);
         h ^= w;
@@ -184,14 +184,25 @@ static inline uint32_t coco3_bus_line_sum(const uint8_t *src) {
     return h | 1u;
 }
 
-static inline void coco3_bus_render_line(struct coco3_bus *b, const uint8_t *data) {
+// One scanline from the GIME. npixels says which form: COCO3_FB_W (its
+// port_render form, PIZERO-218: the shown pixels already halved) or a whole
+// scanline, of which the 640 around the active area are halved here.
+static inline void coco3_bus_render_line(struct coco3_bus *b, const uint8_t *data,
+                                         unsigned npixels) {
     int row = coco3_bus_row(b, b->line++);
     if (row < 0 || !b->fb || !data) return;
+    uint16_t *dst = b->fb + row * COCO3_FB_W;
+    if (npixels == COCO3_FB_W) {
+        uint32_t sum = coco3_bus_line_sum(data, COCO3_FB_W);
+        if (b->row_sum[row] == sum) return;
+        b->row_sum[row] = sum;
+        for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[data[x] & 63];
+        return;
+    }
     const uint8_t *src = data + coco3_bus_first_pixel(b);
-    uint32_t sum = coco3_bus_line_sum(src);
+    uint32_t sum = coco3_bus_line_sum(src, 2 * COCO3_FB_W);
     if (b->row_sum[row] == sum) return;
     b->row_sum[row] = sum;
-    uint16_t *dst = b->fb + row * COCO3_FB_W;
     for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[src[2 * x] & 63];
 }
 

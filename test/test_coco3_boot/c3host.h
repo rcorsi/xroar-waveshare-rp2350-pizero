@@ -19,6 +19,7 @@ struct c3_state {
 void c3_state(struct c3_state *st);       // time and the CPU's registers
 void c3_poke(uint32_t Z, uint8_t v);      // physical RAM, modulo 128 KB
 void c3_set_pc(uint16_t pc);              // between runs: jump there
+void c3_set_port_render(int on);          // PIZERO-218: the GIME's 320-pixel lines
 #ifdef __cplusplus
 }
 #endif

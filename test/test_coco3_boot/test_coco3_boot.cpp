@@ -173,20 +173,80 @@ static void test_row_skip(void) {
     uint16_t *r = fb + row * COCO3_FB_W;
 
     memset(line, 0x12, sizeof line);
-    b.line = y; coco3_bus_render_line(&b, line);
+    b.line = y; coco3_bus_render_line(&b, line, 912);
     TEST_ASSERT_EQUAL_HEX16(b.rgb[0x12], r[0]);
 
     r[0] = 0xBEEF;                                // drawn over (the overlay)
-    b.line = y; coco3_bus_render_line(&b, line);
+    b.line = y; coco3_bus_render_line(&b, line, 912);
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, r[0]);        // same pixels: left alone
 
     coco3_bus_invalidate(&b);
-    b.line = y; coco3_bus_render_line(&b, line);
+    b.line = y; coco3_bus_render_line(&b, line, 912);
     TEST_ASSERT_EQUAL_HEX16(b.rgb[0x12], r[0]);   // redrawn
 
     line[first + 2 * 100] = 0x2D;                 // one shown pixel changes
-    b.line = y; coco3_bus_render_line(&b, line);
+    b.line = y; coco3_bus_render_line(&b, line, 912);
     TEST_ASSERT_EQUAL_HEX16(b.rgb[0x2D], r[100]);
+}
+
+// PIZERO-218: the GIME's port renderer must draw what upstream's renderer
+// plus the halving sink drew. Boot, then optionally run a program that
+// masks interrupts and sets a video mode (VMODE, VRES) over pseudo-random
+// VRAM at physical 0, and compare the two framebuffers.
+static uint16_t g_fb_ref[320 * 240];
+
+static void render_run(int port, int vmode, int vres) {
+    TEST_ASSERT_TRUE(c3_init(g_rom, 1));
+    c3_set_port_render(port);
+    for (int f = 0; f < 180; f++) c3_run_ticks(FRAME_TICKS);
+    if (vmode >= 0) {
+        const uint8_t prog[] = {
+            0x1A, 0x50,                         // ORCC #$50
+            0x86, 0x4C, 0xB7, 0xFF, 0x90,       // INIT0: CoCo 3 mode, MMU on
+            0x86, (uint8_t)vmode, 0xB7, 0xFF, 0x98,
+            0x86, (uint8_t)vres, 0xB7, 0xFF, 0x99,
+            0x4F, 0xB7, 0xFF, 0x9D, 0xB7, 0xFF, 0x9E,   // VRAM at physical 0
+            0x20, 0xFE,                         // BRA *
+        };
+        for (unsigned i = 0; i < sizeof prog; i++) c3_poke(0x13000 + i, prog[i]);
+        uint32_t x = 12345;
+        for (uint32_t z = 0; z < 0x8000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
+        c3_set_pc(0x3000);
+        for (int f = 0; f < 6; f++) c3_run_ticks(FRAME_TICKS);
+    }
+}
+
+static void check_port_render(int vmode, int vres, const char *what) {
+    render_run(0, vmode, vres);
+    memcpy(g_fb_ref, c3_fb(), sizeof g_fb_ref);
+    render_run(1, vmode, vres);
+    const uint16_t *fb = c3_fb();
+    int bad = -1, n = 0;
+    for (int i = 0; i < 320 * 240; i++) if (fb[i] != g_fb_ref[i]) { if (bad < 0) bad = i; n++; }
+    int ncol = 0;                               // the mode took: count its colours
+    static uint16_t seen[64];
+    for (int i = 0; i < 320 * 240 && ncol < 64; i++) {
+        int k = 0;
+        while (k < ncol && seen[k] != fb[i]) k++;
+        if (k == ncol) seen[ncol++] = fb[i];
+    }
+    printf("  %-32s %2d colours, row 120 starts %04x %04x %04x\n", what, ncol, fb[120 * 320 + 40], fb[120 * 320 + 41], fb[120 * 320 + 42]);
+    char msg[128];
+    snprintf(msg, sizeof msg, "%s: %d pixels differ, first at x=%d y=%d", what, n, bad % 320, bad / 320);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, n, msg);
+}
+
+static void test_port_render(void) {
+    if (!load_rom()) TEST_IGNORE_MESSAGE("set COCO_ROM_DIR to a folder with coco3.rom (32 KB)");
+    check_port_render(-1, 0, "BASIC's 32-column screen");
+    check_port_render(0x03, 0x15, "40-column text with attributes");
+    check_port_render(0x03, 0x14, "40-column text");
+    check_port_render(0x80, 0x1E, "320x192, 16 colours");
+    check_port_render(0x80, 0x15, "320x192, 4 colours");
+    check_port_render(0x80, 0x0E, "256x192, 16 colours");
+    check_port_render(0x80, 0x08, "256x192, 2 colours");
+    check_port_render(0x80, 0x1C, "640x192, 2 colours (halved)");
+    check_port_render(0x80, 0x00, "128x192, 2 colours");
 }
 
 int main(int, char **) {
@@ -195,5 +255,6 @@ int main(int, char **) {
     RUN_TEST(test_boots_to_ok);
     RUN_TEST(test_fast_path_matches);
     RUN_TEST(test_fast_path_remap);
+    RUN_TEST(test_port_render);
     return UNITY_END();
 }

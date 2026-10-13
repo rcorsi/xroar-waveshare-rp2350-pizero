@@ -294,6 +294,10 @@ struct TCC1014_private {
 	// than a full scanline.  16 is the maximum number of elements rendered
 	// in render_scanline() between index checks.
 	uint8_t pixel_data[TCC1014_tSL+16];
+
+	// RP2350 port addition (PIZERO-218): see port_render in tcc1014.h.
+	uint8_t port_line[TCC1014_PORT_W + 16];
+	_Bool port_done;  // this scanline's port_line is drawn
 };
 
 // RP2350 port (PIZERO-133): serialisation removed, as for the other
@@ -920,7 +924,16 @@ static void do_hs_fall(void *sptr) {
 	// Finish rendering previous scanline
 	render_scanline(gime, t);
 
-	DELEGATE_CALL(gime->public.render_line, gime->burstn, TCC1014_tSL, gime->pixel_data);
+	if (gime->public.port_render) {
+		// RP2350 port (PIZERO-218): a line outside the active area is all
+		// border, or black in vertical sync.
+		if (!gime->port_done)
+			memset(gime->port_line, gime->vertical.sync ? 0 : gime->border_colour, TCC1014_PORT_W);
+		DELEGATE_CALL(gime->public.render_line, gime->burstn, TCC1014_PORT_W, gime->port_line);
+		gime->port_done = 0;
+	} else {
+		DELEGATE_CALL(gime->public.render_line, gime->burstn, TCC1014_tSL, gime->pixel_data);
+	}
 
 	// HS falling edge.
 	DELEGATE_CALL(gime->public.signal_hs, 0);
@@ -1165,7 +1178,13 @@ static uint8_t fetch_byte_vram(struct TCC1014_private *gime) {
 // Only renders active area scanlines.  Top & bottom border are treated
 // specially, and just memset() the border colour.
 
+static void port_render_scanline(struct TCC1014_private *gime, event_ticks t);
+
 static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
+	if (gime->public.port_render) {
+		port_render_scanline(gime, t);
+		return;
+	}
 	unsigned beam_to = t - gime->scanline_start;
 
 	// Don't bother if not in active area or frame skipping
@@ -1421,6 +1440,193 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 		if (gime->horizontal.npixels >= beam_to)
 			return;
 	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// RP2350 port addition (PIZERO-218): the active area of a scanline straight
+// into the TCC1014_PORT_W pixels the port shows, the 640 GIME pixels centred
+// on it at half resolution. The VRAM fetches and the colour decode are
+// render_scanline's; only the output differs: each 4-bit group writes 8, 4,
+// 2 or 1 pixels by resolution (render_scanline's 16, 8, 4 or 2, halved),
+// keeping the first of each pair as the port's sink always did. The whole
+// active area is drawn the first time the beam is found past its start, so
+// a change of state inside it shows from the next line, not mid-line.
+
+static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
+	if (gime->port_done || !gime->vertical.active_area)
+		return;
+	unsigned beam_to = t - gime->scanline_start;
+	if (beam_to <= gime->horizontal.tHS_AA)
+		return;
+	gime->port_done = 1;
+
+	unsigned tAA = gime->horizontal.tHS_RB - gime->horizontal.tHS_AA;
+	if (tAA > 640)
+		tAA = 640;
+	unsigned side = (640 - tAA) / 4;
+	uint8_t *pixel = gime->port_line;
+	uint8_t *end = pixel + side + tAA / 2;
+	memset(pixel, gime->border_colour, side);
+	pixel += side;
+
+	const unsigned resolution = gime->resolution;
+	const uint8_t *pal = gime->palette_reg;
+
+	while (pixel < end) {
+		enum vdg_render_mode render_mode;
+		uint_fast8_t gdata;
+		uint_fast8_t fg_colour = 0;
+		uint_fast8_t bg_colour = 0;
+		uint_fast8_t cg_colours = 0;
+
+		if (gime->COCO) {
+			uint_fast8_t vdata = fetch_byte_vram(gime);
+			unsigned font_row = gime->row & 0x0f;
+			_Bool SnA = vdata & 0x80;
+			if (gime->VDG.GnA) {
+				gdata = vdata;
+				fg_colour = gime->VDG.CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1;
+				bg_colour = gime->VDG.CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
+				cg_colours = !gime->VDG.CSS ? TCC1014_GREEN : TCC1014_WHITE;
+				if (gime->VDG.GM0) {
+					if (gime->resolution || (gime->PIA1B_shadow.pdr & 0x70) == 0x70) {
+						render_mode = TCC1014_RENDER_RG;
+					} else {
+						render_mode = TCC1014_RENDER_RG2;
+					}
+				} else {
+					render_mode = TCC1014_RENDER_CG;
+				}
+			} else if (SnA) {
+				gdata = (font_row < 6) ? (vdata >> 2) : vdata;
+				fg_colour = (vdata >> 4) & 7;
+				bg_colour = TCC1014_RGCSS0_0;
+				render_mode = TCC1014_RENDER_SG;
+			} else {
+				_Bool INV = vdata & 0x40;
+				INV ^= gime->VDG.GM1;
+				uint_fast8_t c = vdata & 0x7f;
+				if (c < 0x20) {
+					c |= (gime->VDG.GM0 ? 0x60 : 0x40);
+					INV ^= gime->VDG.GM0;
+				} else if (c >= 0x60) {
+					c ^= 0x40;
+				}
+				gdata = font_gime[c*12+font_row];
+				if (INV ^ gime->inverted_text)
+					gdata = ~gdata;
+				fg_colour = gime->VDG.CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
+				bg_colour = gime->VDG.CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN;
+				render_mode = TCC1014_RENDER_RG;
+			}
+		} else {
+			uint_fast8_t vdata = fetch_byte_vram(gime);
+			unsigned font_row = (gime->row + 1) & 0x0f;
+			if (font_row > 11)
+				font_row = 0;
+			if (gime->BP) {
+				gdata = vdata;
+				if (gime->HRES == 0 && gime->CRES >= 2)
+					gime->vdata_cache = 0;
+			} else {
+				int c = vdata & 0x7f;
+				gdata = font_gime[c*12+font_row];
+				if (gime->CRES & 1) {
+					uint_fast8_t attr = fetch_byte_vram(gime);
+					fg_colour = 8 | ((attr >> 3) & 7);
+					bg_colour = attr & 7;
+					if ((attr & 0x80) && gime->blink)
+						fg_colour = bg_colour;
+					if ((attr & 0x40) && ((font_row & gime->rowmask) == gime->rowmask))
+						gdata = 0xff;
+				} else {
+					fg_colour = 1;
+					bg_colour = 0;
+				}
+			}
+			render_mode = TCC1014_RENDER_RG;
+		}
+
+		for (int i = 2; i; --i) {
+			uint_fast8_t c0, c1, c2, c3;
+			if (gime->COCO) {
+				switch (render_mode) {
+				case TCC1014_RENDER_SG: default:
+					c0 = c1 = c2 = c3 = pal[(gdata&0x02) ? fg_colour : bg_colour];
+					gdata <<= 1;
+					break;
+				case TCC1014_RENDER_CG:
+					c0 = c1 = pal[cg_colours + ((gdata >> 6) & 3)];
+					c2 = c3 = pal[cg_colours + ((gdata >> 4) & 3)];
+					gdata <<= 4;
+					break;
+				case TCC1014_RENDER_RG:
+					c0 = pal[(gdata&0x80) ? fg_colour : bg_colour];
+					c1 = pal[(gdata&0x40) ? fg_colour : bg_colour];
+					c2 = pal[(gdata&0x20) ? fg_colour : bg_colour];
+					c3 = pal[(gdata&0x10) ? fg_colour : bg_colour];
+					gdata <<= 4;
+					break;
+				case TCC1014_RENDER_RG2:
+					c0 = c1 = pal[(gdata&0x40) ? fg_colour : bg_colour];
+					c2 = c3 = pal[(gdata&0x10) ? fg_colour : bg_colour];
+					gdata <<= 4;
+					break;
+				}
+			} else {
+				uint_fast8_t cmask = (gime->MOCH && gime->want_composite) ? 0x30 : 0x3f;
+				if (gime->BP) {
+					switch (gime->CRES) {
+					case 0: default:
+						c0 = pal[(gdata>>7)&1] & cmask;
+						c1 = pal[(gdata>>6)&1] & cmask;
+						c2 = pal[(gdata>>5)&1] & cmask;
+						c3 = pal[(gdata>>4)&1] & cmask;
+						break;
+					case 1:
+						c0 = c1 = pal[(gdata>>6)&3] & cmask;
+						c2 = c3 = pal[(gdata>>4)&3] & cmask;
+						break;
+					case 2: case 3:
+						c0 = c1 = c2 = c3 = pal[(gdata>>4)&15] & cmask;
+						break;
+					}
+				} else {
+					c0 = pal[(gdata&0x80)?fg_colour:bg_colour] & cmask;
+					c1 = pal[(gdata&0x40)?fg_colour:bg_colour] & cmask;
+					c2 = pal[(gdata&0x20)?fg_colour:bg_colour] & cmask;
+					c3 = pal[(gdata&0x10)?fg_colour:bg_colour] & cmask;
+				}
+				gdata <<= 4;
+			}
+
+			switch (resolution) {
+			case 0:
+				pixel[0] = c0; pixel[1] = c0;
+				pixel[2] = c1; pixel[3] = c1;
+				pixel[4] = c2; pixel[5] = c2;
+				pixel[6] = c3; pixel[7] = c3;
+				pixel += 8;
+				break;
+			case 1:
+				pixel[0] = c0; pixel[1] = c1;
+				pixel[2] = c2; pixel[3] = c3;
+				pixel += 4;
+				break;
+			case 2:
+				pixel[0] = c0; pixel[1] = c2;
+				pixel += 2;
+				break;
+			case 3:
+				pixel[0] = c0;
+				pixel += 1;
+				break;
+			}
+		}
+	}
+
+	memset(end, gime->border_colour, TCC1014_PORT_W - (end - gime->port_line));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

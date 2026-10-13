@@ -78,7 +78,16 @@ struct TCC1014 {
 	// GIME will set 'burst' to 0 (normal burst) or 1 (inverted burst).
 
 	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
+
+	// RP2350 port addition (PIZERO-218): when set, render_line is called
+	// with TCC1014_PORT_W pixels instead of a whole scanline: the 640 GIME
+	// pixels around the active area at half horizontal resolution, each a
+	// 6-bit colour. The active area is drawn in one go with the state at its
+	// start (or at the first register change inside it), not pixel by pixel.
+	_Bool port_render;
 };
+
+#define TCC1014_PORT_W 320
 
 void tcc1014_reset(struct TCC1014 *gimep);
 void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);

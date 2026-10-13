@@ -25,7 +25,7 @@ From `src/`:
 - `mc6847/mc6847.[ch]`, `font-6847.[ch]`, `font-6847t1.[ch]`
 - `mc6821.[ch]` (PIA)
 - `ram.[ch]`, `part.[ch]`, `serialise.[ch]`, `events.[ch]`
-- `tcc1014/tcc1014.[ch]`, `tcc1014/font-gime.[ch]` (the CoCo 3's GIME, PIZERO-133, copied 2026-10-13 at the same pinned commit). `tcc1014.c` has its serialisation removed, like the other parts here, and two small functions added for the port's fast path (PIZERO-213): `tcc1014_decode_page` (one 8 KB page's decode) and `tcc1014_cycle_ticks` (8 or 16 ticks per CPU cycle). Nothing else changed.
+- `tcc1014/tcc1014.[ch]`, `tcc1014/font-gime.[ch]` (the CoCo 3's GIME, PIZERO-133, copied 2026-10-13 at the same pinned commit). `tcc1014.c` has its serialisation removed, like the other parts here, and two small functions added for the port's fast path (PIZERO-213): `tcc1014_decode_page` (one 8 KB page's decode) and `tcc1014_cycle_ticks` (8 or 16 ticks per CPU cycle), and (PIZERO-218) a port renderer, `port_render_scanline`, selected by the public `port_render` flag: it draws each active line once into the 320 pixels the port shows, with `render_scanline`'s own fetch and colour decode, and `do_hs_fall` hands that to `render_line`. Upstream's renderer is unchanged and still used when the flag is clear. Nothing else changed.
 - `logging.h` (verbatim: its no-op path is used; `LOGGING` is never defined)
 - `breakpoint.h`, `dkbd.h`, `debug_cpu.h`, `fs.h` (declarations only)
 
