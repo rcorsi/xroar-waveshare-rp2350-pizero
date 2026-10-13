@@ -36,7 +36,7 @@ the background and features are the focus again.
   per-game files and Print Screen PNGs (`PIZERO-67`, `146`, `165`).
 - **NitrOS-9 Level 1 boots** to `OS9:` and saves survive a power cycle
   (`PIZERO-190`, `191`, `194`). `scripts/mkos9disk.py` builds a working disk
-  (`PIZERO-199`, awaiting its run on the board).
+  (`PIZERO-199`, booted on the board 2026-10-12).
 - **Overlay**: F9 to F12 open programs, cartridges, files and disks
   (`PIZERO-81`, `114`, `153`); F1 INFO page (`PIZERO-156`); per-game `NAME.TXT`
   (`PIZERO-154`); `settings.txt` and `autorun.txt` edited on screen
@@ -63,15 +63,13 @@ the background and features are the focus again.
 
 ## In flight (waiting on a hardware step)
 
-Only three tickets are `in-progress`, and each needs the board or the user rather
-than more code:
+These need the board or the user rather than more code (`PIZERO-199`, NitrOS-9
+on the board, passed 2026-10-12):
 
 - **`PIZERO-203`: the frame-pace recoveries.** The one live stability bug. A
   re-soak with deliberate overlay use is running; the serial-stall theory is
   tested and ruled out. Keep it soaking on one board while features are built
   on the other.
-- **`PIZERO-199`**: boot `NOS9L1.DSK` on the board and run `dir`, `free` and a
-  write.
 - **`PIZERO-142`**: start a 32 KB and a 64 KB banked cart (Mind Roll, Dunjunz)
   once an image is found.
 
