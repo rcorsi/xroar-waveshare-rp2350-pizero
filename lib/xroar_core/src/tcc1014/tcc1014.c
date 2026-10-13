@@ -1466,6 +1466,37 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 
 #define PORT_MAX_BYTES 192
 
+// Byte i of port_mask[g] is 0xFF when bit 7-i of g is set.
+#define PORT_B(g, b) ((((g) >> (7 - (b))) & 1) ? (0xffull << (8 * (b))) : 0)
+#define PORT_M1(g) (PORT_B(g,0) | PORT_B(g,1) | PORT_B(g,2) | PORT_B(g,3) | \
+                    PORT_B(g,4) | PORT_B(g,5) | PORT_B(g,6) | PORT_B(g,7))
+#define PORT_M4(g) PORT_M1(g), PORT_M1((g)+1), PORT_M1((g)+2), PORT_M1((g)+3)
+#define PORT_M16(g) PORT_M4(g), PORT_M4((g)+4), PORT_M4((g)+8), PORT_M4((g)+12)
+#define PORT_M64(g) PORT_M16(g), PORT_M16((g)+16), PORT_M16((g)+32), PORT_M16((g)+48)
+static const uint64_t port_mask[256] = {
+	PORT_M64(0), PORT_M64(64), PORT_M64(128), PORT_M64(192)
+};
+
+// Eight pixels: fg where the mask is set, bg elsewhere. In 32-bit halves:
+// a 64-bit multiply is a library call on the M33.
+static inline uint64_t port_sel(uint64_t m, uint8_t fg, uint8_t bg) {
+	uint32_t f = fg * 0x01010101u, b = bg * 0x01010101u, d = f ^ b;
+	uint32_t lo = b ^ (d & (uint32_t)m), hi = b ^ (d & (uint32_t)(m >> 32));
+	return lo | (uint64_t)hi << 32;
+}
+
+// Eight pixels from four colours, each shown twice.
+static inline uint64_t port_pairs(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+	return (uint64_t)(a * 0x0101u | b * 0x01010000u) | (uint64_t)(c * 0x0101u | d * 0x01010000u) << 32;
+}
+
+// Four pixels to eight, each shown twice.
+static inline uint64_t port_double(uint32_t x) {
+	uint32_t lo = (x & 0xff) * 0x0101u | ((x >> 8) & 0xff) * 0x01010000u;
+	uint32_t hi = ((x >> 16) & 0xff) * 0x0101u | (x >> 24) * 0x01010000u;
+	return lo | (uint64_t)hi << 32;
+}
+
 static inline uint32_t port_mix(uint32_t h, uint32_t w) {
 	h ^= w;
 	return ((h << 5) | (h >> 27)) * 0x9E3779B1u;
@@ -1522,7 +1553,20 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 		uint32_t B = gime->B;
 		unsigned Xoff = gime->Xoff;
 		const uint8_t *lo = gime->public.port_vram[0], *hi = gime->public.port_vram[1];
-		for (unsigned k = 0; k < nfetch; ) {
+		unsigned k = 0;
+		// The usual case in one copy: the line starts on a fresh 16-bit
+		// word, nothing is lost, and its bytes neither wrap the horizontal
+		// offset nor cross a 64 KB half. Words are even and so is nfetch,
+		// so it ends as the loop would, with the last byte in the cache.
+		uint32_t A0 = (B + (Xoff & 0xff)) & 0x1ffff;
+		if (lo && !have && !lose_low && !(A0 & 1) && !(nfetch & 1)
+		    && (Xoff & 0xff) + nfetch <= 256 && (A0 & 0xffff) + nfetch <= 0x10000) {
+			memcpy(buf, ((A0 & 0x10000) ? hi : lo) + (A0 & 0xffff), nfetch);
+			Xoff += nfetch;
+			cache = buf[nfetch - 1];
+			k = nfetch;
+		}
+		while (k < nfetch) {
 			for (int j = attr ? 2 : 1; j; --j) {
 				uint8_t r;
 				if (have) {
@@ -1584,7 +1628,12 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 		gime->port_sum[sl] = h;
 	}
 
-	// Decode.
+	// Decode. Each VRAM byte becomes eight colours in one 64-bit word, the
+	// first pixel in the low byte: render_scanline's c0-c3 for its two 4-bit
+	// groups. Two-colour patterns pick foreground or background through
+	// port_mask (byte i is 0xFF when bit 7-i is set); the four- and
+	// sixteen-colour ones look up pairs and quads. Then the word is emitted
+	// by resolution.
 	unsigned side = (640 - tAA) / 4;
 	uint8_t *pixel = gime->port_line;
 	memset(pixel, border, side);
@@ -1592,29 +1641,27 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 	const uint8_t *src = buf;
 
 	for (unsigned n = nbytes; n; --n) {
-		enum vdg_render_mode render_mode;
-		uint_fast8_t gdata;
-		uint_fast8_t fg_colour = 0;
-		uint_fast8_t bg_colour = 0;
-		uint_fast8_t cg_colours = 0;
 		uint_fast8_t vdata = *src++;
+		uint64_t cols;
 
 		if (COCO) {
 			if (GnA) {
-				gdata = vdata;
-				fg_colour = CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1;
-				bg_colour = CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
-				cg_colours = !CSS ? TCC1014_GREEN : TCC1014_WHITE;
 				if (GM0) {
-					render_mode = rg_full ? TCC1014_RENDER_RG : TCC1014_RENDER_RG2;
+					unsigned g = vdata;
+					if (!rg_full)
+						g = ((g & 0x40) ? 0xc0 : 0) | ((g & 0x10) ? 0x30 : 0) | ((g & 0x04) ? 0x0c : 0) | ((g & 0x01) ? 0x03 : 0);
+					cols = port_sel(port_mask[g],
+					                pal[CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1],
+					                pal[CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0]);
 				} else {
-					render_mode = TCC1014_RENDER_CG;
+					unsigned cg = !CSS ? TCC1014_GREEN : TCC1014_WHITE;
+					cols = port_pairs(pal[cg + ((vdata >> 6) & 3)], pal[cg + ((vdata >> 4) & 3)],
+					                  pal[cg + ((vdata >> 2) & 3)], pal[cg + (vdata & 3)]);
 				}
 			} else if (vdata & 0x80) {
-				gdata = (font_row < 6) ? (vdata >> 2) : vdata;
-				fg_colour = (vdata >> 4) & 7;
-				bg_colour = TCC1014_RGCSS0_0;
-				render_mode = TCC1014_RENDER_SG;
+				unsigned g = (font_row < 6) ? (vdata >> 2) : vdata;
+				unsigned m = ((g & 2) ? 0xf0 : 0) | ((g & 1) ? 0x0f : 0);
+				cols = port_sel(port_mask[m], pal[(vdata >> 4) & 7], pal[TCC1014_RGCSS0_0]);
 			} else {
 				_Bool INV = vdata & 0x40;
 				INV ^= GM1;
@@ -1625,109 +1672,64 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 				} else if (c >= 0x60) {
 					c ^= 0x40;
 				}
-				gdata = font_gime[c*12+font_row];
+				unsigned g = font_gime[c*12+font_row];
 				if (INV ^ INVT)
-					gdata = ~gdata;
-				fg_colour = CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
-				bg_colour = CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN;
-				render_mode = TCC1014_RENDER_RG;
+					g = ~g & 0xff;
+				cols = port_sel(port_mask[g],
+				                pal[CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN],
+				                pal[CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN]);
 			}
-		} else {
-			if (BP) {
-				gdata = vdata;
-			} else {
-				gdata = font_gime[(vdata & 0x7f)*12+font_row];
-				if (attr) {
-					uint_fast8_t a = *src++;
-					fg_colour = 8 | ((a >> 3) & 7);
-					bg_colour = a & 7;
-					if ((a & 0x80) && blink)
-						fg_colour = bg_colour;
-					if ((a & 0x40) && ((font_row & rowmask) == rowmask))
-						gdata = 0xff;
-				} else {
-					fg_colour = 1;
-					bg_colour = 0;
-				}
-			}
-			render_mode = TCC1014_RENDER_RG;
-		}
-
-		uint_fast8_t fg = pal[fg_colour & 15], bg = pal[bg_colour & 15];
-		for (int i = 2; i; --i) {
-			uint_fast8_t c0, c1, c2, c3;
-			if (COCO) {
-				switch (render_mode) {
-				case TCC1014_RENDER_SG: default:
-					c0 = c1 = c2 = c3 = (gdata&0x02) ? fg : bg;
-					gdata <<= 1;
-					break;
-				case TCC1014_RENDER_CG:
-					c0 = c1 = pal[cg_colours + ((gdata >> 6) & 3)];
-					c2 = c3 = pal[cg_colours + ((gdata >> 4) & 3)];
-					gdata <<= 4;
-					break;
-				case TCC1014_RENDER_RG:
-					c0 = (gdata&0x80) ? fg : bg;
-					c1 = (gdata&0x40) ? fg : bg;
-					c2 = (gdata&0x20) ? fg : bg;
-					c3 = (gdata&0x10) ? fg : bg;
-					gdata <<= 4;
-					break;
-				case TCC1014_RENDER_RG2:
-					c0 = c1 = (gdata&0x40) ? fg : bg;
-					c2 = c3 = (gdata&0x10) ? fg : bg;
-					gdata <<= 4;
-					break;
-				}
-			} else {
-				if (BP) {
-					switch (CRES) {
-					case 0: default:
-						c0 = pal[(gdata>>7)&1] & cmask;
-						c1 = pal[(gdata>>6)&1] & cmask;
-						c2 = pal[(gdata>>5)&1] & cmask;
-						c3 = pal[(gdata>>4)&1] & cmask;
-						break;
-					case 1:
-						c0 = c1 = pal[(gdata>>6)&3] & cmask;
-						c2 = c3 = pal[(gdata>>4)&3] & cmask;
-						break;
-					case 2: case 3:
-						c0 = c1 = c2 = c3 = pal[(gdata>>4)&15] & cmask;
-						break;
-					}
-				} else {
-					c0 = ((gdata&0x80) ? fg : bg) & cmask;
-					c1 = ((gdata&0x40) ? fg : bg) & cmask;
-					c2 = ((gdata&0x20) ? fg : bg) & cmask;
-					c3 = ((gdata&0x10) ? fg : bg) & cmask;
-				}
-				gdata <<= 4;
-			}
-
-			switch (resolution) {
-			case 0:
-				pixel[0] = c0; pixel[1] = c0;
-				pixel[2] = c1; pixel[3] = c1;
-				pixel[4] = c2; pixel[5] = c2;
-				pixel[6] = c3; pixel[7] = c3;
-				pixel += 8;
+		} else if (BP) {
+			switch (CRES) {
+			case 0: default:
+				cols = port_sel(port_mask[vdata], pal[1] & cmask, pal[0] & cmask);
 				break;
 			case 1:
-				pixel[0] = c0; pixel[1] = c1;
-				pixel[2] = c2; pixel[3] = c3;
-				pixel += 4;
+				cols = port_pairs(pal[(vdata >> 6) & 3] & cmask, pal[(vdata >> 4) & 3] & cmask,
+				                  pal[(vdata >> 2) & 3] & cmask, pal[vdata & 3] & cmask);
 				break;
-			case 2:
-				pixel[0] = c0; pixel[1] = c2;
-				pixel += 2;
-				break;
-			case 3:
-				pixel[0] = c0;
-				pixel += 1;
+			case 2: case 3:
+				cols = (uint64_t)((pal[(vdata >> 4) & 15] & cmask) * 0x01010101u)
+				     | (uint64_t)((pal[vdata & 15] & cmask) * 0x01010101u) << 32;
 				break;
 			}
+		} else {
+			unsigned g = font_gime[(vdata & 0x7f)*12+font_row];
+			unsigned fgi = 1, bgi = 0;
+			if (attr) {
+				uint_fast8_t a = *src++;
+				fgi = 8 | ((a >> 3) & 7);
+				bgi = a & 7;
+				if ((a & 0x80) && blink)
+					fgi = bgi;
+				if ((a & 0x40) && ((font_row & rowmask) == rowmask))
+					g = 0xff;
+			}
+			cols = port_sel(port_mask[g], pal[fgi] & cmask, pal[bgi] & cmask);
+		}
+
+		switch (resolution) {
+		case 0: {
+			uint32_t lo = (uint32_t)cols, hi = (uint32_t)(cols >> 32);
+			uint64_t a = port_double(lo), b = port_double(hi);
+			memcpy(pixel, &a, 8);
+			memcpy(pixel + 8, &b, 8);
+			pixel += 16;
+			break;
+		}
+		case 1:
+			memcpy(pixel, &cols, 8);
+			pixel += 8;
+			break;
+		case 2:
+			pixel[0] = cols; pixel[1] = cols >> 16;
+			pixel[2] = cols >> 32; pixel[3] = cols >> 48;
+			pixel += 4;
+			break;
+		case 3:
+			pixel[0] = cols; pixel[1] = cols >> 32;
+			pixel += 2;
+			break;
 		}
 	}
 

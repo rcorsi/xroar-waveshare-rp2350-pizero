@@ -191,43 +191,45 @@ static void test_row_skip(void) {
 
 // PIZERO-218: the GIME's port renderer must draw what upstream's renderer
 // plus the halving sink drew. Boot, then optionally run a program that
-// masks interrupts and sets a video mode (VMODE, VRES) over pseudo-random
-// VRAM at physical 0, and compare the two framebuffers.
+// masks interrupts and makes some register writes (a video mode) over
+// pseudo-random VRAM at physical 0, change part of VRAM, and compare the
+// two framebuffers.
 static uint16_t g_fb_ref[320 * 240];
 
-static void render_run(int port, int vmode, int vres) {
+struct reg_write { uint16_t a; uint8_t v; };
+
+static void render_run(int port, const struct reg_write *w, int nw) {
     TEST_ASSERT_TRUE(c3_init(g_rom, 1));
     c3_set_port_render(port);
     for (int f = 0; f < 180; f++) c3_run_ticks(FRAME_TICKS);
-    if (vmode >= 0) {
-        const uint8_t prog[] = {
-            0x1A, 0x50,                         // ORCC #$50
-            0x86, 0x4C, 0xB7, 0xFF, 0x90,       // INIT0: CoCo 3 mode, MMU on
-            0x86, (uint8_t)vmode, 0xB7, 0xFF, 0x98,
-            0x86, (uint8_t)vres, 0xB7, 0xFF, 0x99,
-            0x4F, 0xB7, 0xFF, 0x9D, 0xB7, 0xFF, 0x9E,   // VRAM at physical 0
-            0x20, 0xFE,                         // BRA *
-        };
-        for (unsigned i = 0; i < sizeof prog; i++) c3_poke(0x13000 + i, prog[i]);
-        uint32_t x = 12345;
-        for (uint32_t z = 0; z < 0x8000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
-        c3_set_pc(0x3000);
-        for (int f = 0; f < 6; f++) c3_run_ticks(FRAME_TICKS);
-        // Change part of VRAM: the port renderer skips unchanged lines, so
-        // the changed ones must still be drawn.
-        for (uint32_t z = 0x800; z < 0x2000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
-        for (int f = 0; f < 2; f++) c3_run_ticks(FRAME_TICKS);
+    if (!nw) return;
+    uint8_t prog[256];
+    unsigned n = 0;
+    prog[n++] = 0x1A; prog[n++] = 0x50;                       // ORCC #$50
+    for (int i = 0; i < nw; i++) {                            // LDA #v / STA a
+        prog[n++] = 0x86; prog[n++] = w[i].v;
+        prog[n++] = 0xB7; prog[n++] = w[i].a >> 8; prog[n++] = w[i].a & 0xFF;
     }
+    prog[n++] = 0x20; prog[n++] = 0xFE;                       // BRA *
+    for (unsigned i = 0; i < n; i++) c3_poke(0x13000 + i, prog[i]);
+    uint32_t x = 12345;
+    for (uint32_t z = 0; z < 0x8000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
+    c3_set_pc(0x3000);
+    for (int f = 0; f < 6; f++) c3_run_ticks(FRAME_TICKS);
+    // Change part of VRAM: the port renderer skips unchanged lines, so the
+    // changed ones must still be drawn.
+    for (uint32_t z = 0x800; z < 0x2000; z++) { x = x * 1103515245u + 12345u; c3_poke(z, (uint8_t)(x >> 16)); }
+    for (int f = 0; f < 2; f++) c3_run_ticks(FRAME_TICKS);
 }
 
-static void check_port_render(int vmode, int vres, const char *what) {
-    render_run(0, vmode, vres);
+static void check_port_render(const char *what, const struct reg_write *w, int nw) {
+    render_run(0, w, nw);
     memcpy(g_fb_ref, c3_fb(), sizeof g_fb_ref);
     static uint16_t fb2[320 * 240];
-    render_run(2, vmode, vres);                 // through fetch_vram
+    render_run(2, w, nw);                       // through fetch_vram
     memcpy(fb2, c3_fb(), sizeof fb2);
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE(g_fb_ref, fb2, sizeof fb2, what);
-    render_run(1, vmode, vres);
+    render_run(1, w, nw);
     const uint16_t *fb = c3_fb();
     int bad = -1, n = 0;
     for (int i = 0; i < 320 * 240; i++) if (fb[i] != g_fb_ref[i]) { if (bad < 0) bad = i; n++; }
@@ -238,23 +240,44 @@ static void check_port_render(int vmode, int vres, const char *what) {
         while (k < ncol && seen[k] != fb[i]) k++;
         if (k == ncol) seen[ncol++] = fb[i];
     }
-    printf("  %-32s %2d colours, row 120 starts %04x %04x %04x\n", what, ncol, fb[120 * 320 + 40], fb[120 * 320 + 41], fb[120 * 320 + 42]);
+    printf("  %-36s %2d colours, row 120 starts %04x %04x %04x\n", what, ncol, fb[120 * 320 + 40], fb[120 * 320 + 41], fb[120 * 320 + 42]);
     char msg[128];
     snprintf(msg, sizeof msg, "%s: %d pixels differ, first at x=%d y=%d", what, n, bad % 320, bad / 320);
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, n, msg);
 }
 
+// A CoCo 3 mode: INIT0 for CoCo 3 video, VMODE, VRES, VRAM at physical 0.
+#define C3MODE(vm, vr) { { 0xFF90, 0x4C }, { 0xFF98, vm }, { 0xFF99, vr }, { 0xFF9D, 0 }, { 0xFF9E, 0 } }
+// A VDG-compatible mode: INIT0 with COCO set, $FF22 (the VDG mode bits),
+// VRAM at physical 0 plus the SAM's $0400, and SAM V (clear bits via the
+// even address, set via the odd).
+#define VDGMODE(ff22, v) { { 0xFF90, 0xCC }, { 0xFF22, ff22 }, { 0xFF9D, 0 }, { 0xFF9E, 0 }, \
+    { (uint16_t)(0xFFC0 + ((v) & 1)), 0 }, { (uint16_t)(0xFFC2 + (((v) >> 1) & 1)), 0 }, \
+    { (uint16_t)(0xFFC4 + (((v) >> 2) & 1)), 0 } }
+
 static void test_port_render(void) {
     if (!load_rom()) TEST_IGNORE_MESSAGE("set COCO_ROM_DIR to a folder with coco3.rom (32 KB)");
-    check_port_render(-1, 0, "BASIC's 32-column screen");
-    check_port_render(0x03, 0x15, "40-column text with attributes");
-    check_port_render(0x03, 0x14, "40-column text");
-    check_port_render(0x80, 0x1E, "320x192, 16 colours");
-    check_port_render(0x80, 0x15, "320x192, 4 colours");
-    check_port_render(0x80, 0x0E, "256x192, 16 colours");
-    check_port_render(0x80, 0x08, "256x192, 2 colours");
-    check_port_render(0x80, 0x1C, "640x192, 2 colours (halved)");
-    check_port_render(0x80, 0x00, "128x192, 2 colours");
+    check_port_render("BASIC's 32-column screen", NULL, 0);
+    static const struct { const char *what; struct reg_write w[7]; } modes[] = {
+        { "40-column text with attributes", C3MODE(0x03, 0x15) },
+        { "40-column text",                 C3MODE(0x03, 0x14) },
+        { "320x192, 16 colours",            C3MODE(0x80, 0x1E) },
+        { "320x192, 4 colours",             C3MODE(0x80, 0x15) },
+        { "256x192, 16 colours",            C3MODE(0x80, 0x0E) },
+        { "256x192, 2 colours",             C3MODE(0x80, 0x08) },
+        { "640x192, 2 colours (halved)",    C3MODE(0x80, 0x1C) },
+        { "128x192, 2 colours",             C3MODE(0x80, 0x00) },
+        { "VDG alpha and SG4, CSS 0",       VDGMODE(0x00, 0) },
+        { "VDG alpha and SG4, CSS 1",       VDGMODE(0x08, 0) },
+        { "VDG CG1",                        VDGMODE(0x80, 1) },
+        { "VDG RG1",                        VDGMODE(0x90, 1) },
+        { "VDG CG2",                        VDGMODE(0xA0, 2) },
+        { "VDG RG3, CSS 1",                 VDGMODE(0xD8, 4) },
+        { "VDG CG6",                        VDGMODE(0xE0, 6) },
+        { "VDG RG6, CSS 1",                 VDGMODE(0xF8, 6) },
+    };
+    for (unsigned i = 0; i < sizeof modes / sizeof modes[0]; i++)
+        check_port_render(modes[i].what, modes[i].w, modes[i].w[5].a ? 7 : 5);
 }
 
 int main(int, char **) {
