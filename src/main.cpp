@@ -2121,6 +2121,13 @@ void loop() {
     // Pace to real time; resync if we fell behind rather than spiral.
     next_us += FRAME_PERIOD_US;
     int32_t rem = (int32_t)(next_us - micros());
+    // PIZERO-219: the least time any frame had to spare this second, and how
+    // many missed their slot. A late frame drops emulated time (the sound
+    // comes up short) while fps, a count per second, can still read 60.
+    static int32_t s_slack = INT32_MAX;
+    static uint32_t s_late = 0;
+    if (rem < s_slack) s_slack = rem;
+    if (rem <= 0) s_late++;
     if (rem > 0) delayMicroseconds((uint32_t)rem);
     else         next_us = micros();
 
@@ -2193,7 +2200,7 @@ void loop() {
         snprintf(g_run_line, sizeof g_run_line,
                       "[run] fps=%lu cpu=%luus render=%luus blit=%luus aud=%luus "
                       "| ls=%s conn=%d sof=%lu usb=%lu rpts=%lu rfail=%lu eperr=%u ints=%x "
-                      "| freezes=%lu last=%s badfps=%lu tdrop=%lu",
+                      "| freezes=%lu last=%s badfps=%lu tdrop=%lu slack=%ldus late=%lu",
                       (unsigned long)frames, (unsigned long)(b - a),
                       (unsigned long)(c - b), (unsigned long)(d - c),
                       (unsigned long)(e - d),
@@ -2205,7 +2212,10 @@ void loop() {
                       usbdiag_ep_error(), usbdiag_ints(),
                       (unsigned long)g_freeze_count,
                       g_freeze_count ? wd_phase_name(g_last_freeze_phase) : "none",
-                      (unsigned long)g_bad_fps, (unsigned long)g_tele_dropped);
+                      (unsigned long)g_bad_fps, (unsigned long)g_tele_dropped,
+                      (long)s_slack, (unsigned long)s_late);
+        s_slack = INT32_MAX;
+        s_late = 0;
         tprintf("%s\r\n", g_run_line);
 #ifdef CPU_PROF
         {

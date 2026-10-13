@@ -231,7 +231,10 @@ in editor; they are **not** real build errors (the actual `pio run` is clean).
   real time), so dates are right to within when the card was last touched;
   F1 INFO shows it and where it came from. The `badfps` field on the `[run]`
   line counts every second off 60 fps since boot, so the minute sampling
-  loses no video-fault windows. The logger's own writes (about 8 ms a minute)
+  loses no video-fault windows. `slack` (PIZERO-219) is the least time any
+  frame that second had left before its slot, and `late` how many frames
+  missed it: a late frame loses emulated time, so the sound comes up short
+  while `fps` can still read 60. The logger's own writes (about 8 ms a minute)
   are part of what the soak tests.
 - **Hardware acceptance** (audio/video) is listen/look-on-the-monitor and must be
   user-confirmed. Do not mark an issue `done` from a green build alone (see
