@@ -80,10 +80,9 @@ be made faster without changing what it does. The plan and its reasoning are in
 `docs/coco3-plan.md`.
 
 1. **`PIZERO-130`** (done 2026-10-12): 185.4 host clocks per emulated cycle; 1.79 MHz takes 131.7% of a frame. Numbers in `docs/coco3-feasibility.md`.
-2. **`PIZERO-131`**: the 6809 speed-up (about 1.7×) so 1.79 MHz fits in a frame.
-   Its gate decides whether the CoCo 3 happens.
+2. **`PIZERO-131`** (done 2026-10-13): 185.4 to about 101 host clocks per cycle; 1.79 MHz fits a 60 fps frame, so the gate is met. Remainders: `PIZERO-210` (one game at about 141), `PIZERO-211` (13 KB of RAM).
 3. **`PIZERO-135`**: the open decisions (how the mode is chosen, audio below
-   real time). Settle them alongside 131.
+   real time). Settle them before 133.
 4. **`PIZERO-133`**: boot a 128 KB CoCo 3 to BASIC. Then `PIZERO-178` (GIME
    render cost per mode), `PIZERO-134` and `PIZERO-179` (640-wide modes and the
    path to show them). Check `PIZERO-205`'s F1 caveat (a real CoCo 3 keyboard has
