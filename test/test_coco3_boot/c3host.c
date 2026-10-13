@@ -4,6 +4,12 @@
 // upstream's src/coco3.c wires them, with coco3_bus.h doing what the
 // firmware's machine does with the GIME's decode. No keyboard, sound, disk
 // or cartridge: enough to boot Super Extended Color BASIC and look at it.
+//
+// PIZERO-213: c3_init's fast flag turns on the firmware's fast path, the
+// 6809 core reading and writing whole MMU pages itself (coco_fastbus.h), so
+// a run with it can be compared with a run without.
+
+#define COCO_FASTBUS_PAGES 1     // as -DCOCO3 sets it in the firmware
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +34,7 @@ extern const struct partdb_entry mc6809_part, mc6821_part, tcc1014_1986_part, tc
 
 void *part_new(size_t psize) { return calloc(1, psize); }   // part.c, without its partdb
 
-struct coco_fastbus coco_fastbus;          // every window empty: all cycles take the hook
+struct coco_fastbus coco_fastbus;          // empty pages: every cycle takes the hook
 
 static struct MC6809 *cpu;
 static struct MC6821 *pia0, *pia1;
@@ -37,7 +43,8 @@ static struct coco3_bus bus;
 static uint8_t ram[2][65536];
 static uint8_t rom[COCO3_ROM_SIZE];
 static uint16_t fb[COCO3_FB_W * COCO3_FB_H];
-static int32_t budget;                     // event ticks left in this run
+static event_ticks run_end;                // event tick at which this run stops
+static int fast;                           // PIZERO-213: the fast path is on
 
 static struct part *make(const struct partdb_entry *e, void *options) {
     struct part *p = e->funcs->allocate();
@@ -57,19 +64,45 @@ void coco_mem_nvma(void *sptr) {
     (void)sptr;
     tcc1014_mem_cycle(gime, 1, 0xFFFF);
 }
+// A cycle the core did itself that ends at or after the deadline: the
+// whole cycle again through the GIME, as the firmware does.
 void coco_mem_tick(void *sptr, _Bool RnW, uint16_t A) {
-    (void)sptr; (void)RnW; (void)A;
-    abort();                               // no fast windows, so never reached
+    (void)sptr;
+    if (!fast) abort();                    // no pages, so never reached
+    tcc1014_mem_cycle(gime, RnW, A);
+}
+
+// The pages as the GIME's decode stands now (the firmware's fastbus_sync).
+static void map_pages(void) {
+    coco_fastbus.ram_top = coco_fastbus.rom_top = coco_fastbus.cart_top = 0;
+    if (!fast) {
+        coco_fastbus.page_top = 0;
+        return;
+    }
+    for (unsigned p = 0; p < 8; p++) {
+        unsigned bank;
+        unsigned S = tcc1014_decode_page(gime, p, &bank);
+        coco3_bus_page(&bus, p, S, bank, &coco_fastbus.rd[p], &coco_fastbus.wr[p]);
+    }
+    coco_fastbus.rom = rom + 0x4000;
+    coco_fastbus.ticks = (uint16_t)tcc1014_cycle_ticks(gime);
+    coco_fastbus.page_top = 0xFE00;
+}
+
+// The next tick a cycle must take the full path: the next event, or the
+// end of the run.
+static void set_deadline(void) {
+    event_ticks dl = run_end;
+    struct event *head = MACHINE_EVENT_LIST->events;
+    if (head && event_tick_delta(head->at_tick, dl) < 0) dl = head->at_tick;
+    coco_fastbus.deadline = fast ? dl : event_current_tick;
 }
 
 // The GIME's call-back for every cycle, as upstream's cpu_cycle.
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
     (void)sptr;
-    budget -= ncycles;
-    if (budget <= 0) cpu->running = 0;
     event_run_queue(MACHINE_EVENT_LIST, ncycles);
-    MC6809_IRQ_SET(cpu, pia0->a.irq || pia0->b.irq || gime->IRQ);
-    MC6809_FIRQ_SET(cpu, pia1->a.irq || pia1->b.irq || gime->FIRQ);
+    if (event_tick_delta(event_current_tick, run_end) >= 0) cpu->running = 0;
     switch (coco3_bus_cycle(&bus, gime->S, gime->RAS, gime->Z, RnW, A, &cpu->D)) {
     case C3_BUS_PIA0:
         if (RnW) cpu->D = mc6821_read(pia0, A); else mc6821_write(pia0, A, cpu->D);
@@ -80,8 +113,16 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
     default:
         break;
     }
+    if (!RnW && ((A & 0xFFFE) == 0xFF90 || (A & 0xFFF0) == 0xFFA0 || (A & 0xFFE0) == 0xFFC0))
+        map_pages();
     gime->IL1 = (PIA_VALUE_A(pia0) | 0x80) != 0xff;
-    coco_fastbus.deadline = event_current_tick;   // keep the core off its fast path
+    // The interrupt lines as this cycle leaves them, as the firmware's
+    // mem_cycle_tail does. Upstream sets them at the start of the next cycle,
+    // which is the same for a machine that takes every cycle here, but the
+    // fast path's cycles in between would keep a stale line.
+    MC6809_IRQ_SET(cpu, pia0->a.irq || pia0->b.irq || gime->IRQ);
+    MC6809_FIRQ_SET(cpu, pia1->a.irq || pia1->b.irq || gime->FIRQ);
+    set_deadline();
 }
 
 static uint16_t fetch_vram(void *sptr, uint32_t A) { (void)sptr; return coco3_bus_fetch_vram(&bus, A); }
@@ -100,7 +141,9 @@ static void set_active_area(void *sptr, int x, int y, int w, int h) {
     coco3_bus_set_active_area(&bus, x, y, w, h);
 }
 
-int c3_init(const uint8_t *rom32k) {
+int c3_init(const uint8_t *rom32k, int fast_path) {
+    fast = fast_path;
+    memset(&coco_fastbus, 0, sizeof coco_fastbus);
     memcpy(rom, rom32k, sizeof rom);
     memset(ram, 0, sizeof ram);
     machine_event_list_global = event_list_new();
@@ -132,20 +175,33 @@ int c3_init(const uint8_t *rom32k) {
     mc6821_reset(pia0);
     mc6821_reset(pia1);
     tcc1014_reset(gime);
+    map_pages();
     cpu->reset(cpu);
     return 1;
 }
 
 void c3_run_ticks(int32_t ticks) {
-    budget += ticks;
-    while (budget > 0) {
-        coco_fastbus.deadline = event_current_tick;
+    run_end = event_current_tick + (event_ticks)ticks;
+    while (event_tick_delta(event_current_tick, run_end) < 0) {
+        set_deadline();
         cpu->running = 1;
         cpu->run(cpu);
     }
+}
+
+void c3_state(struct c3_state *st) {
+    st->tick = event_current_tick;
+    st->pc = cpu->reg_pc;
+    st->s = cpu->reg_s;
+    st->u = cpu->reg_u;
+    st->x = cpu->reg_x;
+    st->y = cpu->reg_y;
+    st->cc = cpu->reg_cc;
 }
 
 uint16_t c3_pc(void) { return cpu->reg_pc; }
 const uint16_t *c3_fb(void) { return fb; }
 
 uint8_t c3_phys(uint32_t Z) { return *coco3_ram_at(&bus, Z); }
+void c3_poke(uint32_t Z, uint8_t v) { *coco3_ram_at(&bus, Z) = v; }
+void c3_set_pc(uint16_t pc) { cpu->reg_pc = pc; }

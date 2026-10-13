@@ -25,7 +25,7 @@ From `src/`:
 - `mc6847/mc6847.[ch]`, `font-6847.[ch]`, `font-6847t1.[ch]`
 - `mc6821.[ch]` (PIA)
 - `ram.[ch]`, `part.[ch]`, `serialise.[ch]`, `events.[ch]`
-- `tcc1014/tcc1014.[ch]`, `tcc1014/font-gime.[ch]` (the CoCo 3's GIME, PIZERO-133, copied 2026-10-13 at the same pinned commit). `tcc1014.c` has its serialisation removed, like the other parts here; nothing else changed.
+- `tcc1014/tcc1014.[ch]`, `tcc1014/font-gime.[ch]` (the CoCo 3's GIME, PIZERO-133, copied 2026-10-13 at the same pinned commit). `tcc1014.c` has its serialisation removed, like the other parts here, and two small functions added for the port's fast path (PIZERO-213): `tcc1014_decode_page` (one 8 KB page's decode) and `tcc1014_cycle_ticks` (8 or 16 ticks per CPU cycle). Nothing else changed.
 - `logging.h` (verbatim: its no-op path is used; `LOGGING` is never defined)
 - `breakpoint.h`, `dkbd.h`, `debug_cpu.h`, `fs.h` (declarations only)
 

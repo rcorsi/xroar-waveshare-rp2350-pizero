@@ -721,6 +721,34 @@ unsigned tcc1014_decode(struct TCC1014 *gimep, uint16_t A) {
 	return 7;
 }
 
+// PIZERO-213 (port addition): the decode of one 8 KB logical page below
+// $FE00, for the port's fast path, which maps whole pages instead of
+// decoding every cycle. Returns S as tcc1014_mem_cycle sets it (0 internal
+// ROM, 1 cartridge ROM, 7 RAM) and the page's bank, so RAM is physical
+// (bank << 13) onwards.
+
+unsigned tcc1014_decode_page(struct TCC1014 *gimep, unsigned page, unsigned *bank) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+	page &= 7;
+	unsigned b = gime->MMUEN ? gime->mmu_bank[gime->TR | page] : (0x38 | page);
+	*bank = b;
+	if (!gime->TY && b >= 0x3c) {
+		if (!gime->MC1) {
+			return (b >= 0x3e) ? 1 : 0;
+		}
+		return gime->MC0 ? 1 : 0;
+	}
+	return 7;
+}
+
+// PIZERO-213 (port addition): event ticks per CPU cycle, as tcc1014_mem_cycle
+// passes to cpu_cycle: 8 at 1.79 MHz, 16 at 0.89 MHz.
+
+unsigned tcc1014_cycle_ticks(struct TCC1014 *gimep) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+	return gime->R1 ? 8 : 16;
+}
+
 void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 	gime->SAM_register = val;

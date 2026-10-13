@@ -103,6 +103,34 @@ static inline int coco3_bus_cycle(const struct coco3_bus *b, unsigned S, bool RA
     return left;
 }
 
+// PIZERO-213: where the 6809 core may read and write one 8 KB logical page
+// itself (coco_fastbus.h), given the GIME's decode of it (S as
+// tcc1014_decode_page returns it, and the bank): the same bytes
+// coco3_bus_cycle would move, or NULL for a page that must take the full
+// cycle. Internal ROM is addressed by the logical address, as in
+// coco3_bus_cycle; a cartridge smaller than a page, or none, is left slow.
+static inline void coco3_bus_page(const struct coco3_bus *b, unsigned page, unsigned S,
+                                  unsigned bank, const uint8_t **rd, uint8_t **wr) {
+    *rd = 0;
+    *wr = 0;
+    switch (S) {
+    case 0:
+        *rd = b->rom + ((page << 13) & 0x7FFFu);
+        break;
+    case 1:
+        if (b->cart && b->cart_mask >= 0x1FFFu) *rd = b->cart + ((page << 13) & b->cart_mask);
+        break;
+    case 7: {
+        uint8_t *p = coco3_ram_at(b, (uint32_t)bank << 13);
+        *rd = p;
+        *wr = p;
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 // The GIME's video fetch: 16 bits at an even physical address.
 static inline uint16_t coco3_bus_fetch_vram(const struct coco3_bus *b, uint32_t A) {
     const uint8_t *p = coco3_ram_at(b, A & ~1u);

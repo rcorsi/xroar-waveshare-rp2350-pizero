@@ -803,14 +803,26 @@ extern "C" { struct coco_fastbus coco_fastbus; }
 static const uint8_t k_open_bus = 0xFF;   // no cartridge: reads float high
 
 static inline void fastbus_sync(void) {
+#ifdef COCO_FASTBUS_PAGES
     if (g_c3) {
-        // PIZERO-133: every cycle goes through the GIME for now (the MMU
-        // fast path is a later step). The cartridge is still kept current.
+        // PIZERO-213: map each 8 KB logical page through the GIME's MMU as
+        // its decode stands now. coco3_cpu_cycle calls this after every
+        // write that can change the map.
         g_c3bus.cart = g_m.cart_rom;
         g_c3bus.cart_mask = g_m.cart_mask;
         coco_fastbus.ram_top = coco_fastbus.rom_top = coco_fastbus.cart_top = 0;
+        if (!g_gime3) { coco_fastbus.page_top = 0; return; }
+        for (unsigned p = 0; p < 8; p++) {
+            unsigned bank;
+            unsigned S = tcc1014_decode_page(g_gime3, p, &bank);
+            coco3_bus_page(&g_c3bus, p, S, bank, &coco_fastbus.rd[p], &coco_fastbus.wr[p]);
+        }
+        coco_fastbus.rom = g_c3bus.rom + 0x4000;     // a dummy cycle reads $FFFF
+        coco_fastbus.ticks = (uint16_t)tcc1014_cycle_ticks(g_gime3);
+        coco_fastbus.page_top = 0xFE00;              // $FE00 up: MC3 and I/O
         return;
     }
+#endif
     coco_fastbus.ram = g_m.ram;
     coco_fastbus.rom = g_m.rom;
     coco_fastbus.cart = g_m.cart_rom ? g_m.cart_rom : &k_open_bus;
@@ -825,6 +837,22 @@ static inline void fastbus_sync(void) {
         coco_fastbus.rom_top  = 0xC000;
         coco_fastbus.cart_top = 0xFF00;
     }
+#ifdef COCO_FASTBUS_PAGES
+    // A CoCo 2 in a paged build: the same windows as pages.
+    for (unsigned p = 0; p < 8; p++) {
+        uint16_t a = (uint16_t)(p << 13);
+        const uint8_t *rd = nullptr;
+        uint8_t *wr = nullptr;
+        if (a < coco_fastbus.ram_top) rd = wr = coco_fastbus.ram + a;
+        else if (a < coco_fastbus.rom_top) rd = coco_fastbus.rom + (a & 0x3FFF);
+        else if (a < coco_fastbus.cart_top && coco_fastbus.cart_mask >= 0x1FFF)
+            rd = coco_fastbus.cart + (a & coco_fastbus.cart_mask);
+        coco_fastbus.rd[p] = rd;
+        coco_fastbus.wr[p] = wr;
+    }
+    coco_fastbus.ticks = 16;
+    coco_fastbus.page_top = coco_fastbus.cart_top ? 0xFF00 : 0;
+#endif
 }
 
 // A write to the cartridge's I/O window, $FF40-$FF5F: a bank-switched
@@ -1063,6 +1091,9 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
 // (coco_fastbus.h): only the per-cycle tail is left.
 extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr; (void)RnW; (void)A;
+    // PIZERO-213: the CoCo 3 repeats the whole cycle through the GIME. The
+    // core has already moved the byte; moving it again changes nothing.
+    if (g_c3) { tcc1014_mem_cycle(g_gime3, RnW, A); return; }
     audio_catch_up();
     g_m.total_mem_cycles++;
 #if PROFILE_MEM_CYCLE
@@ -1194,8 +1225,15 @@ static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_
     default:
         break;
     }
+    // PIZERO-213: a write that can move the MMU map (the registers at
+    // $FFA0-$FFAF, INIT0/INIT1 at $FF90/$FF91, the SAM subset) remaps the
+    // fast path's pages. The GIME has already taken it.
+    if (!RnW && ((A & 0xFFFE) == 0xFF90 || (A & 0xFFF0) == 0xFFA0 || (A & 0xFFE0) == 0xFFC0))
+        fastbus_sync();
     // The keyboard interrupt: any row pulled low (upstream does this every
-    // cycle; the GIME edge-detects it at the start of the next).
+    // cycle; the GIME edge-detects it at the start of the next). PIZERO-213:
+    // now only on the cycles that take the full path, at least once per
+    // audio sample.
     g_gime3->IL1 = (PIA_VALUE_A(g_m.pia0) | 0x80) != 0xff;
     mem_cycle_tail(ncycles, 0);
 }
@@ -1285,6 +1323,7 @@ static _Bool coco3_init(const uint8_t *rom) {
     g_gime3->CPUD = &g_m.cpu->D;
     tcc1014_notify_mode(g_gime3);
     tcc1014_reset(g_gime3);
+    fastbus_sync();                                  // PIZERO-213: the GIME's map
     g_m.cpu->reset(g_m.cpu);
     return 1;
 }
@@ -1506,8 +1545,12 @@ static inline __attribute__((always_inline)) void audio_catch_up(void) {
 static inline __attribute__((always_inline)) void fastbus_deadline(void) {
     uint32_t now = event_current_tick;
     g_aud_tick = now;
-    if (g_c3) { coco_fastbus.deadline = now; return; }   // PIZERO-133: no skipping yet
-    uint32_t dl = now + 16u * audio_integ_accesses_to_boundary(&g_aud, g_aud_rate, 16);
+#ifdef COCO_FASTBUS_PAGES
+    uint32_t t = coco_fastbus.ticks;              // PIZERO-213: 8 at 1.79 MHz
+#else
+    const uint32_t t = 16;
+#endif
+    uint32_t dl = now + t * audio_integ_accesses_to_boundary(&g_aud, g_aud_rate, t);
     struct event *head = machine_event_list_global->events;
     if (head && event_tick_delta(head->at_tick, dl) < 0) dl = head->at_tick;
     if (event_tick_delta(g_budget_end, dl) < 0) dl = g_budget_end;
@@ -1781,6 +1824,7 @@ extern "C" void coco_machine_cold_reset(void) {
         fastbus_sync();
         csg_reset();
         tcc1014_reset(g_gime3);
+        fastbus_sync();                              // PIZERO-213: the map after reset
         g_m.cpu->reset(g_m.cpu);
         return;
     }
