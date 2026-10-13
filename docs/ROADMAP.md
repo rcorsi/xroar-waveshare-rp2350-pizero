@@ -86,8 +86,9 @@ be made faster without changing what it does. The plan and its reasoning are in
 4. **`PIZERO-133`** (done 2026-10-13): env `pizero_coco3` boots a 128 KB CoCo 3
    to OK on hardware, at about half speed (29 fps, 35 ms of CPU per frame).
 5. **`PIZERO-213`** (done 2026-10-13): the MMU fast path and a per-row redraw skip;
-   58 fps at OK at 0.89 MHz, 48 at 1.79. **`PIZERO-218`**: the GIME's video, the
-   rest of the frame. Then
+   58 fps at OK at 0.89 MHz, 48 at 1.79. **`PIZERO-218`** (done 2026-10-13): a
+   port-side GIME renderer; 60 fps at both speeds. `PIZERO-219` measures the
+   worst case (full-screen animation at 1.79 MHz). Then
    `PIZERO-214` (check WIDTH 40, palette, timer, HSCREEN), `PIZERO-215` (ALT,
    CTRL, F1, F2, fire2; includes `PIZERO-205`'s F1 caveat), `PIZERO-178` (GIME
    render cost per mode), `PIZERO-134` and `PIZERO-179` (640-wide modes and the
@@ -171,7 +172,7 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 
 ## Dependency notes
 
-- **CoCo 3**: `PIZERO-129` (done) → `130` → `131` (gate) → `133` (done) → `213` (done) → `218`;
+- **CoCo 3**: `PIZERO-129` (done) → `130` → `131` (gate) → `133` (done) → `213` (done) → `218` (done) → `214`;
   `135` still decides how the mode is chosen; `134`/`179`/`214`-`217` after 133. `PIZERO-142`'s banked carts allocate on the
   heap only while installed, so they do not take the RAM 133 needs.
 - **Storage**: `PIZERO-70` → `71` → `72` → `73` → `74`; `PIZERO-79` needs 73
