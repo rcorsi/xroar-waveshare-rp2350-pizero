@@ -29,11 +29,17 @@ void LS(mem_cycle)(void *sptr, _Bool RnW, uint16_t A);
 // cycles move the same bytes LS(mem_cycle) would; ROM reads and everything
 // else still come through LS(mem_cycle). The reference core ignores this.
 struct coco_fastbus LS(fastbus);
+// Never advanced, with the deadline at 0: every cycle ends at or past the
+// deadline, so the live core calls LS(mem_tick) or LS(mem_nvma) for each one
+// and every cycle is recorded.
+uint32_t event_current_tick;              // renamed per core by renames.h
 
 static void LS(fastbus_sync)(void) {
     LS(fastbus).ram = LS(mem);
     LS(fastbus).ram_top = LS(rom_base) ? LS(rom_base) : 0xFF00;
     LS(fastbus).rom_top = LS(fastbus).cart_top = 0;
+    LS(fastbus).deadline = 0;
+    event_current_tick = 0;
 }
 
 // Every cycle, whoever moved its data: record it, count it, and end the

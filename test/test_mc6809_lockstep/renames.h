@@ -6,6 +6,7 @@
 #define coco_mem_nvma    LSR_CAT(LS_PREFIX, mem_nvma)
 #define coco_mem_tick    LSR_CAT(LS_PREFIX, mem_tick)
 #define coco_fastbus     LSR_CAT(LS_PREFIX, fastbus)
+#define event_current_tick LSR_CAT(LS_PREFIX, event_current_tick)
 #define MC6809_HALT_SET  LSR_CAT(LS_PREFIX, MC6809_HALT_SET)
 #define MC6809_NMI_SET   LSR_CAT(LS_PREFIX, MC6809_NMI_SET)
 #define MC6809_FIRQ_SET  LSR_CAT(LS_PREFIX, MC6809_FIRQ_SET)

@@ -22,6 +22,7 @@
 #include "joy_compare.h"       // PIZERO-13, host-tested
 #include "coco_palette.h"
 #include "audio_servo.h"
+#include "audio_integ.h"       // PIZERO-131, host-tested
 #ifdef GIME_TIMER
 #include "gime_timer.h"
 #endif
@@ -106,7 +107,6 @@ struct CocoMachine {
     struct MC6821 *pia1 = nullptr;
     struct MC6847 *vdg = nullptr;
 
-    int32_t cycles_remaining = 0;
     uint32_t total_mem_cycles = 0;
     uint32_t render_lines = 0;
 
@@ -728,6 +728,10 @@ static inline void audio_update_level(void);
 // Forced inline (PIZERO-131): with two callers, the hook and the dummy-cycle
 // entry, the compiler made it a real function and put it in flash.
 static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks);
+// PIZERO-131 step (c): see coco_fastbus.h and the audio section.
+static inline __attribute__((always_inline)) void audio_catch_up(void);
+static inline __attribute__((always_inline)) void fastbus_deadline(void);
+static uint32_t g_budget_end;   // event tick at which this run's budget is spent
 
 // PIZERO-143: the Games Master Cartridge's SN76489. Written from the bus
 // (odd $FF40-$FF5F with a banked cart in), rendered at each audio sample in
@@ -828,8 +832,11 @@ static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, ui
         g_m.pia_irq_dirty = false;
     }
 
-    g_m.cycles_remaining -= ncycles;
-    if (g_m.cycles_remaining <= 0) g_m.cpu->running = 0;
+    // The budget is spent once time reaches its end (PIZERO-131: by tick,
+    // so cycles that skip the tail still count against it).
+    if (event_tick_delta(event_current_tick, g_budget_end) >= 0) g_m.cpu->running = 0;
+
+    fastbus_deadline();
 
 #if PROFILE_MEM_CYCLE
     { uint32_t pt1 = cpu_prof_now(); g_cpu_prof.sec_clk[3] += pt1 - pt0; }
@@ -838,6 +845,7 @@ static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, ui
 
 extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr;
+    audio_catch_up();     // before a PIA1 write can change the level
     g_m.total_mem_cycles++;
 
 #if PROFILE_MEM_CYCLE
@@ -1006,6 +1014,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
 // (coco_fastbus.h): only the per-cycle tail is left.
 extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr; (void)RnW; (void)A;
+    audio_catch_up();
     g_m.total_mem_cycles++;
 #if PROFILE_MEM_CYCLE
     uint32_t pt0 = cpu_prof_now();
@@ -1022,6 +1031,7 @@ extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
 // switch. The CPU's interrupt latches are still sampled by the caller.
 extern "C" void HOT_FUNC(coco_mem_nvma)(void *sptr) {
     (void)sptr;
+    audio_catch_up();
     g_m.total_mem_cycles++;
     g_m.sam->S = 2;
     g_m.cpu->D = g_m.rom[0xFFFF & 0x3FFF];
@@ -1236,11 +1246,8 @@ static uint32_t          g_audio_err = 0;              // Bresenham accumulator
 // This captures edge timing to ~1 memory access (~16 ticks) instead of a whole
 // 447-tick sample, removing the jitter aliasing at the source. A gentle 2-pole
 // IIR then matches the OEM CoCo's TV-bandwidth sound.
-#define EVENT_TICK_HZ        14318180u                 // event ticks per second (16/CPU cycle)
 static int32_t  g_dac_level = 0;                       // current DAC+1bit level (set on PIA1 write)
-static int32_t  g_aud_acc   = 0;                       // integral of level*ticks this sample
-static uint32_t g_aud_tk    = 0;                       // ticks accumulated this sample
-static uint32_t g_aud_terr  = 0;                       // Bresenham accumulator (ticks*RATE)
+static struct audio_integ g_aud;                       // the sample being integrated (audio_integ.h)
 static int32_t  g_lp1 = 0, g_lp2 = 0;                  // 2-pole TV-bandwidth LPF state
 
 // Recompute the cached audio level from PIA1 (called right after a PIA1 write).
@@ -1294,21 +1301,42 @@ static inline void audio_emit(int s) {
 // ticks past the boundary carry to the next sample) so each emitted sample is
 // the true time-average over its period -- no edge jitter, no residual aliasing.
 static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks) {
-    g_aud_acc  += g_dac_level * (int32_t)ticks;
-    g_aud_tk   += ticks;
-    g_aud_terr += ticks * g_aud_rate;
-    if (g_aud_terr >= EVENT_TICK_HZ) {
-        g_aud_terr -= EVENT_TICK_HZ;
-        uint32_t over_tk  = g_aud_terr / g_aud_rate;          // ticks of this access past the boundary
-        int32_t  over_val = g_dac_level * (int32_t)over_tk;   // ...belong to the next sample
-        int32_t  acc = g_aud_acc - over_val;
-        uint32_t tk  = g_aud_tk  - over_tk;
-        int s = tk ? (int)(acc / (int32_t)tk) : g_dac_level;
+    int s; uint32_t tk;
+    if (audio_integ_step(&g_aud, g_dac_level, ticks, g_aud_rate, &s, &tk)) {
         if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume / 10;   // PIZERO-143/145
         audio_emit(s);
-        g_aud_acc = over_val;
-        g_aud_tk  = over_tk;
     }
+}
+
+// PIZERO-131 step (c). Cycles that end before coco_fastbus.deadline only
+// advance event_current_tick. g_aud_tick is the tick the audio has been
+// integrated up to; the cycles since are whole 16-tick accesses at one DAC
+// level (a level change comes through coco_mem_cycle, which catches up
+// first) and, by the deadline, none crosses a sample boundary. So they add
+// to the integral exactly as audio_integrate(16) would have one by one.
+static uint32_t g_aud_tick;
+
+static inline __attribute__((always_inline)) void audio_catch_up(void) {
+    uint32_t pend = event_current_tick - g_aud_tick;
+    if (pend) {
+        audio_integ_span(&g_aud, g_dac_level, pend, g_aud_rate);
+        g_m.total_mem_cycles += pend / 16;
+        g_aud_tick = event_current_tick;
+    }
+}
+
+// The earliest tick at which a cycle needs the tail: the end of the
+// 16-tick access that crosses the next sample boundary, the next event, or
+// the end of the budget. Called at the end of every tail, with the audio
+// caught up to now.
+static inline __attribute__((always_inline)) void fastbus_deadline(void) {
+    uint32_t now = event_current_tick;
+    g_aud_tick = now;
+    uint32_t dl = now + 16u * audio_integ_accesses_to_boundary(&g_aud, g_aud_rate, 16);
+    struct event *head = machine_event_list_global->events;
+    if (head && event_tick_delta(head->at_tick, dl) < 0) dl = head->at_tick;
+    if (event_tick_delta(g_budget_end, dl) < 0) dl = g_budget_end;
+    coco_fastbus.deadline = dl;
 }
 
 // Drain up to `max` mono int16 samples; returns count read. PIZERO-39: this is
@@ -1374,9 +1402,18 @@ extern "C" void coco_machine_audio_counters(uint32_t *produced, uint32_t *tone) 
 // cpu->run. (The VDG already drives field-sync at 60 Hz, so we do NOT regenerate
 // it here -- doing so double-drove PIA0 CB1.)
 static inline void run_cpu_with_audio(uint32_t cycles) {
-    g_m.cycles_remaining = (int32_t)cycles * 16;
+    // PIZERO-131: the budget is an end tick, and the audio is caught up at
+    // the end of every run, so the servo's rate change between runs applies
+    // from here on, as before.
+    g_budget_end = event_current_tick + cycles * 16u;
+    g_aud_tick = event_current_tick;
+    fastbus_deadline();
+    // Interrupt lines changed between runs (the cart autostart toggle, a
+    // key) are refreshed by the first cycle's tail, as before.
+    if (g_m.pia_irq_dirty) coco_fastbus.deadline = event_current_tick;
     g_m.cpu->running = 1;
     g_m.cpu->run(g_m.cpu);
+    audio_catch_up();
 }
 
 extern "C" void coco_machine_run_cycles(uint32_t cycles) {
