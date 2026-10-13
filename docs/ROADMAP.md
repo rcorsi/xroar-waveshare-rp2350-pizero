@@ -83,10 +83,13 @@ be made faster without changing what it does. The plan and its reasoning are in
 2. **`PIZERO-131`** (done 2026-10-13): 185.4 to about 101 host clocks per cycle; 1.79 MHz fits a 60 fps frame, so the gate is met. Remainders: `PIZERO-210` (one game at about 141), `PIZERO-211` (13 KB of RAM).
 3. **`PIZERO-135`**: the open decisions (how the mode is chosen, audio below
    real time). Settle them before 133.
-4. **`PIZERO-133`**: boot a 128 KB CoCo 3 to BASIC. Then `PIZERO-178` (GIME
+4. **`PIZERO-133`** (done 2026-10-13): env `pizero_coco3` boots a 128 KB CoCo 3
+   to OK on hardware, at about half speed (29 fps, 35 ms of CPU per frame).
+5. **`PIZERO-213`**: the MMU fast path, so the CoCo 3 runs at full speed. Then
+   `PIZERO-214` (check WIDTH 40, palette, timer, HSCREEN), `PIZERO-215` (ALT,
+   CTRL, F1, F2, fire2; includes `PIZERO-205`'s F1 caveat), `PIZERO-178` (GIME
    render cost per mode), `PIZERO-134` and `PIZERO-179` (640-wide modes and the
-   path to show them). Check `PIZERO-205`'s F1 caveat (a real CoCo 3 keyboard has
-   F1) when 133 lands.
+   path to show them), `PIZERO-216` and `PIZERO-217`.
 
 Related CPU-speed bug: **`PIZERO-132`** (SAM double speed is never applied).
 
@@ -166,8 +169,8 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 
 ## Dependency notes
 
-- **CoCo 3**: `PIZERO-129` (done) → `130` → `131` (gate) → `133`; `135` decides
-  before 133; `134`/`179` after it. `PIZERO-142`'s banked carts allocate on the
+- **CoCo 3**: `PIZERO-129` (done) → `130` → `131` (gate) → `133` (done) → `213`;
+  `135` still decides how the mode is chosen; `134`/`179`/`214`-`217` after 133. `PIZERO-142`'s banked carts allocate on the
   heap only while installed, so they do not take the RAM 133 needs.
 - **Storage**: `PIZERO-70` → `71` → `72` → `73` → `74`; `PIZERO-79` needs 73
   for the default cart. `PIZERO-62`'s GIME timer occupies `$FF90-$FF95`, so
