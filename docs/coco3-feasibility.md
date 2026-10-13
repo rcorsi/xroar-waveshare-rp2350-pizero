@@ -114,12 +114,15 @@ only: its baseline is 180.6 clocks, where unit 10 measured 185.4.
 | (d) the core reads RAM, ROM and cartridge, and writes RAM, itself | 18.53 ms | 156.6 | 49 |
 | (c) cycles before the next deadline skip the per-cycle tail | 12.11 ms | **102.3** | 60 |
 
-The target is met at the BASIC prompt: 1.79 MHz fits in 72.7% of a frame for
-emulation, 85.3% for the whole frame. One caveat, from a contaminated run
-(2026-10-12-2325): a graphics game running flat out at 2x took 16.69 ms of
-emulation a frame, about 141 clocks per cycle, so busy programs cost more per
-cycle than the idle prompt (more I/O through the full hook). A game workload
-needs its own bench before the gate is called.
+| (c), Dungeons of Daggorath attract mode (graphics and sound) | 11.97 ms | **101.1** | 60 |
+
+The target is met at the BASIC prompt (1.79 MHz in 72.7% of a frame for
+emulation, 85.3% for the whole frame) and in a busy game: Daggorath's attract
+mode, in full graphics with sound, held 60 fps for 99.2% of 4 minutes, its
+worst second at 12.9 ms of emulation. One open question: a game played at the
+keyboard in the contaminated 2026-10-12-2325 run took about 141 clocks per
+cycle (16.69 ms), so some program or input pattern costs more; which one is
+not known yet.
 
 Target about 105.
 
