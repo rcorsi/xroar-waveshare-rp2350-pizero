@@ -65,6 +65,42 @@ static unsigned run_new(const struct access *a, unsigned n, const uint32_t *rate
     return ns;
 }
 
+// PIZERO-220: the machine's way since then. Plain 16-tick accesses only
+// add up until an event (here every 20-90 accesses), whatever sample
+// boundaries they cross; the catch-up then runs them all with
+// audio_integ_run, which emits every sample they crossed.
+static unsigned g_run_ns;
+static void run_emit(int s, uint32_t tk) { g_new[g_run_ns++] = (struct sample){s, tk}; }
+
+static unsigned run_events(const struct access *a, unsigned n, const uint32_t *rates,
+                           struct audio_integ *out) {
+    struct audio_integ st = {0, 0, 0};
+    unsigned run = 0;
+    uint32_t rate = rates[0];
+    int32_t level = 0;
+    uint32_t pend = 0, left = 20 + rnd() % 70;
+    g_run_ns = 0;
+    for (unsigned i = 0; i < n; i++) {
+        if (a[i].new_run) {
+            audio_integ_run(&st, level, pend / 16, 16, rate, run_emit);
+            pend = 0;
+            rate = rates[++run];
+        }
+        bool slow = a[i].ticks != 16 || a[i].level != level || --left == 0;
+        if (!slow) { pend += 16; continue; }
+        audio_integ_run(&st, level, pend / 16, 16, rate, run_emit);
+        pend = 0;
+        level = a[i].level;
+        int s; uint32_t tk;
+        if (audio_integ_step(&st, level, a[i].ticks, rate, &s, &tk))
+            g_new[g_run_ns++] = (struct sample){s, tk};
+        if (!left) left = 20 + rnd() % 70;
+    }
+    audio_integ_run(&st, level, pend / 16, 16, rate, run_emit);
+    *out = st;
+    return g_run_ns;
+}
+
 static unsigned run_old(const struct access *a, unsigned n, const uint32_t *rates,
                         struct audio_integ *out) {
     struct audio_integ st = {0, 0, 0};
@@ -80,7 +116,7 @@ static unsigned run_old(const struct access *a, unsigned n, const uint32_t *rate
     return ns;
 }
 
-static void compare_streams(unsigned n, unsigned level_every, unsigned odd_every) {
+static void compare_streams(unsigned n, unsigned level_every, unsigned odd_every, int events = 0) {
     static struct access a[1000000];
     static uint32_t rates[2000];
     unsigned runs = 0;
@@ -96,7 +132,7 @@ static void compare_streams(unsigned n, unsigned level_every, unsigned odd_every
     }
     struct audio_integ so, sn;
     unsigned no = run_old(a, n, rates, &so);
-    unsigned nn = run_new(a, n, rates, &sn);
+    unsigned nn = events ? run_events(a, n, rates, &sn) : run_new(a, n, rates, &sn);
     TEST_ASSERT_TRUE(no > 0);
     TEST_ASSERT_EQUAL_UINT32(no, nn);
     for (unsigned i = 0; i < no; i++) {
@@ -121,6 +157,11 @@ static void test_changing_level_matches(void) { compare_streams(600000, 40, 0); 
 // Busy sound with odd-length accesses mixed in (SAM register writes).
 static void test_odd_accesses_match(void) { compare_streams(600000, 7, 50); }
 
+// PIZERO-220: the same three streams caught up only at events.
+static void test_events_constant_level_matches(void) { compare_streams(300000, 0, 0, 1); }
+static void test_events_changing_level_matches(void) { compare_streams(600000, 40, 0, 1); }
+static void test_events_odd_accesses_match(void) { compare_streams(600000, 7, 50, 1); }
+
 // The access the helper names crosses a boundary and none before it does.
 static void test_accesses_to_boundary_is_exact(void) {
     for (unsigned k = 0; k < 20000; k++) {
@@ -141,5 +182,8 @@ int main(int, char **) {
     RUN_TEST(test_changing_level_matches);
     RUN_TEST(test_odd_accesses_match);
     RUN_TEST(test_accesses_to_boundary_is_exact);
+    RUN_TEST(test_events_constant_level_matches);
+    RUN_TEST(test_events_changing_level_matches);
+    RUN_TEST(test_events_odd_accesses_match);
     return UNITY_END();
 }

@@ -432,10 +432,18 @@ static void tele_write(const char *s, size_t n) {
     if (!g_tele_ok) { g_tele_dropped++; return; }
     if (!Serial) return;                              // no host: nothing would be sent
     uint32_t t0 = micros();
-    while (Serial.availableForWrite() < (int)n) {
-        if (micros() - t0 > 10000) { g_tele_ok = false; g_tele_dropped++; return; }
+    // PIZERO-220: in pieces, since a line can be longer than the USB
+    // serial's transmit buffer (the [run] line passed it), and a wait for
+    // that much room never ends.
+    while (n) {
+        size_t k = n < 64 ? n : 64;
+        while (Serial.availableForWrite() < (int)k) {
+            if (micros() - t0 > 10000) { g_tele_ok = false; g_tele_dropped++; return; }
+        }
+        Serial.write((const uint8_t *)s, k);
+        s += k;
+        n -= k;
     }
-    Serial.write((const uint8_t *)s, n);
 }
 static void tprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 static void tprintf(const char *fmt, ...) {
@@ -2128,8 +2136,15 @@ void loop() {
     static uint32_t s_late = 0;
     if (rem < s_slack) s_slack = rem;
     if (rem <= 0) s_late++;
+    // PIZERO-220: the worst emulation time and the worst whole frame's work
+    // (from the end of the last frame's wait to here) this second, so a late
+    // frame can be put down to the emulation or to the rest of the loop.
+    static uint32_t s_cmax = 0, s_wmax = 0, s_frame_start = 0;
+    if (b - a > s_cmax) s_cmax = b - a;
+    { uint32_t w = micros() - s_frame_start; if (s_frame_start && w > s_wmax) s_wmax = w; }
     if (rem > 0) delayMicroseconds((uint32_t)rem);
     else         next_us = micros();
+    s_frame_start = micros();
 
     static uint32_t last = 0, frames = 0;
     frames++;
@@ -2200,7 +2215,7 @@ void loop() {
         snprintf(g_run_line, sizeof g_run_line,
                       "[run] fps=%lu cpu=%luus render=%luus blit=%luus aud=%luus "
                       "| ls=%s conn=%d sof=%lu usb=%lu rpts=%lu rfail=%lu eperr=%u ints=%x "
-                      "| freezes=%lu last=%s badfps=%lu tdrop=%lu slack=%ldus late=%lu",
+                      "| freezes=%lu last=%s badfps=%lu tdrop=%lu slack=%ldus late=%lu cmax=%luus wmax=%luus",
                       (unsigned long)frames, (unsigned long)(b - a),
                       (unsigned long)(c - b), (unsigned long)(d - c),
                       (unsigned long)(e - d),
@@ -2213,9 +2228,11 @@ void loop() {
                       (unsigned long)g_freeze_count,
                       g_freeze_count ? wd_phase_name(g_last_freeze_phase) : "none",
                       (unsigned long)g_bad_fps, (unsigned long)g_tele_dropped,
-                      (long)s_slack, (unsigned long)s_late);
+                      (long)s_slack, (unsigned long)s_late,
+                      (unsigned long)s_cmax, (unsigned long)s_wmax);
         s_slack = INT32_MAX;
         s_late = 0;
+        s_cmax = s_wmax = 0;
         tprintf("%s\r\n", g_run_line);
 #ifdef CPU_PROF
         {
@@ -2245,6 +2262,23 @@ void loop() {
                         (unsigned long)(p.sec_clk[1] * 10ull / n / 10), (unsigned long)(p.sec_clk[1] * 10ull / n % 10),
                         (unsigned long)(p.sec_clk[2] * 10ull / n / 10), (unsigned long)(p.sec_clk[2] * 10ull / n % 10),
                         (unsigned long)(p.sec_clk[3] * 10ull / n / 10), (unsigned long)(p.sec_clk[3] * 10ull / n % 10));
+                // PIZERO-220: the CoCo 3's slow cycles, events and sink, per frame.
+                if (p.slow_n)
+                    tprintf("[prof3] per frame: slow=%lu (%lu clk: bus %lu tail %lu) ev=%lu (%lu clk) lines=%lu sink=%lu clk run=%lu clk | samples=%lu (%lu clk) catch=%lu clk\r\n",
+                            (unsigned long)(p.slow_n / 60), (unsigned long)(p.slow_clk / 60),
+                            (unsigned long)(p.cb_bus_clk / 60), (unsigned long)(p.cb_tail_clk / 60),
+                            (unsigned long)(p.ev_n / 60), (unsigned long)(p.ev_clk / 60),
+                            (unsigned long)(p.line_n / 60), (unsigned long)(p.line_clk / 60),
+                            (unsigned long)(p.run_clk / 60),
+                            (unsigned long)(p.samp_n / 60), (unsigned long)(p.samp_clk / 60),
+                            (unsigned long)(p.catch_clk / 60));
+                if (p.pr_n)
+                    tprintf("[prof3] port render per drawn line: gather+hash=%lu decode=%lu clk (%lu lines/s)\r\n",
+                            (unsigned long)(p.pr_gather / p.pr_n), (unsigned long)(p.pr_decode / p.pr_n),
+                            (unsigned long)p.pr_n);
+                tprintf("[prof3] worst frame: run=%lu clk cyc=%lu slow=%lu ev=%lu lines=%lu sink=%lu\r\n",
+                        (unsigned long)p.wf_run, (unsigned long)p.wf_cyc, (unsigned long)p.wf_slow,
+                        (unsigned long)p.wf_ev, (unsigned long)p.wf_lines, (unsigned long)p.wf_sink);
             }
         }
 #endif

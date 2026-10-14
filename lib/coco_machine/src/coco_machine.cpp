@@ -883,7 +883,14 @@ static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, ui
     event_ticks new_tick = event_current_tick + ncycles;
     struct event *head = machine_event_list_global->events;
     if (head && event_tick_delta(new_tick, head->at_tick) >= 0) {
+#ifdef CPU_PROF
+        uint32_t et0 = cpu_prof_now();
         event_run_queue(machine_event_list_global, ncycles);
+        g_cpu_prof.ev_clk += cpu_prof_now() - et0;
+        g_cpu_prof.ev_n++;
+#else
+        event_run_queue(machine_event_list_global, ncycles);
+#endif
         // VDG event callbacks may toggle PIA CB1 inputs; assume any actual
         // dispatch could have shifted PIA IRQ outputs.
         g_m.pia_irq_dirty = true;
@@ -930,9 +937,22 @@ static inline __attribute__((always_inline)) void mem_cycle_tail(int ncycles, ui
 #endif
 }
 
+// PIZERO-133: a CoCo 3 cycle goes through the GIME, which calls back
+// coco3_cpu_cycle. PIZERO-220: timed in the profiler build.
+static inline __attribute__((always_inline)) void c3_slow(_Bool RnW, uint16_t A) {
+#ifdef CPU_PROF
+    uint32_t t0 = cpu_prof_now();
+    tcc1014_mem_cycle(g_gime3, RnW, A);
+    g_cpu_prof.slow_clk += cpu_prof_now() - t0;
+    g_cpu_prof.slow_n++;
+#else
+    tcc1014_mem_cycle(g_gime3, RnW, A);
+#endif
+}
+
 extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr;
-    if (g_c3) { tcc1014_mem_cycle(g_gime3, RnW, A); return; }   // PIZERO-133
+    if (g_c3) { c3_slow(RnW, A); return; }   // PIZERO-133
     audio_catch_up();     // before a PIA1 write can change the level
     g_m.total_mem_cycles++;
 
@@ -1087,13 +1107,36 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     mem_cycle_tail(ncycles, pt0);
 }
 
+#ifdef COCO3
+// PIZERO-220: a CoCo 3 RAM or ROM cycle the core has already done, at or
+// past the deadline: what coco3_cpu_cycle does after the GIME's decode,
+// less the bus (no PIA, cartridge I/O or remapping write gets here).
+static inline __attribute__((always_inline)) void coco3_tick(void) {
+#ifdef CPU_PROF
+    uint32_t t0 = cpu_prof_now();
+#endif
+    tcc1014_poll_lines(g_gime3);
+    audio_catch_up();
+    g_m.total_mem_cycles++;
+    g_gime3->IL1 = (PIA_VALUE_A(g_m.pia0) | 0x80) != 0xff;
+    mem_cycle_tail(coco_fastbus.ticks, 0);
+#ifdef CPU_PROF
+    g_cpu_prof.slow_clk += cpu_prof_now() - t0;
+    g_cpu_prof.slow_n++;
+#endif
+}
+#else
+static inline void coco3_tick(void) {}
+#endif
+
 // PIZERO-131: a RAM or ROM cycle the core has already done itself
 // (coco_fastbus.h): only the per-cycle tail is left.
 extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr; (void)RnW; (void)A;
-    // PIZERO-213: the CoCo 3 repeats the whole cycle through the GIME. The
-    // core has already moved the byte; moving it again changes nothing.
-    if (g_c3) { tcc1014_mem_cycle(g_gime3, RnW, A); return; }
+    // PIZERO-220: on a CoCo 3 the core has already moved the byte, so of the
+    // GIME's cycle only its interrupt edge detect is left (PIZERO-213 ran the
+    // whole cycle through it again, decode and bus included).
+    if (g_c3) { coco3_tick(); return; }
     audio_catch_up();
     g_m.total_mem_cycles++;
 #if PROFILE_MEM_CYCLE
@@ -1110,7 +1153,8 @@ extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
 // per-cycle tail: about a third of all cycles skip the decode and the data
 // switch. The CPU's interrupt latches are still sampled by the caller.
 extern "C" void HOT_FUNC(coco_mem_nvma)(void *sptr) {
-    if (g_c3) { coco_mem_cycle(sptr, 1, 0xFFFF); return; }       // PIZERO-133
+    // PIZERO-220: a CoCo 3 dummy cycle reads what the fast path's does.
+    if (g_c3) { g_m.cpu->D = coco_fastbus.rom[0x3FFF]; coco3_tick(); return; }
     (void)sptr;
     audio_catch_up();
     g_m.total_mem_cycles++;
@@ -1206,6 +1250,9 @@ extern "C" void HOT_FUNC(coco_vdg_render)(void *sptr, unsigned burst, unsigned n
 // in src/coco3.c.
 static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_t A) {
     (void)sptr;
+#ifdef CPU_PROF
+    uint32_t cb0 = cpu_prof_now();
+#endif
     audio_catch_up();     // before a PIA1 write can change the level
     g_m.total_mem_cycles++;
     uint8_t *D = &g_m.cpu->D;
@@ -1232,10 +1279,17 @@ static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_
         fastbus_sync();
     // The keyboard interrupt: any row pulled low (upstream does this every
     // cycle; the GIME edge-detects it at the start of the next). PIZERO-213:
-    // now only on the cycles that take the full path, at least once per
-    // audio sample.
+    // now only on the cycles that take the full path or the tail, at least
+    // once per event (PIZERO-220: every scanline).
     g_gime3->IL1 = (PIA_VALUE_A(g_m.pia0) | 0x80) != 0xff;
+#ifdef CPU_PROF
+    uint32_t cb1 = cpu_prof_now();
     mem_cycle_tail(ncycles, 0);
+    g_cpu_prof.cb_bus_clk += cb1 - cb0;
+    g_cpu_prof.cb_tail_clk += cpu_prof_now() - cb1;
+#else
+    mem_cycle_tail(ncycles, 0);
+#endif
 }
 
 static uint16_t HOT_FUNC(coco3_fetch_vram)(void *sptr, uint32_t A) {
@@ -1254,7 +1308,14 @@ static void coco3_signal_fs(void *sptr, bool level) {
 static void HOT_FUNC(coco3_render_line)(void *sptr, unsigned burst, unsigned npixels,
                                         const uint8_t *data) {
     (void)sptr; (void)burst;
+#ifdef CPU_PROF
+    uint32_t lt0 = cpu_prof_now();
     coco3_bus_render_line(&g_c3bus, data, npixels);
+    g_cpu_prof.line_clk += cpu_prof_now() - lt0;
+    g_cpu_prof.line_n += data != nullptr;
+#else
+    coco3_bus_render_line(&g_c3bus, data, npixels);
+#endif
 }
 static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
     (void)sptr;
@@ -1526,47 +1587,74 @@ static inline void audio_emit(int s) {
 // When a sample boundary falls inside this access we split EXACTLY at it (the
 // ticks past the boundary carry to the next sample) so each emitted sample is
 // the true time-average over its period -- no edge jitter, no residual aliasing.
+// One finished sample from the integrator, tk ticks long.
+static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t tk) {
+#ifdef CPU_PROF
+    uint32_t t0 = cpu_prof_now();
+#endif
+    if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume / 10;   // PIZERO-143/145
+    audio_emit(s);
+#ifdef CPU_PROF
+    g_cpu_prof.samp_clk += cpu_prof_now() - t0;
+    g_cpu_prof.samp_n++;
+#endif
+}
+
 static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks) {
     int s; uint32_t tk;
-    if (audio_integ_step(&g_aud, g_dac_level, ticks, g_aud_rate, &s, &tk)) {
-        if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume / 10;   // PIZERO-143/145
-        audio_emit(s);
-    }
+    if (audio_integ_step(&g_aud, g_dac_level, ticks, g_aud_rate, &s, &tk))
+        audio_sample(s, tk);
 }
 
 // PIZERO-131 step (c). Cycles that end before coco_fastbus.deadline only
 // advance event_current_tick. g_aud_tick is the tick the audio has been
-// integrated up to; the cycles since are whole 16-tick accesses at one DAC
-// level (a level change comes through coco_mem_cycle, which catches up
-// first) and, by the deadline, none crosses a sample boundary. So they add
-// to the integral exactly as audio_integrate(16) would have one by one.
+// integrated up to; the cycles since are whole accesses (16 ticks, or the
+// CoCo 3's coco_fastbus.ticks) at one DAC level (a level change comes
+// through coco_mem_cycle, which catches up first). PIZERO-220: they may
+// cross any number of sample boundaries, and audio_integ_run emits each
+// sample exactly as audio_integrate on every access would have.
 static uint32_t g_aud_tick;
+
+// The catch-up's work, in one place: inlined into every bus entry, its
+// sample loop (and the filter in it) cost 4 KB of RAM.
+static void __attribute__((noinline)) HOT_FUNC(audio_catch_up_run)(uint32_t pend);
 
 static inline __attribute__((always_inline)) void audio_catch_up(void) {
     uint32_t pend = event_current_tick - g_aud_tick;
-    if (pend) {
-        audio_integ_span(&g_aud, g_dac_level, pend, g_aud_rate);
+    if (pend) audio_catch_up_run(pend);
+}
+
+static void HOT_FUNC(audio_catch_up_run)(uint32_t pend) {
+    {
+#ifdef CPU_PROF
+        uint32_t ct0 = cpu_prof_now();
+#endif
+#ifdef COCO_FASTBUS_PAGES
+        uint32_t t = coco_fastbus.ticks;
+#else
+        const uint32_t t = 16;
+#endif
+        audio_integ_run(&g_aud, g_dac_level, pend / t, t, g_aud_rate, audio_sample);
+        if (pend % t) audio_integrate(pend % t);   // never expected: keep time exact
         g_m.total_mem_cycles += pend / 16;
         g_aud_tick = event_current_tick;
+#ifdef CPU_PROF
+        g_cpu_prof.catch_clk += cpu_prof_now() - ct0;
+#endif
     }
 }
 
-// The earliest tick at which a cycle needs the tail: the end of the
-// 16-tick access that crosses the next sample boundary, the next event, or
-// the end of the budget. Called at the end of every tail, with the audio
-// caught up to now.
+// The earliest tick at which a cycle needs the tail: the next event, or the
+// end of the budget. Called at the end of every tail, with the audio caught
+// up to now. PIZERO-220: no longer the next sample boundary as well; the
+// catch-up emits the samples a run of cycles crossed (about 800 a frame of
+// tails saved at 1.79 MHz, where events still come every scanline).
 static inline __attribute__((always_inline)) void fastbus_deadline(void) {
     uint32_t now = event_current_tick;
     g_aud_tick = now;
-#ifdef COCO_FASTBUS_PAGES
-    uint32_t t = coco_fastbus.ticks;              // PIZERO-213: 8 at 1.79 MHz
-#else
-    const uint32_t t = 16;
-#endif
-    uint32_t dl = now + t * audio_integ_accesses_to_boundary(&g_aud, g_aud_rate, t);
+    uint32_t dl = g_budget_end;
     struct event *head = machine_event_list_global->events;
     if (head && event_tick_delta(head->at_tick, dl) < 0) dl = head->at_tick;
-    if (event_tick_delta(g_budget_end, dl) < 0) dl = g_budget_end;
     coco_fastbus.deadline = dl;
 }
 
@@ -1681,9 +1769,19 @@ extern "C" void coco_machine_run_cycles(uint32_t cycles) {
     }
 
 #ifdef CPU_PROF
+    struct cpu_prof before = g_cpu_prof;
     uint32_t prof_t = cpu_prof_now();
     run_cpu_with_audio(cycles);
-    g_cpu_prof.run_clk += cpu_prof_now() - prof_t;
+    uint32_t run = cpu_prof_now() - prof_t;
+    g_cpu_prof.run_clk += run;
+    if (run > g_cpu_prof.wf_run) {               // PIZERO-220: the worst frame
+        g_cpu_prof.wf_run = run;
+        g_cpu_prof.wf_slow = g_cpu_prof.slow_clk - before.slow_clk;
+        g_cpu_prof.wf_ev = g_cpu_prof.ev_clk - before.ev_clk;
+        g_cpu_prof.wf_lines = g_cpu_prof.line_n - before.line_n;
+        g_cpu_prof.wf_sink = g_cpu_prof.line_clk - before.line_clk;
+        g_cpu_prof.wf_cyc = g_cpu_prof.bus_n - before.bus_n;
+    }
 #else
     run_cpu_with_audio(cycles);
 #endif

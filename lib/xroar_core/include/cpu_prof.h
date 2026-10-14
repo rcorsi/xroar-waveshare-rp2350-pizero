@@ -38,6 +38,26 @@ struct cpu_prof {
 	uint32_t nvma_n;      // of which dummy cycles (address $FFFF)
 	uint32_t insn_n;      // opcode fetches (a page prefix counts again)
 	uint32_t sec_clk[4];  // CPU_PROF=2: decode, data, events+audio, irq+budget
+	uint32_t slow_n;      // PIZERO-220: CoCo 3 cycles through the GIME (tick, cycle, dummy)
+	uint32_t slow_clk;    //   and their clocks, events included
+	uint32_t ev_n;        // event_run_queue calls from the per-cycle tail
+	uint32_t ev_clk;      //   and their clocks, rendering included
+	uint32_t line_n;      // CoCo 3 scanlines handed to the sink
+	uint32_t line_clk;    //   and their clocks (GIME render to the sink)
+	uint32_t cb_bus_clk;  // coco3_cpu_cycle before its tail
+	uint32_t cb_tail_clk; // coco3_cpu_cycle's tail, events included
+	uint32_t samp_n;      // audio samples finished
+	uint32_t samp_clk;    //   and their clocks after the integrator (filter, ring)
+	uint32_t catch_clk;   // audio_catch_up with something pending, samples included
+	uint32_t wf_run;      // the worst frame this second: its run clocks,
+	uint32_t wf_slow;     //   slow-path clocks,
+	uint32_t wf_ev;       //   event clocks,
+	uint32_t wf_lines;    //   lines drawn,
+	uint32_t wf_sink;     //   sink clocks,
+	uint32_t wf_cyc;      //   and bus cycles
+	uint32_t pr_gather;   // GIME port renderer: gather and hash, per drawn line
+	uint32_t pr_decode;   //   and decode
+	uint32_t pr_n;        //   lines decoded
 };
 
 extern struct cpu_prof g_cpu_prof;

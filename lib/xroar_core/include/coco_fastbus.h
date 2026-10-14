@@ -15,10 +15,11 @@
  *
  *  Step (c): most cycles need nothing from the tail either. The machine sets
  *  deadline to the earliest event tick at which something is due (the next
- *  event, the next audio sample boundary, the end of the frame's budget, or
- *  now when the interrupt lines need refreshing). A cycle that ends before it
- *  only advances event_current_tick; the audio for those cycles is caught up
- *  exactly the next time the tail runs.
+ *  event, the end of the frame's budget, or now when the interrupt lines need
+ *  refreshing; PIZERO-220 dropped the next audio sample boundary). A cycle
+ *  that ends before it only advances event_current_tick; the audio for those
+ *  cycles, every sample they crossed, is caught up exactly the next time the
+ *  tail runs.
  */
 
 #ifndef XROAR_COCO_FASTBUS_H_

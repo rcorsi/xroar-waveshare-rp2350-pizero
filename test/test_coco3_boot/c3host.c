@@ -64,12 +64,17 @@ void coco_mem_nvma(void *sptr) {
     (void)sptr;
     tcc1014_mem_cycle(gime, 1, 0xFFFF);
 }
+static void cycle_tail(int ncycles);
+
 // A cycle the core did itself that ends at or after the deadline: the
-// whole cycle again through the GIME, as the firmware does.
+// GIME's edge detect and the call-back's tail, without the decode or the
+// bus, as the firmware does (PIZERO-220).
 void coco_mem_tick(void *sptr, _Bool RnW, uint16_t A) {
-    (void)sptr;
+    (void)sptr; (void)RnW; (void)A;
     if (!fast) abort();                    // no pages, so never reached
-    tcc1014_mem_cycle(gime, RnW, A);
+    tcc1014_poll_lines(gime);
+    gime->IL1 = (PIA_VALUE_A(pia0) | 0x80) != 0xff;
+    cycle_tail(coco_fastbus.ticks);
 }
 
 // The pages as the GIME's decode stands now (the firmware's fastbus_sync).
@@ -120,6 +125,15 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
     // mem_cycle_tail does. Upstream sets them at the start of the next cycle,
     // which is the same for a machine that takes every cycle here, but the
     // fast path's cycles in between would keep a stale line.
+    MC6809_IRQ_SET(cpu, pia0->a.irq || pia0->b.irq || gime->IRQ);
+    MC6809_FIRQ_SET(cpu, pia1->a.irq || pia1->b.irq || gime->FIRQ);
+    set_deadline();
+}
+
+// The call-back's tail for a cycle the core did itself (coco_mem_tick).
+static void cycle_tail(int ncycles) {
+    event_run_queue(MACHINE_EVENT_LIST, ncycles);
+    if (event_tick_delta(event_current_tick, run_end) >= 0) cpu->running = 0;
     MC6809_IRQ_SET(cpu, pia0->a.irq || pia0->b.irq || gime->IRQ);
     MC6809_FIRQ_SET(cpu, pia1->a.irq || pia1->b.irq || gime->FIRQ);
     set_deadline();

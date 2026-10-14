@@ -63,4 +63,28 @@ static inline uint32_t audio_integ_accesses_to_boundary(const struct audio_integ
     return (AUDIO_TICK_HZ - a->terr + step - 1) / step;
 }
 
+// PIZERO-220: `n` accesses of `access_ticks` at `level` that may cross any
+// number of boundaries: spans up to each access that crosses, which is
+// stepped, so the samples (handed to emit with their length in ticks) and
+// the state are exactly those of n calls of audio_integ_step. This lets the
+// machine catch the audio up only at events, not at every sample boundary.
+typedef void (*audio_integ_emit_fn)(int s, uint32_t tk);
+
+static inline __attribute__((always_inline)) void audio_integ_run(
+        struct audio_integ *a, int32_t level, uint32_t n, uint32_t access_ticks,
+        uint32_t rate, audio_integ_emit_fn emit) {
+    while (n) {
+        uint32_t k = audio_integ_accesses_to_boundary(a, rate, access_ticks);
+        if (k > n) {
+            audio_integ_span(a, level, n * access_ticks, rate);
+            return;
+        }
+        audio_integ_span(a, level, (k - 1) * access_ticks, rate);
+        int s; uint32_t tk;
+        audio_integ_step(a, level, access_ticks, rate, &s, &tk);
+        emit(s, tk);
+        n -= k;
+    }
+}
+
 #endif

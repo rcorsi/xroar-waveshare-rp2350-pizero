@@ -55,6 +55,7 @@ buildable on its own.
 | `pizero_cpu179` | `pizero_stream_60` | `-DCPU_SPEED_MUL=2` | single-buffered | product running twice the 6809 cycles per frame: the CPU load of a CoCo 3 at 1.79 MHz, the baseline for the speed work (PIZERO-130, 131). The whole machine runs fast and the audio ring overflows, so it is for measuring `cpu=`, not for use | ~75% |
 | `pizero_cpuprof` | `pizero_stream_60` | `-DCPU_PROF=1` | single-buffered | product + the M33 cycle counter timing the 6809's bus path, with cycle, dummy-cycle and instruction counts: a `[prof]` line a second splits host clocks per emulated cycle into bus and core (PIZERO-209). The bus helpers are forced inline so the layout matches the product | ~77% |
 | `pizero_cpuprof_hook` | `pizero_stream_60` | `-DCPU_PROF=2` | single-buffered | `pizero_cpuprof` plus the hook split into its sections (decode, data, events and audio, irq and budget) | ~77% |
+| `pizero_coco3_prof` | `pizero_coco3` | `-DCPU_PROF=1` | single-buffered | `pizero_coco3` with the profiler, for the CoCo 3 speed work (PIZERO-220): `[prof3]` lines a second give, per frame, the cycles through the GIME's slow path and their clocks, event clocks, lines handed to the sink and its clocks, the run's clocks, audio samples and the catch-up; the port renderer's gather-and-hash and decode clocks per drawn line; and the worst frame's breakdown. Its `[prof]` bus/core split is not meaningful here (the nested timings land in the bus window) | ~78% |
 | `pizero_wdtest` | `pizero_stream` | `-DWATCHDOG_SELFTEST` | single-buffered | wedges core 0 to prove watchdog recovery (PIZERO-33) | ~75% |
 | `pizero_wavmeas` | `pizero_base` | `-DAUDIO_WAV_DUMP -DFB_SINGLE` | single-buffered | no data-island audio: dumps the emulator's sound as WAV over USB (PIZERO-41) | ~73% |
 | `native` | (none) | `platform = native`, Unity | n/a | host unit tests, no board (PIZERO-109): `pio test -e native`, 16 suites, 222 cases | n/a |
@@ -234,7 +235,10 @@ in editor; they are **not** real build errors (the actual `pio run` is clean).
   loses no video-fault windows. `slack` (PIZERO-219) is the least time any
   frame that second had left before its slot, and `late` how many frames
   missed it: a late frame loses emulated time, so the sound comes up short
-  while `fps` can still read 60. The logger's own writes (about 8 ms a minute)
+  while `fps` can still read 60. `cmax` and `wmax` (PIZERO-220) are that
+  second's worst emulation time and worst whole frame of work (from the end
+  of the last frame's wait to the pacing), so a late frame can be put down
+  to the emulation or to the rest of the loop. The logger's own writes (about 8 ms a minute)
   are part of what the soak tests.
 - **Hardware acceptance** (audio/video) is listen/look-on-the-monitor and must be
   user-confirmed. Do not mark an issue `done` from a green build alone (see

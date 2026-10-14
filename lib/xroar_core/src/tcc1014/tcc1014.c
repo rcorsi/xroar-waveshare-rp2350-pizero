@@ -42,6 +42,7 @@
 #include "tcc1014/font-gime.h"
 #include "tcc1014/tcc1014.h"
 #include "xroar.h"
+#include "cpu_prof.h"   // PIZERO-220: empty unless CPU_PROF
 
 #ifndef GIME_DEBUG
 #define HAVE_GIME_DEBUG
@@ -561,6 +562,25 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	update_from_gime_registers(gime);
 	//gime->vram_bit = 0;
 	gime->have_vdata_cache = 0;
+}
+
+// Port addition (PIZERO-220): what tcc1014_mem_cycle does for a cycle whose
+// data the CPU has already moved (a RAM or ROM page of the port's fast path):
+// only the edge detect on IL2..0. The caller does the rest of its call-back.
+void tcc1014_poll_lines(struct TCC1014 *gimep) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+	if (gimep->IL2 && !gime->IL2_state) {
+		SET_INTERRUPT(gime, INT_EI2);
+	}
+	gime->IL2_state = gimep->IL2 ? INT_EI2 : 0;
+	if (gimep->IL1 && !gime->IL1_state) {
+		SET_INTERRUPT(gime, INT_EI1);
+	}
+	gime->IL1_state = gimep->IL1 ? INT_EI1 : 0;
+	if (gimep->IL0 && !gime->IL0_state) {
+		SET_INTERRUPT(gime, INT_EI0);
+	}
+	gime->IL0_state = gimep->IL0 ? INT_EI0 : 0;
 }
 
 void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
@@ -1497,6 +1517,47 @@ static inline uint64_t port_double(uint32_t x) {
 	return lo | (uint64_t)hi << 32;
 }
 
+// Eight pixels from two colours, each shown four times.
+static inline uint64_t port_quads(uint8_t a, uint8_t b) {
+	return (uint64_t)(a * 0x01010101u) | (uint64_t)(b * 0x01010101u) << 32;
+}
+
+// A byte's eight pixels out at a resolution (0 shows each twice, 3 keeps
+// every fourth), as the decode loop's switch does. PIZERO-220: always called
+// with a constant resolution, so each loop below gets its own.
+static inline __attribute__((always_inline)) uint8_t *port_emit(uint8_t *pixel, uint64_t cols,
+                                                                 const unsigned res) {
+	switch (res) {
+	case 0: {
+		uint64_t a = port_double((uint32_t)cols), b = port_double((uint32_t)(cols >> 32));
+		memcpy(pixel, &a, 8);
+		memcpy(pixel + 8, &b, 8);
+		return pixel + 16;
+	}
+	case 1:
+		memcpy(pixel, &cols, 8);
+		return pixel + 8;
+	case 2:
+		pixel[0] = cols; pixel[1] = cols >> 16;
+		pixel[2] = cols >> 32; pixel[3] = cols >> 48;
+		return pixel + 4;
+	default:
+		pixel[0] = cols; pixel[1] = cols >> 32;
+		return pixel + 2;
+	}
+}
+
+// PIZERO-220: the decode loop for one mode, once per resolution, so neither
+// is tested per byte. COLS is an expression of vdata.
+#define PORT_LOOP(COLS) do { \
+		switch (resolution) { \
+		case 0: for (unsigned n = nbytes; n; --n) { uint_fast8_t vdata = *src++; pixel = port_emit(pixel, (COLS), 0); } break; \
+		case 1: for (unsigned n = nbytes; n; --n) { uint_fast8_t vdata = *src++; pixel = port_emit(pixel, (COLS), 1); } break; \
+		case 2: for (unsigned n = nbytes; n; --n) { uint_fast8_t vdata = *src++; pixel = port_emit(pixel, (COLS), 2); } break; \
+		case 3: for (unsigned n = nbytes; n; --n) { uint_fast8_t vdata = *src++; pixel = port_emit(pixel, (COLS), 3); } break; \
+		} \
+	} while (0)
+
 static inline uint32_t port_mix(uint32_t h, uint32_t w) {
 	h ^= w;
 	return ((h << 5) | (h >> 27)) * 0x9E3779B1u;
@@ -1510,6 +1571,9 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 		return;
 	gime->port_done = 1;
 	gime->port_skip = 0;
+#ifdef CPU_PROF
+	uint32_t pr_t0 = cpu_prof_now();
+#endif
 
 	unsigned tAA = gime->horizontal.tHS_RB - gime->horizontal.tHS_AA;
 	if (tAA > 640)
@@ -1627,6 +1691,10 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 		}
 		gime->port_sum[sl] = h;
 	}
+#ifdef CPU_PROF
+	uint32_t pr_t1 = cpu_prof_now();
+	g_cpu_prof.pr_gather += pr_t1 - pr_t0;
+#endif
 
 	// Decode. Each VRAM byte becomes eight colours in one 64-bit word, the
 	// first pixel in the low byte: render_scanline's c0-c3 for its two 4-bit
@@ -1640,7 +1708,28 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 	pixel += side;
 	const uint8_t *src = buf;
 
-	for (unsigned n = nbytes; n; --n) {
+	if (!COCO && BP) {
+		// PIZERO-220: the bitplane modes, the ones a game redraws whole,
+		// each in its own loop. The general loop below tests the mode for
+		// every byte, about 49 clocks a byte on HSCREEN 2.
+		uint8_t pm[16];
+		for (int i = 0; i < 16; i++)
+			pm[i] = pal[i] & cmask;
+		switch (CRES) {
+		case 0: default: {
+			const uint8_t fg = pm[1], bg = pm[0];
+			PORT_LOOP(port_sel(port_mask[vdata], fg, bg));
+			break;
+		}
+		case 1:
+			PORT_LOOP(port_pairs(pm[(vdata >> 6) & 3], pm[(vdata >> 4) & 3],
+			                     pm[(vdata >> 2) & 3], pm[vdata & 3]));
+			break;
+		case 2: case 3:
+			PORT_LOOP(port_quads(pm[vdata >> 4], pm[vdata & 15]));
+			break;
+		}
+	} else for (unsigned n = nbytes; n; --n) {
 		uint_fast8_t vdata = *src++;
 		uint64_t cols;
 
@@ -1734,6 +1823,10 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 	}
 
 	memset(pixel, border, TCC1014_PORT_W - (pixel - gime->port_line));
+#ifdef CPU_PROF
+	g_cpu_prof.pr_decode += cpu_prof_now() - pr_t1;
+	g_cpu_prof.pr_n++;
+#endif
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
