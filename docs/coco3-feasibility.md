@@ -7,6 +7,33 @@ is about scope rather than hope.
 _Measured 2026-09-17 on the post-PIZERO-119 build. Sources: the build's own RAM
 report, `docs/measurements/2026-09.jsonl`, and `docs/cpu-speed.md`._
 
+## Outcome (2026-10-14)
+
+This study's conclusion held for RAM and for the 512 KB answer, and was
+overtaken for the CPU. The 6809 was made fast enough (PIZERO-131), and a
+128 KB CoCo 3 now runs at full speed in its own build, `pizero_coco3`
+(PIZERO-133). Per [`coco3-plan.md`](coco3-plan.md), measured on the bench
+board:
+
+| | 0.89 MHz | 1.79 MHz |
+|---|---|---|
+| BASIC at OK | 60 fps, about 8.5-9 ms emulation a frame | 60 fps, about 13 ms |
+| Full-screen HCLS loop on HSCREEN 2 | | 60 fps, median 12.9 ms, worst 15.2 ms, no late frames, sound 0% short (PIZERO-220) |
+
+Two things went differently from what is predicted below:
+
+- **The framebuffer stayed.** A 128 KB CoCo 3 fits beside it: the
+  `pizero_coco3` build uses 400,020 bytes, 76.3% of RAM. Per-line scanout is
+  needed only for the 640-wide modes (PIZERO-134, PIZERO-179).
+- **The GIME's video was a real cost.** Once the CPU was fast, upstream's
+  scanline renderer plus the halving sink took about 7.6 + 3.5 ms a frame.
+  A port-side renderer that draws each changed line once at 320 pixels
+  (PIZERO-218, PIZERO-220) cut that to about 2,500 clocks per redrawn line
+  on HSCREEN 2.
+
+The 141-clocks-per-cycle game mentioned below (PIZERO-210) was never
+identified, and that issue was closed.
+
 ## The short answer
 
 | Question | Answer |
@@ -141,6 +168,9 @@ core we currently treat as trusted and untouched, but it is a project, not a
 tuning pass, and it is the first thing that would have to succeed.
 
 ## Recommendation
+
+_As written on 2026-09-17; see the Outcome section at the top for what
+happened._
 
 **CoCo 3 stays an aspiration, and the next step is a CPU experiment, not a
 feature branch.**

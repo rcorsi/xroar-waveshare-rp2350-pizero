@@ -71,6 +71,33 @@ guest's GIME palette writes to `$FFB0-$FFBF` and holds the `color_*` settings
   written each frame.
 - After `libdvi`'s 2× scale-out this appears as **512×384 inside 640×480**.
 
+### 2a. The CoCo 3 build instead (core 0, `pizero_coco3`)
+
+The CoCo 3 build (`-DCOCO3`, PIZERO-133) has no VDG buffer, no
+`coco_machine_render_frame` and no blit: the main loop sets `render` and `blit`
+to zero. The vendored GIME (`lib/xroar_core/src/tcc1014/tcc1014.c`) is the bus
+and draws while the 6809 runs:
+
+- **Drawing:** at each scanline's horizontal sync (`do_hs_fall`), the port
+  renderer (`port_render_scanline`, PIZERO-218) hands over 320 palette indices:
+  - **Active lines:** decoded from VRAM read directly (`port_vram`).
+  - **Other lines:** border, or black in vertical sync.
+- **Skipping:** a line whose inputs (VRAM bytes, mode, palette, border) hash
+  the same as last frame's (`port_sum`) is passed as NULL. That keeps static
+  screens cheap.
+- **Decode:** each bitplane graphics mode and resolution has its own loop
+  (`PORT_LOOP`, PIZERO-220).
+- **Sink:** `coco3_bus_render_line` (`lib/coco_machine/src/coco3_bus.h`) maps
+  the indices to RGB565 through the GIME's 64-entry palette table. It writes
+  the row into `g_fb`, centring 192 lines at row 24 and 225 at row 7. It has
+  its own per-row hash as well.
+- **Redraw:** anything else that draws into `g_fb` (the overlay) calls
+  `coco_machine_video_invalidate`, which forces a full redraw.
+
+The picture is drawn while the beam moves, so it can tear: the HCLS colour
+bands moving down the screen are what a real CoCo 3 shows too (PIZERO-217).
+640-wide modes are halved to 320 (PIZERO-134).
+
 ### 3. Framebuffer hand-off (core 0 → core 1)
 
 Every shipping build defines `AV_DATA_ISLAND` and so **single-buffers**: one
@@ -119,6 +146,15 @@ All in `lib/coco_machine/src/coco_machine.cpp`. The CoCo's **6-bit DAC** (PIA1 p
 A) level is recached on PIA writes (`audio_update_level`) and integrated over CPU
 memory-access time (`audio_integrate`): an integrate-and-dump resampler that emits
 **48 kHz / 16-bit mono** samples (`COCO_AUDIO_RATE`).
+
+The integrator is not called on every access. Most cycles take the 6809 core's fast
+path (`coco_fastbus.h`, PIZERO-131) and only advance time. The audio for them is
+caught up the next time a cycle takes the full path: at the next event, which comes at
+least once a scanline, or at a level change (`audio_catch_up`). Since PIZERO-220 that
+catch-up emits every sample boundary the run crossed (`audio_integ_run` in
+`audio_integ.h`), exactly as stepping each access would; `test_audio_integ` checks it
+sample for sample. The samples reach the ring in small bursts, which the 8192-deep
+ring absorbs.
 
 The **SN76489** sound chip (PIZERO-143) is the second source. Writes to `$FF41` reach
 it through `csg_bus_write`, either from a Game Master Cartridge or, with the
@@ -185,6 +221,7 @@ Symbols rather than line numbers, since the files move.
 
 | Stage                         | File : symbol                                                        |
 |-------------------------------|---------------------------------------------------------------------|
+| CoCo 3 scanline render       | `lib/xroar_core/src/tcc1014/tcc1014.c` : `port_render_scanline` / `do_hs_fall`; sink `lib/coco_machine/src/coco3_bus.h` : `coco3_bus_render_line` |
 | VDG geometry / buffer         | `lib/coco_machine/src/coco_machine.h` : `COCO_VDG_W` / `coco_machine_get_vdg_buffer` |
 | Frame drive                   | `src/main.cpp` : `coco_machine_run_cycles` / `coco_machine_render_frame` (main loop) |
 | RGB565 blit                   | `src/coco_boot.cpp` : `coco_boot_blit_vdg_pizero_src`                |
@@ -195,7 +232,7 @@ Symbols rather than line numbers, since the files move.
 | DVI timing struct             | `src/main.cpp` : `dvi_timing_640x480p_57hz_240mhz` (aliased as `DVI_TIMING`). Despite the name it carries every build's timing through `#if` branches, the 60 Hz product included. libdvi's stock `dvi_timing_640x480p_60hz` (`lib/libdvi/dvi_timing.cpp`) is not used. |
 | Pin config / PIO base         | `lib/libdvi/common_dvi_pin_configs.h` : `pico_sock_cfg` / `src/main.cpp` : `pio_set_gpio_base` |
 | Core 1 launch                 | `src/main.cpp` : `core1_main` / `multicore_launch_core1`             |
-| Audio source / resampler      | `lib/coco_machine/src/coco_machine.cpp` : `audio_update_level` / `audio_integrate` |
+| Audio source / resampler      | `lib/coco_machine/src/coco_machine.cpp` : `audio_update_level` / `audio_integrate` / `audio_catch_up`; `audio_integ.h` |
 | SN76489                       | `lib/coco_machine/src/coco_machine.cpp` : `csg_bus_write`; chip model `csg_sn76489.h` |
 | Audio ring                    | `lib/coco_machine/src/coco_machine.cpp` : `audio_emit` / `coco_machine_audio_read` |
 | Data-island encoder           | `lib/libdvi/dvi_data_island.c`                                       |

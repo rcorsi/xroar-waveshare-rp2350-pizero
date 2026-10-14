@@ -178,5 +178,6 @@ older ~52 Hz timing is kept as the fallback. RISK: `h_bp=56`
 - Streaming delivery + meter + ring consumer: `src/main.cpp` (`stream_audio_cb`,
   `AV_STREAM_AUDIO`).
 - Source resampler + SPSC ring: `lib/coco_machine/src/coco_machine.cpp`
-  (`audio_emit` / `audio_integrate` / `coco_machine_audio_read`).
+  (`audio_emit` / `audio_integrate` / `audio_catch_up` / `coco_machine_audio_read`); the
+  multi-sample catch-up is `audio_integ_run` in `audio_integ.h` (PIZERO-220).
 - Build envs & flag matrix: `docs/BUILD.md`. Original scoping: `audio-decision.md`.

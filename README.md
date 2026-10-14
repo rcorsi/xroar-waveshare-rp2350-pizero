@@ -26,6 +26,8 @@ size of a Raspberry Pi Zero.
 - Print Screen saves a screenshot to the card.
 - Can start a game automatically at power-on.
 - Fits a printable case shaped like a CoCo 2.
+- Experimental: a separate firmware that is a 128 KB **CoCo 3** instead, at full speed (see
+  Status).
 
 ## What you need
 
@@ -121,8 +123,21 @@ Everything above works on hardware. Known gaps:
 - **Disk writes are new** (PIZERO-66): `SAVE`, `SAVEM`, `KILL` and the rest write straight into the
   `.DSK` on the card. Press **W** in the disk list to lock a drive read-only. A `.DSK` whose file is
   read-only on the card is always locked.
-- **High-speed POKEs** (SAM double speed) are accepted but ignored; the machine always runs at
-  normal speed (PIZERO-132).
+- **High-speed POKEs** (SAM double speed) are accepted but ignored on the CoCo 2; the machine always
+  runs at normal speed (PIZERO-132). The CoCo 3 build honors its 1.79 MHz mode.
+
+**CoCo 3 (experimental).** A separate firmware, built from the `pizero_coco3` environment (see
+[`docs/BUILD.md`](docs/BUILD.md)), makes the board a 128 KB CoCo 3. It needs the CoCo 3 ROM on the
+card at `/coco/roms/coco3.rom` (32 KB).
+- **What runs:** Super Extended Color BASIC boots to OK and runs at 60 fps at both 0.89 and
+  1.79 MHz. HSCREEN graphics draw, and a full-screen animation at 1.79 MHz keeps full speed and
+  sound.
+- **Not yet:**
+  - WIDTH 40, palette POKEs and the GIME timer are still to be checked on hardware (PIZERO-214).
+  - The ALT, CTRL, F1 and F2 keys aren't mapped (PIZERO-215).
+  - 80-column text shows at half width (PIZERO-134).
+- **Choosing the machine:** how you pick CoCo 3 mode, one firmware or two, is not decided yet
+  (PIZERO-135).
 - **Larger USB-C hubs** with several hub chips inside don't work yet. A simple hub does
   (PIZERO-159).
 - **Gamepads:** tested with a GameSir Tegenaria Lite in its Android and automatic modes. Its
@@ -309,14 +324,18 @@ clock driving standard 640×480p60, with about a fifth of the core-0 frame budge
 with USB-host servicing (keyboard and gamepad) running on core 0.
 
 Per-frame work on core 0, against the 60 Hz frame period of **16.67 ms** (from the `[run]`
-telemetry of the default build, 2026-09-28):
+telemetry of the default build at the BASIC prompt, 2026-10-13):
 
 | Work | Time | Notes |
 |---|---|---|
-| CoCo emulation | ~11 ms | ~14,900 6809 cycles/frame at the emulated ~0.895 MHz, plus USB host |
+| CoCo emulation | ~6.1 ms | ~14,900 6809 cycles/frame at the emulated ~0.895 MHz; was ~11 ms before the faster core (PIZERO-131) |
 | `render_frame` (alpha/text) | ~0.5 ms | precomputed glyph-row → packed-word LUT |
-| Blit to framebuffer | ~1.6 ms | 320×240 RGB565, landscape, no rotation |
-| **Total** | **~13 ms** | ~3.5 ms (about 20%) headroom per frame |
+| Blit and the rest of the loop | ~2.4 ms | 320×240 RGB565 blit, USB host, audio |
+| **Total** | **~9 ms** | at least 7.6 ms (about 45%) to spare in the tightest frame |
+
+The CoCo 3 build (`pizero_coco3`) runs about twice the cycles at 1.79 MHz and draws each scanline
+as it goes, with no separate render or blit: about 13 ms a frame at the BASIC prompt and at most
+15.2 ms in a full-screen animation (PIZERO-220).
 
 How we got from the first boot (54 fps) to a locked 60 fps:
 
@@ -329,16 +348,17 @@ How we got from the first boot (54 fps) to a locked 60 fps:
   (507,340 / 524,288 bytes) in the double-buffered envs `pizero` and `pizero_60hz`, since retired
   (PIZERO-150). The default
   `pizero_stream_60` **single**-buffers instead (the audio data islands need the framebuffer's
-  ~150 KB) and sits at **75.7%** of RAM (396,892 bytes), leaving ~127 KB free. Measured 2026-09-28.
+  ~150 KB) and sits at **80.0%** of RAM (419,364 bytes), leaving ~105 KB free. Measured 2026-10-13;
+  about 13 KB of the growth since September is the faster core's RAM-resident run loop (PIZERO-131, PIZERO-211).
 
 Performance instrumentation, clock, and vreg tuning landed in `PIZERO-15`; the serial monitor prints
 per-second `[run]` fps/cpu/blit stats. For comparison, the AMOLED port manages ~15 fps (~36%
 real-time), so this is roughly a **4× improvement**.
 
 The CoCo's **high-speed POKEs** (SAM double speed, `POKE 65495,0` / `POKE 65497,0`) are accepted but
-currently have no effect: every memory access is charged the normal speed, so the machine always
-runs at 1× (`PIZERO-132`). What honoring them would cost against the frame budget is worked out in
-[`docs/cpu-speed.md`](docs/cpu-speed.md).
+currently have no effect on the CoCo 2: every memory access is charged the normal speed, so the
+machine always runs at 1× (`PIZERO-132`). Since the faster core, double speed would fit the frame
+(the 2× benchmark build runs in about 12 ms); see [`docs/cpu-speed.md`](docs/cpu-speed.md).
 
 Note the two distinct clocks: the host RP2350 MCU runs at **252 MHz** (set from the DVI TMDS bit
 clock), while the *emulated* 6809 runs at its authentic **~0.895 MHz**, independent of the host clock.

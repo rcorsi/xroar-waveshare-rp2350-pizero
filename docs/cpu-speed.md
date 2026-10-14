@@ -76,6 +76,13 @@ would be **non-issues**:
 
 ## Where it would break: core-0 headroom
 
+_Update 2026-10-14: the numbers in this section predate the faster 6809 core
+and are kept for the record. Since PIZERO-131 the product build emulates a
+frame in about 6.1 ms (was about 11), and the 2× benchmark build
+(`pizero_cpu179`) holds 60 fps at about 12 ms. So full double speed would now
+fit. The CoCo 3 build runs 1.79 MHz for real at 60 fps (PIZERO-220). See
+Status._
+
 Full fast mode executes ~2× as many 6809 memory cycles inside the same per-frame budget,
 so the **host cost of emulation roughly doubles**. The measured 1× frame budget on
 `pizero_stream_60` is **76.2%** (noted by the GIME flags in `platformio.ini`): ~12.7 ms
@@ -108,6 +115,21 @@ On those assumptions the break-even is roughly **~1.4×** real-time emulation lo
   emulate it in real time, so pacing and audio would both suffer.
 
 ## Status
+
+**2026-10-14.** The headroom question is answered by measurement, not by this
+analysis:
+
+- **Benchmark:** PIZERO-130 measured the cost of a 2× machine, 185.4 host
+  clocks per emulated cycle and 131.7% of a frame.
+- **Faster core:** PIZERO-131 brought that to about 101 clocks, so 2× fits:
+  `pizero_cpu179` runs at 60 fps with about 12 ms of emulation a frame.
+- **The CoCo 3 build** honors the GIME's 1.79 MHz bit. A full-screen animation
+  there holds 60 fps with no late frames and full sound (PIZERO-220,
+  `docs/coco3-feasibility.md`).
+- **The CoCo 2 still ignores the SAM speed bits** (PIZERO-132). Honoring them
+  is now a correctness change, not a performance risk.
+
+The text below is the original status.
 
 `PIZERO-48` (done) was the write-up of this analysis. It is a **code-level analysis,
 not measured on hardware**, and the on-device measurement is **not tracked by any open

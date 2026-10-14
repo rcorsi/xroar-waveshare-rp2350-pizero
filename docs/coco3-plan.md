@@ -4,6 +4,43 @@ _Written 2026-09-26. Follows the feasibility study in
 [`coco3-feasibility.md`](coco3-feasibility.md) (PIZERO-111). Tickets:
 PIZERO-129 to PIZERO-135._
 
+## Outcome (2026-10-14)
+
+All four stages ran, and the CoCo 3 runs at full speed, not the 80% this
+plan was prepared to accept. The plan below is kept as written.
+
+| Stage | Issue | Result |
+|---|---|---|
+| 1. Correctness harness | PIZERO-129 | Done: the live core runs in lockstep against a frozen reference |
+| 2. 1.79 MHz benchmark | PIZERO-130 | 185.4 host clocks per emulated cycle; 1.79 MHz took 131.7% of a frame |
+| 3. Faster core | PIZERO-131 | About 101 clocks per cycle; the gate was met at full speed |
+| 4. 128 KB CoCo 3 | PIZERO-133 | Env `pizero_coco3` boots to OK on hardware, at first at 29 fps |
+
+Stage 4 then needed three more steps to reach 60 fps:
+
+- **PIZERO-213:** the MMU fast path. The 6809 reads and writes each 8 KB page
+  directly, through a table rebuilt whenever the map changes.
+- **PIZERO-218:** a port-side GIME renderer. It replaced the per-scanline
+  sink that halved upstream's 912 samples. The GIME draws each active line
+  once at the 320 pixels the port shows, reads VRAM directly, and skips a
+  line whose inputs have not changed since the last frame.
+- **PIZERO-219 and PIZERO-220:** the worst case, a full-screen HCLS loop at
+  1.79 MHz, measured and fixed:
+  - **Leaner tail:** a fast-path cycle at the deadline now runs only the
+    GIME's interrupt edge detect and the tail.
+  - **Audio:** it is caught up at events, not at every sample boundary.
+  - **Decode:** each bitplane mode decodes in its own loop.
+  - **Result:** median 12.9 ms a frame, worst 15.2 ms, no late frames, sound
+    0% short.
+
+Stage 4's verification list is half done. It boots to OK and draws HSCREEN 2.
+WIDTH 40, the palette POKE and the GIME timer are PIZERO-214. 80-column text
+is still halved (PIZERO-134).
+
+Of the open questions below, the first (how CoCo 3 mode is chosen) is still
+open in PIZERO-135. Until it is settled the CoCo 3 is a separate build. The
+second (audio below real time) no longer arises at full speed.
+
 ## Why this order
 
 [`coco3-feasibility.md`](coco3-feasibility.md) showed that a 128 KB CoCo 3

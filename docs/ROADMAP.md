@@ -7,8 +7,8 @@ ticket (`PIZERO-NN`) and the deep docs (`README.md`, `docs/`). The short ranked
 list of what to pick up next is `roadmap.jsonl` (shown at the top of
 `issues.html`).
 
-_Last updated: 2026-10-11 (tracker clean-up after the stability and NitrOS-9
-work; the focus moves back to features)._
+_Last updated: 2026-10-14 (the CoCo 3 runs at full speed in its own build;
+docs brought up to date, `PIZERO-221`)._
 
 ## Where things stand
 
@@ -16,7 +16,9 @@ From late September to early October the work was mostly features (58 issues
 closed in two weeks, 33 of them features, 5 bugs). The ten days to 2026-10-10
 were bring-up and stability: NitrOS-9, writable drives, and the first
 laptop-free soak. That soak came out well, so the stability work now runs in
-the background and features are the focus again.
+the background. From 2026-10-12 to 2026-10-13 the CoCo 3 track went from a
+benchmark to a 128 KB CoCo 3 running at 60 fps at both 0.89 and 1.79 MHz, in
+a build of its own (`pizero_coco3`).
 
 ## Shipped / working
 
@@ -27,8 +29,16 @@ the background and features are the focus again.
 - **Audio**: streaming data-island audio, the default since `PIZERO-45`. The
   rate servo (`PIZERO-121`) held the ring at its set-point with **0 skips over
   26.7 h**. SN76489 sound chip (`PIZERO-143`).
-- **CoCo 3 extras**: the GIME palette at `$FFB0-$FFBF` (`PIZERO-85`, `55`) and
-  the GIME timer at `$FF90-$FF95` (`PIZERO-62`), both on by default.
+- **CoCo 3 extras on the CoCo 2**: the GIME palette at `$FFB0-$FFBF`
+  (`PIZERO-85`, `55`) and the GIME timer at `$FF90-$FF95` (`PIZERO-62`), both
+  on by default.
+- **A 128 KB CoCo 3**, its own build for now (env `pizero_coco3`, loads
+  `/coco/roms/coco3.rom`): the vendored GIME is the bus (`PIZERO-133`), the
+  6809 reads and writes MMU pages directly (`PIZERO-213`), and a port-side GIME
+  renderer draws each changed scanline straight into the framebuffer
+  (`PIZERO-218`). 60 fps at 0.89 and 1.79 MHz, HSCREEN 2 drawn; a full-screen
+  HCLS loop at 1.79 MHz holds 60 fps with no late frames and full sound
+  (`PIZERO-219`, `220`). 80-column modes show at half width (`PIZERO-134`).
 - **Storage**: microSD ROM/disk/cartridge load and autorun (`PIZERO-182`, `183`:
   drives remembered across power-off). **Writable `.DSK` drives**: SAVE from
   BASIC and NitrOS-9, W lock per drive, N makes a named blank disk, R renames
@@ -53,13 +63,14 @@ the background and features are the focus again.
   (`PIZERO-168`, logged to the card by `PIZERO-201`) measured **0.075
   freezes/h**, against 0.46/h in September (`PIZERO-98`). Figures in the
   README's "Stability, measured".
-- **Trust tooling**: 237 host tests in about 9 s (`pio test -e native`,
+- **Trust tooling**: 254 host tests in about 15 s (`pio test -e native`,
   `PIZERO-109`), including a 6809 lockstep harness that runs the live core
   against a frozen reference (`PIZERO-129`). `scripts/soak.py` records and
   analyses soaks; `scripts/qc_flash.py` flashes and logs a batch of boards
   (`PIZERO-189`, 12 boards so far).
 - **Docs**: README, SETTINGS, AUTORUN, BUILD, pipeline, video-audio-notes,
-  cpu-speed, kit, coco3-plan, usb-retrospective, show-prep-retrospective.
+  cpu-speed, kit, coco3-plan, coco3-feasibility, usb-retrospective,
+  show-prep-retrospective.
 
 ## In flight (waiting on a hardware step)
 
@@ -72,29 +83,39 @@ on the board, passed 2026-10-12):
   on the other.
 - **`PIZERO-142`**: start a 32 KB and a 64 KB banked cart (Mind Roll, Dunjunz)
   once an image is found.
+- **`PIZERO-220`**: the CoCo 3 speed work at 1.79 MHz. Measured clean (no late
+  frames, sound 0% short over a minute); waits on a look and a listen.
 
-## Now: features, starting with the CoCo 3 track
+## Now: the CoCo 3 track
 
-The groundwork is done: `PIZERO-129`'s lockstep harness exists so the 6809 can
-be made faster without changing what it does. The plan and its reasoning are in
-`docs/coco3-plan.md`.
+The plan and its reasoning are in `docs/coco3-plan.md`; what fits and the
+measured outcome in `docs/coco3-feasibility.md`. Done so far:
 
-1. **`PIZERO-130`** (done 2026-10-12): 185.4 host clocks per emulated cycle; 1.79 MHz takes 131.7% of a frame. Numbers in `docs/coco3-feasibility.md`.
-2. **`PIZERO-131`** (done 2026-10-13): 185.4 to about 101 host clocks per cycle; 1.79 MHz fits a 60 fps frame, so the gate is met. Remainders: `PIZERO-210` (one game at about 141), `PIZERO-211` (13 KB of RAM).
-3. **`PIZERO-135`**: the open decisions (how the mode is chosen, audio below
-   real time). Settle them before 133.
-4. **`PIZERO-133`** (done 2026-10-13): env `pizero_coco3` boots a 128 KB CoCo 3
-   to OK on hardware, at about half speed (29 fps, 35 ms of CPU per frame).
-5. **`PIZERO-213`** (done 2026-10-13): the MMU fast path and a per-row redraw skip;
-   58 fps at OK at 0.89 MHz, 48 at 1.79. **`PIZERO-218`** (done 2026-10-13): a
-   port-side GIME renderer; 60 fps at both speeds. `PIZERO-219` measures the
-   worst case (full-screen animation at 1.79 MHz). Then
-   `PIZERO-214` (check WIDTH 40, palette, timer, HSCREEN), `PIZERO-215` (ALT,
-   CTRL, F1, F2, fire2; includes `PIZERO-205`'s F1 caveat), `PIZERO-178` (GIME
-   render cost per mode), `PIZERO-134` and `PIZERO-179` (640-wide modes and the
-   path to show them), `PIZERO-216` and `PIZERO-217`.
+- **`PIZERO-129`** (lockstep harness), **`PIZERO-130`** (benchmark: 185.4 host
+  clocks per emulated cycle, 1.79 MHz took 131.7% of a frame), **`PIZERO-131`**
+  (about 101 clocks per cycle, so 1.79 MHz fits).
+- **`PIZERO-133`**: `pizero_coco3` boots a 128 KB CoCo 3 to OK (29 fps at first).
+- **`PIZERO-213`**: the MMU fast path. **`PIZERO-218`**: the port-side GIME
+  renderer; 60 fps at both speeds.
+- **`PIZERO-219`**: worst case measured (full-screen HCLS at 1.79 MHz: 3-5 late
+  frames a second). **`PIZERO-220`** (in flight): fixed, no late frames.
 
-Related CPU-speed bug: **`PIZERO-132`** (SAM double speed is never applied).
+Next, in order:
+
+1. **`PIZERO-135`**: how CoCo 3 mode is chosen (one firmware or two). The
+   other half, audio below real time, mostly falls away now that it runs at
+   full speed.
+2. **`PIZERO-214`**: check WIDTH 40, palette POKEs, the GIME timer and the
+   HSCREEN modes on hardware.
+3. **`PIZERO-215`**: ALT, CTRL, F1, F2 and the second fire buttons (includes
+   `PIZERO-205`'s F1 caveat). Most CoCo 3 software needs them.
+4. Then **`PIZERO-216`** (LOADM under a non-default MMU map), **`PIZERO-217`**
+   (tearing), **`PIZERO-134`** and **`PIZERO-179`** (640-wide modes and the
+   path to show them), **`PIZERO-170`** (GIME timer reload quirk),
+   **`PIZERO-178`** (render cost per mode, largely answered by 218-220).
+
+Related CPU-speed items: **`PIZERO-132`** (the CoCo 2's SAM double speed is
+never applied), **`PIZERO-211`** (RAM back from the fast 6809 core).
 
 ## Next: experience features (small, unblocked)
 
@@ -172,8 +193,9 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 
 ## Dependency notes
 
-- **CoCo 3**: `PIZERO-129` (done) → `130` → `131` (gate) → `133` (done) → `213` (done) → `218` (done) → `214`;
-  `135` still decides how the mode is chosen; `134`/`179`/`214`-`217` after 133. `PIZERO-142`'s banked carts allocate on the
+- **CoCo 3**: `PIZERO-129` → `130` → `131` → `133` → `213` → `218` → `219` →
+  `220` (all done but 220's sign-off) → `214`, `215`; `135` still decides how
+  the mode is chosen; `134`/`179`/`216`/`217` after. `PIZERO-142`'s banked carts allocate on the
   heap only while installed, so they do not take the RAM 133 needs.
 - **Storage**: `PIZERO-70` → `71` → `72` → `73` → `74`; `PIZERO-79` needs 73
   for the default cart. `PIZERO-62`'s GIME timer occupies `$FF90-$FF95`, so
