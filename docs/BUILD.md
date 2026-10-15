@@ -58,6 +58,7 @@ buildable on its own.
 | `pizero_coco3_prof` | `pizero_coco3` | `-DCPU_PROF=1` | single-buffered | `pizero_coco3` with the profiler, for the CoCo 3 speed work (PIZERO-220): `[prof3]` lines a second give, per frame, the cycles through the GIME's slow path and their clocks, event clocks, lines handed to the sink and its clocks, the run's clocks, audio samples and the catch-up; the port renderer's gather-and-hash and decode clocks per drawn line; and the worst frame's breakdown. Its `[prof]` bus/core split is not meaningful here (the nested timings land in the bus window) | ~78% |
 | `pizero_wdtest` | `pizero_stream` | `-DWATCHDOG_SELFTEST` | single-buffered | wedges core 0 to prove watchdog recovery (PIZERO-33) | ~75% |
 | `pizero_wavmeas` | `pizero_base` | `-DAUDIO_WAV_DUMP -DFB_SINGLE` | single-buffered | no data-island audio: dumps the emulator's sound as WAV over USB (PIZERO-41) | ~73% |
+| `pizero_wavmeas_boot` | `pizero_wavmeas` | `+ -DAUDIO_WAV_DUMP_BOOT` | single-buffered | `pizero_wavmeas`, but boots as usual (the card's autorun runs, so a program's own music plays) and records 20 s when Ctrl-W (0x17) arrives on USB serial; no picture or HDMI sound (PIZERO-223) | ~77% |
 | `native` | (none) | `platform = native`, Unity | n/a | host unit tests, no board (PIZERO-109): `pio test -e native`, 16 suites, 222 cases | n/a |
 
 PIZERO-150 retired `pizero` and `pizero_60hz` (silent, double-buffered, ~99%
@@ -117,6 +118,7 @@ All flags are plain `-D` macros consumed in `src/main.cpp`. The **master switch 
 | `AV_STREAM_AUDIO` | **(PIZERO-38, CURRENT)** Streaming per-active-line delivery: one metered island/line in the core-1 IRQ (rotating pool + 16.16 sample meter). **This is the warble fix**, and every audio env uses it; the product is `pizero_stream_60` (it inherits the flag from `pizero_stream`). Unset = the legacy bursty 77-line bank path. |
 | `AV_EVEN_AUDIO` | **Abandoned (PIZERO-34).** Even delivery via vblank back-porch islands. It **breaks video sync on the dev sink**. Kept off behind the flag; do not enable. |
 | `AV_ACR_CTS=<n>` | ACR CTS value (default 25176). **Monitor-dependent** (PIZERO-32); inert on sinks that ignore ACR (like the dev monitor). See video-audio-notes.md. |
+| `AUDIO_WAV_DUMP_BOOT` | With `AUDIO_WAV_DUMP`: keep the normal boot and autorun, and start the recording on Ctrl-W from USB serial instead of at attach (20 s instead of 9). PIZERO-223. |
 | `AUDIO_WAV_DUMP` | Stream the source ring as base64 WAV over USB-CDC (source measurement, no video link). Diagnostic for PIZERO-41. The old `AUDIO_OUTPUT_LPF` flag is gone: the output low-pass is the `audio_lowpass` setting since PIZERO-212. |
 
 ### Display & stability

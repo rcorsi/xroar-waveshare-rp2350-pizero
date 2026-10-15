@@ -708,7 +708,11 @@ static bool mount_sd() {
 // hardware wiring: capture the serial log on the host, snip between the markers,
 // `base64 -D > coco.wav`. Base64 (not raw) so a cooked tty/monitor can't mangle
 // the bytes. All other debug prints are suppressed while dumping.
+#ifdef AUDIO_WAV_DUMP_BOOT
+static const uint32_t AUDIO_DUMP_SECONDS = 20;   // PIZERO-223: a stretch of a song
+#else
 static const uint32_t AUDIO_DUMP_SECONDS = 9;
+#endif
 static bool     g_audio_dumping = false;
 static uint32_t g_audio_dump_start_ms = 0;
 static const char B64[] =
@@ -1843,7 +1847,7 @@ void setup() {
     // Boot strategy from /coco/autorun.txt (see AUTORUN.md); default = Disk BASIC.
     static struct coco_autorun autorun = {};
     static char path[80];
-#ifdef AUDIO_WAV_DUMP
+#if defined(AUDIO_WAV_DUMP) && !defined(AUDIO_WAV_DUMP_BOOT)
     // Validation build: ignore autorun and boot a clean BASIC OK prompt so the
     // injected SOUND test program actually runs. (The SD autorun.txt otherwise
     // DIRECT-loads a game, e.g. spacewarp.bin, and our keystrokes go nowhere.)
@@ -1942,7 +1946,7 @@ void setup() {
         boot_page(MSG_ARMISS_TITLE, body, MSG_ARMISS_DETAIL);
         boot_wait(30000);         // until a key; boot then carries on
     }
-#endif // AUDIO_WAV_DUMP
+#endif // AUDIO_WAV_DUMP && !AUDIO_WAV_DUMP_BOOT
     disk_overlay_init(present_card, overlay_launch_request);   // PIZERO-81: F12 overlay
     disk_overlay_set_info(info_lines);                         // PIZERO-156: F1 INFO
     text_editor_init(present_card, on_file_saved);             // PIZERO-146
@@ -2117,6 +2121,18 @@ void loop() {
     // Arm on USB-CDC attach (DTR), then autotype a deterministic ascending-tone
     // program (SOUND = core Color BASIC, no ECB) and stream a base64 WAV.
     static bool dump_armed = false;
+#ifdef AUDIO_WAV_DUMP_BOOT
+    // PIZERO-223: the machine boots as usual (autorun and all) and the
+    // recording starts when Ctrl-W arrives on USB serial, once whatever is
+    // to be heard is playing. The backlog in the ring is dropped first.
+    if (!g_audio_dumping && Serial && Serial.available() && Serial.peek() == 0x17) {
+        Serial.read();
+        int16_t junk[256];
+        while (coco_machine_audio_read(junk, 256) > 0) {}
+        audio_dump_begin();
+    }
+    dump_armed = true;
+#endif
     if (!dump_armed && Serial) {
         dump_armed = true;
         g_autotype = "\rSOUND159,255\r";   // PIZERO-32 measure: sustained ~440Hz A for freq analysis
