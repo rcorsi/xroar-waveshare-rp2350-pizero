@@ -58,7 +58,7 @@ a build of its own (`pizero_coco3`).
   (`PIZERO-154`); `settings.txt` and `autorun.txt` edited on screen
   (`PIZERO-145`, `146`, `147`); the pad drives the overlay (`PIZERO-169`).
 - **Cartridges** of 2 to 16 KB (`PIZERO-139`); bank-switched carts over 16 KB
-  are built and host-tested, waiting on a test image (`PIZERO-142`).
+  are built and host-tested (`PIZERO-142`); a hardware test waits on a tester with an image (`PIZERO-226`).
 - **Input**: USB keyboard that types what the keycaps say, keypad, auto-repeat
   (`PIZERO-163`, `49`, `167`); USB gamepad as both joysticks, buttons as keys
   (`PIZERO-13`, `160`, `164`); keyboard and pad together through a simple hub
@@ -87,8 +87,6 @@ on the board, passed 2026-10-12):
   re-soak with deliberate overlay use is running; the serial-stall theory is
   tested and ruled out. Keep it soaking on one board while features are built
   on the other.
-- **`PIZERO-142`**: start a 32 KB and a 64 KB banked cart (Mind Roll, Dunjunz)
-  once an image is found.
 
 ## Now: the CoCo 3 track
 
