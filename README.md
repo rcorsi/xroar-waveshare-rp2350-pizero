@@ -352,9 +352,10 @@ How we got from the first boot (54 fps) to a locked 60 fps:
   (507,340 / 524,288 bytes) in the double-buffered envs `pizero` and `pizero_60hz`, since retired
   (PIZERO-150). The default
   `pizero_stream_60` **single**-buffers instead (the audio data islands need the framebuffer's
-  ~150 KB) and sits at **80.4%** of RAM (421,376 bytes), leaving ~103 KB free. Measured 2026-10-14;
+  ~150 KB) and sits at **80.6%** of RAM (422,320 bytes), leaving ~102 KB free. Measured 2026-10-15;
   about 13 KB of the growth since September is the faster core's RAM-resident run loop (PIZERO-131, PIZERO-211),
-  and 2 KB is honouring the high-speed POKEs (PIZERO-132).
+  2 KB is honouring the high-speed POKEs (PIZERO-132), and about 1 KB is the HDMI audio
+  channel status table and the DC blocker (PIZERO-223).
 
 Performance instrumentation, clock, and vreg tuning landed in `PIZERO-15`; the serial monitor prints
 per-second `[run]` fps/cpu/blit stats. For comparison, the AMOLED port manages ~15 fps (~36%

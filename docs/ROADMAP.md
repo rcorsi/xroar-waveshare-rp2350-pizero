@@ -7,8 +7,8 @@ ticket (`PIZERO-NN`) and the deep docs (`README.md`, `docs/`). The short ranked
 list of what to pick up next is `roadmap.jsonl` (shown at the top of
 `issues.html`).
 
-_Last updated: 2026-10-14 (the CoCo 3 runs at full speed in its own build;
-docs brought up to date, `PIZERO-221`)._
+_Last updated: 2026-10-15 (CoCo 2 high-speed POKEs, `PIZERO-132`; HDMI audio
+packets fixed and the jukebox clean on a second TV, `PIZERO-223`, `224`)._
 
 ## Where things stand
 
@@ -28,7 +28,10 @@ a build of its own (`pizero_coco3`).
   the 6847T1, and our 6847T2 by default (`PIZERO-166`).
 - **Audio**: streaming data-island audio, the default since `PIZERO-45`. The
   rate servo (`PIZERO-121`) held the ring at its set-point with **0 skips over
-  26.7 h**. SN76489 sound chip (`PIZERO-143`).
+  26.7 h**. SN76489 sound chip (`PIZERO-143`). Sample packets follow IEC 60958
+  with a 48 kHz channel status, at exactly 48,000 samples/s, three times louder
+  by default and AC coupled (`PIZERO-223`); the SN76489 jukebox plays cleanly on
+  a second Samsung, so the fuzz on the test TV is that TV's (`PIZERO-224`).
 - **High-speed POKEs on the CoCo 2** (`PIZERO-132`):
   `POKE 65495,0` and `POKE 65497,0` run the machine up to 2× at 60 fps with
   full sound; normal speed by default and after reset (`docs/cpu-speed.md`).
@@ -174,7 +177,8 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 - **Other screens**: `PIZERO-99`, and `PIZERO-120` (the centre band on one LCD;
   palette-walk experiment next). `PIZERO-32` (ACR on sinks that honor it).
 - **Audio by ear**: `PIZERO-41`, a listening test against desktop XRoar now that
-  timing and the servo changed under it.
+  timing and the servo changed under it. The CoCo 2 SN76489 jukebox already
+  passed on a TV (`PIZERO-224`). `PIZERO-212`, the low-pass verdict.
 - **Hardware sightings**: `PIZERO-137`, `144`, `151`, `155`, `200`.
 - **Tooling**: `PIZERO-110` (on-board self-test), `PIZERO-207` (ring accounting
   test), `PIZERO-88` (frame-time headroom, refresh), `PIZERO-42` (remove code

@@ -162,6 +162,15 @@ it through `csg_bus_write`, either from a Game Master Cartridge or, with the
 its output (`sn_render`, scaled by the `volume` setting) to the DAC sample before
 emitting it, so both share one mono stream.
 
+`audio_emit` then shapes the sample on its way to the ring (PIZERO-223, PIZERO-212):
+a **DC blocker** (`audio_dc_run`, a one-pole high-pass near 5 Hz) makes the output
+AC coupled like the real CoCo's, so a parked DAC no longer sits as an offset taking
+headroom; then the **`audio_lowpass`** filter (`audio_lp_run`, 8 kHz by default)
+softens the hard square-wave steps; then a clamp. Both filters are in
+`lib/coco_machine/src/audio_lowpass.h`. The level is set by `AUDIO_DAC_GAIN` (180)
+and `AUDIO_GAIN_X` (3, the SN76489's matching factor) in `coco_machine.cpp`, three
+times the pre-PIZERO-223 level, scaled by the `volume` setting.
+
 Samples go into an 8192-deep **SPSC ring** (`audio_emit`, `AUDIO_RING_SAMPLES`).
 Core 0 owns the write index `g_audio_w` and publishes with a `__dmb()`; the consumer
 owns `g_audio_r`.
@@ -172,10 +181,19 @@ Audio sample packets are TERC4-encoded with BCH parity into data islands
 (`lib/libdvi/dvi_data_island.c`). **ACR** (clock regeneration) and the **AVI / Audio
 InfoFrames** are emitted on the vblank lines.
 
+Each sample subframe follows IEC 60958 (PIZERO-223, `dvi_di_set_audio_samples`):
+validity 0, a consumer channel status (linear PCM, 48 kHz, 16 bits) sent one bit a
+frame from a RAM table, and the block-start flag on whichever subpacket starts each
+192-frame block. ACR (N 6144, CTS 25200 at 25.2 MHz), the Audio InfoFrame and the
+channel status all declare the same 48 kHz. The inherited packet had set V=1 and
+sent no channel status, which a TV may treat as unreliable or 44.1 kHz audio.
+
 ### 3. Streaming delivery (core 1, in the DMA IRQ)
 
-`stream_audio_cb()` (`src/main.cpp`) runs per active scanline. A 16.16 fixed-point
-meter (`g_meter_step`, set in `setup()`) releases **0–4 samples per line**,
+`stream_audio_cb()` (`src/main.cpp`) runs per active scanline. An exact meter
+counting in 480ths of a sample (`g_meter_acc`, step `AUDIO_SAMPLES_PER_FRAME`; it was
+16.16 fixed point until PIZERO-223, which truncated to 47,999.7 samples/s) releases
+**0–4 samples per line**,
 spreading `AUDIO_SAMPLES_PER_FRAME` evenly across the 480 active lines. It reads those
 samples from the ring (`coco_machine_audio_read`, `coco_machine.cpp`), builds and
 parity-stamps one island,

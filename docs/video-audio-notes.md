@@ -33,7 +33,7 @@ warble)** → 41 (residual source-side fidelity) → 44 (60 Hz).
 core 0 (emulator)                         core 1 (libdvi scanout + DMA IRQ)
   6809/SAM/PIA/VDG                           per active-line IRQ (fires ONE line
   audio_emit() -> SPSC ring  ───────────▶    ahead of the beam):
-  (event-driven integrate-and-dump,            1. 16.16 meter -> n = 0..4 samples
+  (event-driven integrate-and-dump,            1. meter -> n = 0..4 samples
    keyed to PIA-write timestamps)               2. read n from the ring
                                                  3. encode ONE audio island
                                                  4. point the back-porch DMA at it
@@ -46,8 +46,10 @@ Why each piece is the way it is:
    active lines (3 packets each) into double-buffered banks. The sink's audio FIFO
    saw a coarse, frame-locked burst pattern → **~52 Hz warble**. The fix is
    what a standard transmitter does: sprinkle **0–4 samples onto (nearly) every active
-   line** via a 16.16 fixed-point sample accumulator (`g_meter_acc += step` each
-   line; `n = acc>>16`). Near-constant feed ⇒ no warble.
+   line** via a sample accumulator (`g_meter_acc += step` each line). It was 16.16
+   fixed point (`n = acc>>16`); since PIZERO-223 it counts in 480ths of a sample
+   (`step = AUDIO_SAMPLES_PER_FRAME`, `n = acc/480`), so it delivers exactly
+   48,000 samples/s instead of 47,999.7. Near-constant feed ⇒ no warble.
 
 2. **Encode in the IRQ, one line ahead.** One island encode costs **~4.8 µs**
    (measured, PIZERO-36). That does *not* fit the back-porch window it ships in
