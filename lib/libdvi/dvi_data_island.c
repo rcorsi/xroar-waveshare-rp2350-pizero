@@ -132,39 +132,58 @@ void dvi_di_set_gcp(dvi_data_packet_t *pkt, bool set_avmute) {
 }
 
 // Audio Sample Packet (type 0x02). nframes (1..4) IEC 60958 stereo frames.
-// header[1] = sample_present (one bit per subpacket); header[2] = sample_flat=0
-// + B-bit position. Per HDMI, 16-bit PCM occupies bits 8..23 of the 24-bit IEC
-// word. VUCP: validity=0, user=0, channel-status bit from frame_ctr framing,
-// parity over bits. (Exact IEC bit positions confirmed on the sink in M4.)
-// Even parity of a byte (XOR-reduce of its 8 bits).
+// header[1] = layout 0 (2 channels) and sample_present, one bit per subpacket;
+// header[2] bits 4-7 = B.0-B.3, set on the subpacket whose frame starts a
+// 192-frame IEC block. 16-bit samples go in bytes [1..2] (left) and [4..5]
+// (right) of each subpacket, the top of the 24-bit IEC word; byte 6 is
+// V U C P for left (bits 0-3) and right (bits 4-7), P even parity over the
+// sample and V U C.
+//
+// PIZERO-223: this was FRANK's packet (rh1tech/FRANK, shuichitakano): V=1 on
+// every sample (IEC: "not reliable"), no channel status (all zero, which reads
+// as 44.1 kHz against the 48 kHz in ACR and the Audio InfoFrame), and B set
+// only when a packet began exactly on frame 0, so a block start falling on a
+// packet's second to fourth frame was skipped. SN76489 chords came out mushy
+// on two TVs while the same samples were clean before the link. Now V=0, a
+// consumer channel status declaring linear PCM, 48 kHz and 16 bits is sent,
+// and B marks every block start.
 static inline int iec_par(unsigned b) { b ^= b >> 4; b ^= b >> 2; b ^= b >> 1; return b & 1; }
 
-// Audio Sample Packet (type 0x02). Matches the rh1tech/FRANK + shuichitakano
-// reference exactly: V=1 in the VUCP byte and the IEC channel status is NOT
-// emitted -- FRANK's author tested a populated channel status and found it
-// "better to ignore" (the sink uses ACR + the Audio InfoFrame for the rate; a
-// declared channel-status rate just risks a conflict). 16-bit sample bytes go in
-// [1..2] (left) / [4..5] (right); byte 6 = [V . . P] for L (bits 0..3) and R
-// (bits 4..7).
+// IEC 60958-3 consumer channel status, bit n = byte n/8, bit n%8 (sent bit 0
+// first, one bit per frame). Byte 0: consumer, linear PCM, copying permitted
+// (bit 2), no pre-emphasis. Byte 2: channel number, filled per subframe.
+// Byte 3: 48 kHz (bit 25). Byte 4: 16-bit words, max 20 (bit 33).
+// Not const: it is read from core 1's scanline IRQ, which must not touch
+// flash (PIZERO-37), and a non-const array lives in RAM.
+static uint8_t iec_cs[24] = { 0x04, 0x00, 0x00, 0x02, 0x02 };
+
+static inline unsigned iec_cs_bit(unsigned frame, unsigned chan) {
+	unsigned byte = frame >> 3, bit = frame & 7;
+	unsigned v = iec_cs[byte];
+	if (byte == 2) v |= chan << 4;                       // bits 20-23: 1 left, 2 right
+	return (v >> bit) & 1u;
+}
+
 void DVI_DI_RAMFUNC dvi_di_set_audio_samples(dvi_data_packet_t *pkt, const int16_t *lr,
                               int nframes, uint32_t frame_ctr) {
 	memset(pkt, 0, sizeof(*pkt));
 	if (nframes < 1) nframes = 1;
 	if (nframes > 4) nframes = 4;
-	const unsigned B = (frame_ctr % 192u == 0) ? 1u : 0u;   // 192-frame IEC block start
 	pkt->header[0] = 0x02;                                   // Audio Sample Packet
 	pkt->header[1] = (uint8_t)((1u << nframes) - 1);         // layout=0 (2ch) | sample_present
-	pkt->header[2] = (uint8_t)(B << 4);                      // B.0 preamble bit (block start)
-	const unsigned vuc = 1;                                  // V=1, U=0, C=0 (channel status ignored)
 	for (int i = 0; i < nframes; ++i) {
+		unsigned f = (frame_ctr + (unsigned)i) % 192u;
+		if (f == 0) pkt->header[2] |= (uint8_t)(1u << (4 + i));   // B.i: block start
 		uint16_t l = (uint16_t)lr[2 * i + 0];
 		uint16_t r = (uint16_t)lr[2 * i + 1];
 		uint8_t *d = pkt->subpacket[i];
 		d[0] = 0; d[1] = (uint8_t)l; d[2] = (uint8_t)(l >> 8);
 		d[3] = 0; d[4] = (uint8_t)r; d[5] = (uint8_t)(r >> 8);
-		int pl = iec_par(d[1]) ^ iec_par(d[2]) ^ iec_par(vuc);
-		int pr = iec_par(d[4]) ^ iec_par(d[5]) ^ iec_par(vuc);
-		d[6] = (uint8_t)((vuc << 0) | ((unsigned)pl << 3) | (vuc << 4) | ((unsigned)pr << 7));
+		unsigned vucl = iec_cs_bit(f, 1) << 2;               // V=0, U=0, C
+		unsigned vucr = iec_cs_bit(f, 2) << 2;
+		int pl = iec_par(d[1]) ^ iec_par(d[2]) ^ iec_par(vucl);
+		int pr = iec_par(d[4]) ^ iec_par(d[5]) ^ iec_par(vucr);
+		d[6] = (uint8_t)(vucl | ((unsigned)pl << 3) | (vucr << 4) | ((unsigned)pr << 7));
 	}
 }
 

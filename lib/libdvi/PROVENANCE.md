@@ -37,4 +37,8 @@ documented by `PIZERO-NN` references in the source comments:
   (`dvi_setup_active_audio_line`, `dvi_setup_active_hdmi_framing`; PIZERO-38).
 - RAM-resident (`.time_critical`) data-island encode so it can run in the
   core-1 DMA IRQ (PIZERO-37).
+- Audio Sample Packets follow IEC 60958 (PIZERO-223): validity 0, a consumer
+  channel status declaring linear PCM, 48 kHz and 16 bits, and the block-start
+  flag on whichever subpacket starts a 192-frame block. The upstream packet set
+  V=1, sent no channel status and could skip block starts.
 - `pio_set_gpio_base(pio, 16)` support for TMDS on GPIO 32–39 (RP2350B).
