@@ -853,6 +853,14 @@ static volatile uint32_t g_stream_under = 0;       // ring-underrun (hold-last) 
 static int16_t  g_sine[SYNTH_TBL];                 // one 440 Hz period, filled on core 0
 static uint32_t g_synth_ph   = 0;                  // 32-bit phase accumulator (IRQ-only)
 static uint32_t g_synth_inc  = 0;                  // per-sample phase step (set at init)
+#ifdef AV_AUDIO_SYNTH_CHORD
+// PIZERO-223: a C major chord (C4 E4 G4) over the HDMI link, made on core 1
+// with no CoCo in the path: 4 s of three sines, 4 s of the same notes as
+// square waves (what the SN76489 plays), 1 s of silence, repeating. Whether
+// the TV makes the sines fuzzy too says whether it is the link or the TV.
+static uint32_t g_chord_ph[3], g_chord_inc[3];
+static uint32_t g_chord_n = 0;                     // samples into the 9 s cycle
+#endif
 #endif
 #else
 #define N_ALINES   77
@@ -882,9 +890,27 @@ static uint32_t g_irq_bank = 0;                   // latched once per frame (IRQ
 // the IRQ); live = the CoCo ring (hold-last on underrun). Both run on core 1.
 static inline int16_t __not_in_flash_func(stream_next_sample)(void) {
 #ifdef AV_AUDIO_SYNTH
+#ifdef AV_AUDIO_SYNTH_CHORD
+    uint32_t n = g_chord_n;
+    g_chord_n = (n + 1 >= 9u * 48000u) ? 0 : n + 1;
+    int32_t acc = 0;
+    for (int v = 0; v < 3; ++v) {
+        uint32_t ph = g_chord_ph[v];
+        g_chord_ph[v] = ph + g_chord_inc[v];
+        if (n < 4u * 48000u) {                     // sine, interpolated between table entries
+            uint32_t i = ph >> 23, fr = (ph >> 7) & 0xFFFF;
+            int32_t a = g_sine[i], b = g_sine[(i + 1) & (SYNTH_TBL - 1)];
+            acc += (a + (((b - a) * (int32_t)fr) >> 16)) / 2;
+        } else if (n < 8u * 48000u) {              // square, the same peak
+            acc += (ph & 0x80000000u) ? -3000 : 3000;
+        }
+    }
+    return (int16_t)acc;
+#else
     int16_t s = g_sine[g_synth_ph >> 23];          // top 9 bits index the 512-entry table
     g_synth_ph += g_synth_inc;
     return s;
+#endif
 #else
     // PIZERO-81c: while the overlay pauses the machine, the ring is left
     // exactly as it was (the producer is stopped too, so the rate servo sees
@@ -1688,6 +1714,10 @@ void setup() {
         for (int i = 0; i < SYNTH_TBL; ++i)
             g_sine[i] = (int16_t)(6000.0f * sinf((float)i * (2.0f * 3.14159265f / SYNTH_TBL)));   // ~18% FS
         g_synth_inc = (uint32_t)((double)440.0 / 48000.0 * 4294967296.0);   // 440 Hz @ 48 kHz, 32-bit phase
+#ifdef AV_AUDIO_SYNTH_CHORD
+        { static const double hz[3] = { 261.63, 329.63, 392.00 };   // C4 E4 G4
+          for (int v = 0; v < 3; ++v) g_chord_inc[v] = (uint32_t)(hz[v] / 48000.0 * 4294967296.0); }
+#endif
         Serial.print("[disp] M2 STREAM: 440 Hz synth, per-line IRQ encode (PIZERO-38)\r\n");
 #else
         Serial.print("[disp] M2 STREAM: live per-line IRQ encode (PIZERO-38)\r\n");
