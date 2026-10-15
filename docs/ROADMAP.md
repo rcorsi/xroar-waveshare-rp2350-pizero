@@ -89,8 +89,6 @@ on the board, passed 2026-10-12):
   on the other.
 - **`PIZERO-142`**: start a 32 KB and a 64 KB banked cart (Mind Roll, Dunjunz)
   once an image is found.
-- **`PIZERO-220`**: the CoCo 3 speed work at 1.79 MHz. Measured clean (no late
-  frames, sound 0% short over a minute); waits on a look and a listen.
 
 ## Now: the CoCo 3 track
 
@@ -104,7 +102,7 @@ measured outcome in `docs/coco3-feasibility.md`. Done so far:
 - **`PIZERO-213`**: the MMU fast path. **`PIZERO-218`**: the port-side GIME
   renderer; 60 fps at both speeds.
 - **`PIZERO-219`**: worst case measured (full-screen HCLS at 1.79 MHz: 3-5 late
-  frames a second). **`PIZERO-220`** (in flight): fixed, no late frames.
+  frames a second). **`PIZERO-220`**: fixed, no late frames, done 2026-10-15.
 
 Next, in order:
 
@@ -200,7 +198,7 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 ## Dependency notes
 
 - **CoCo 3**: `PIZERO-129` → `130` → `131` → `133` → `213` → `218` → `219` →
-  `220` (all done but 220's sign-off) → `214`, `215`; `135` still decides how
+  `220` (all done) → `214`, `215`; `135` still decides how
   the mode is chosen; `134`/`179`/`216`/`217` after. `PIZERO-142`'s banked carts allocate on the
   heap only while installed, so they do not take the RAM 133 needs.
 - **Storage**: `PIZERO-70` → `71` → `72` → `73` → `74`; `PIZERO-79` needs 73
