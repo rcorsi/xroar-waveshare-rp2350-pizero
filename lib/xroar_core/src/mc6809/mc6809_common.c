@@ -67,8 +67,10 @@ extern void coco_mem_nvma(void *sptr);
 // written, without coco_mem_cycle's address decode. The cycle then only
 // advances time unless something is due, when coco_mem_tick does the
 // per-cycle work. I/O and the SAM registers still take the full hook.
-#define COCO_TICK(rnw, a) do { \
-		if (!coco_fastbus_advance()) coco_mem_tick(cpu->mem_cycle.sptr, (rnw), (a)); \
+// PIZERO-132: `ticks` is the cycle's length, which on a CoCo 2 at address-
+// dependent speed differs between RAM and ROM.
+#define COCO_TICK(rnw, a, ticks) do { \
+		if (!coco_fastbus_advance(ticks)) coco_mem_tick(cpu->mem_cycle.sptr, (rnw), (a)); \
 	} while (0)
 
 static CPU_PROF_INLINE uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a) {
@@ -80,20 +82,20 @@ static CPU_PROF_INLINE uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a
 	const uint8_t *p;
 	if (a < coco_fastbus.page_top && (p = coco_fastbus.rd[a >> 13])) {
 		cpu->D = p[a & 0x1fff];
-		COCO_TICK(1, a);
+		COCO_TICK(1, a, coco_fastbus.ticks);
 	} else {
 		coco_mem_cycle(cpu->mem_cycle.sptr, 1, a);
 	}
 #else
 	if (a < coco_fastbus.ram_top) {
 		cpu->D = coco_fastbus.ram[a];
-		COCO_TICK(1, a);
+		COCO_TICK(1, a, coco_fastbus.ticks);
 	} else if (a < coco_fastbus.rom_top) {
 		cpu->D = coco_fastbus.rom[a & 0x3fff];
-		COCO_TICK(1, a);
+		COCO_TICK(1, a, coco_fastbus.rom_ticks);
 	} else if (a < coco_fastbus.cart_top) {
 		cpu->D = coco_fastbus.cart[a & coco_fastbus.cart_mask];
-		COCO_TICK(1, a);
+		COCO_TICK(1, a, coco_fastbus.rom_ticks);
 	} else {
 		coco_mem_cycle(cpu->mem_cycle.sptr, 1, a);
 	}
@@ -131,14 +133,14 @@ static CPU_PROF_INLINE void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d
 	uint8_t *p;
 	if (a < coco_fastbus.page_top && (p = coco_fastbus.wr[a >> 13])) {
 		p[a & 0x1fff] = d;
-		COCO_TICK(0, a);
+		COCO_TICK(0, a, coco_fastbus.ticks);
 	} else {
 		coco_mem_cycle(cpu->mem_cycle.sptr, 0, a);
 	}
 #else
 	if (a < coco_fastbus.ram_top) {
 		coco_fastbus.ram[a] = d;
-		COCO_TICK(0, a);
+		COCO_TICK(0, a, coco_fastbus.ticks);
 	} else {
 		coco_mem_cycle(cpu->mem_cycle.sptr, 0, a);  // AMOLED-56
 	}
@@ -154,7 +156,7 @@ static CPU_PROF_INLINE void nvma_cycle(struct MC6809 *cpu) {
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
-	if (coco_fastbus_advance())
+	if (coco_fastbus_advance(coco_fastbus.rom_ticks))
 		cpu->D = coco_fastbus.rom[0x3fff];   // what a read of $FFFF finds
 	else
 		coco_mem_nvma(cpu->mem_cycle.sptr);

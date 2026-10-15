@@ -55,25 +55,26 @@ struct coco_fastbus {
 	uint16_t cart_top;
 	uint16_t cart_mask;
 	uint32_t deadline;
+	// Event ticks per bus cycle. PIZERO-132: on a CoCo 2 the SAM's rate
+	// bits decide it: ticks for a RAM cycle, rom_ticks for a ROM or
+	// cartridge cycle and a dummy cycle (16 at normal speed, 8 fast; only
+	// address-dependent speed, POKE 65495, makes them differ).
+	uint16_t ticks;
+	uint16_t rom_ticks;
 #ifdef COCO_FASTBUS_PAGES
 	const uint8_t *rd[8];
 	uint8_t *wr[8];
 	uint16_t page_top;
-	uint16_t ticks;
 #endif
 };
 
 extern struct coco_fastbus coco_fastbus;
 extern uint32_t event_current_tick;   // events.h
 
-// One 16-tick (paged: ticks-long) bus cycle that ends before the deadline: advance time and
+// One bus cycle `ticks` long that ends before the deadline: advance time and
 // report 1. Otherwise leave time alone and report 0: call the tail.
-static inline int coco_fastbus_advance(void) {
-#ifdef COCO_FASTBUS_PAGES
-	uint32_t t = event_current_tick + coco_fastbus.ticks;
-#else
-	uint32_t t = event_current_tick + 16;
-#endif
+static inline int coco_fastbus_advance(uint32_t ticks) {
+	uint32_t t = event_current_tick + ticks;
 	if ((int32_t)(t - coco_fastbus.deadline) >= 0)
 		return 0;
 	event_current_tick = t;

@@ -16,6 +16,8 @@ size of a Raspberry Pi Zero.
 ## What it does
 
 - Runs a CoCo 2 at full speed: Color, Extended and Disk BASIC, games and demos.
+- Honours the CoCo's high-speed POKEs: `POKE 65495,0` and `POKE 65497,0` make programs run up to
+  twice as fast, and unlike a real CoCo 2 the screen stays clean at full speed.
 - Picture and sound over one video cable, at 60 frames per second.
 - Adds the three-voice sound chip from the Games Master Cartridge.
 - Lets you pick disks, programs and cartridges from on-screen lists.
@@ -123,8 +125,10 @@ Everything above works on hardware. Known gaps:
 - **Disk writes are new** (PIZERO-66): `SAVE`, `SAVEM`, `KILL` and the rest write straight into the
   `.DSK` on the card. Press **W** in the disk list to lock a drive read-only. A `.DSK` whose file is
   read-only on the card is always locked.
-- **High-speed POKEs** (SAM double speed) are accepted but ignored on the CoCo 2; the machine always
-  runs at normal speed (PIZERO-132). The CoCo 3 build honors its 1.79 MHz mode.
+- **High-speed POKEs are new** (PIZERO-132): the CoCo 2 now runs faster when a program asks.
+  `POKE 65495,0` (address-dependent) and `POKE 65497,0` (full, 2×) work, `POKE 65494,0` and
+  `POKE 65496,0` go back to normal, and a reset always does. Details and measurements in
+  [`docs/cpu-speed.md`](docs/cpu-speed.md).
 
 **CoCo 3 (experimental).** A separate firmware, built from the `pizero_coco3` environment (see
 [`docs/BUILD.md`](docs/BUILD.md)), makes the board a 128 KB CoCo 3. It needs the CoCo 3 ROM on the
@@ -328,7 +332,7 @@ telemetry of the default build at the BASIC prompt, 2026-10-13):
 
 | Work | Time | Notes |
 |---|---|---|
-| CoCo emulation | ~6.1 ms | ~14,900 6809 cycles/frame at the emulated ~0.895 MHz; was ~11 ms before the faster core (PIZERO-131) |
+| CoCo emulation | ~6.2 ms | ~14,900 6809 cycles/frame at the emulated ~0.895 MHz; was ~11 ms before the faster core (PIZERO-131) |
 | `render_frame` (alpha/text) | ~0.5 ms | precomputed glyph-row → packed-word LUT |
 | Blit and the rest of the loop | ~2.4 ms | 320×240 RGB565 blit, USB host, audio |
 | **Total** | **~9 ms** | at least 7.6 ms (about 45%) to spare in the tightest frame |
@@ -348,17 +352,18 @@ How we got from the first boot (54 fps) to a locked 60 fps:
   (507,340 / 524,288 bytes) in the double-buffered envs `pizero` and `pizero_60hz`, since retired
   (PIZERO-150). The default
   `pizero_stream_60` **single**-buffers instead (the audio data islands need the framebuffer's
-  ~150 KB) and sits at **80.0%** of RAM (419,364 bytes), leaving ~105 KB free. Measured 2026-10-13;
-  about 13 KB of the growth since September is the faster core's RAM-resident run loop (PIZERO-131, PIZERO-211).
+  ~150 KB) and sits at **80.4%** of RAM (421,376 bytes), leaving ~103 KB free. Measured 2026-10-14;
+  about 13 KB of the growth since September is the faster core's RAM-resident run loop (PIZERO-131, PIZERO-211),
+  and 2 KB is honouring the high-speed POKEs (PIZERO-132).
 
 Performance instrumentation, clock, and vreg tuning landed in `PIZERO-15`; the serial monitor prints
 per-second `[run]` fps/cpu/blit stats. For comparison, the AMOLED port manages ~15 fps (~36%
 real-time), so this is roughly a **4× improvement**.
 
-The CoCo's **high-speed POKEs** (SAM double speed, `POKE 65495,0` / `POKE 65497,0`) are accepted but
-currently have no effect on the CoCo 2: every memory access is charged the normal speed, so the
-machine always runs at 1× (`PIZERO-132`). Since the faster core, double speed would fit the frame
-(the 2× benchmark build runs in about 12 ms); see [`docs/cpu-speed.md`](docs/cpu-speed.md).
+The CoCo's **high-speed POKEs** (SAM double speed) fit the frame (`PIZERO-132`): at `POKE 65497,0`
+(full, 2×) emulation takes about 12.6 ms a frame and at `POKE 65495,0` about 12.4 ms in BASIC,
+with no late frames and no audio shortfall. Normal speed is the 6.2 ms above. See
+[`docs/cpu-speed.md`](docs/cpu-speed.md).
 
 Note the two distinct clocks: the host RP2350 MCU runs at **252 MHz** (set from the DVI TMDS bit
 clock), while the *emulated* 6809 runs at its authentic **~0.895 MHz**, independent of the host clock.

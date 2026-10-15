@@ -102,6 +102,7 @@ struct CocoMachine {
     // to read from the right framebuffer for graphics modes like RG6.
     uint16_t sam_f = 0;
     uint8_t  sam_v = 0;          // PIZERO-140: SAM VDG mode V2-V0, sets row geometry
+    uint8_t  sam_r = 0;          // PIZERO-132: SAM MPU rate R1-R0 (POKE 65495/65497)
 
 
     struct MC6809 *cpu = nullptr;
@@ -818,7 +819,7 @@ static inline void fastbus_sync(void) {
             coco3_bus_page(&g_c3bus, p, S, bank, &coco_fastbus.rd[p], &coco_fastbus.wr[p]);
         }
         coco_fastbus.rom = g_c3bus.rom + 0x4000;     // a dummy cycle reads $FFFF
-        coco_fastbus.ticks = (uint16_t)tcc1014_cycle_ticks(g_gime3);
+        coco_fastbus.ticks = coco_fastbus.rom_ticks = (uint16_t)tcc1014_cycle_ticks(g_gime3);
         coco_fastbus.page_top = 0xFE00;              // $FE00 up: MC3 and I/O
         return;
     }
@@ -837,6 +838,10 @@ static inline void fastbus_sync(void) {
         coco_fastbus.rom_top  = 0xC000;
         coco_fastbus.cart_top = 0xFF00;
     }
+    // PIZERO-132: what the SAM's rate makes a cycle cost, as sam_ticks says.
+    // RAM (all of it below $FF00 in all-RAM mode) is fast only at full speed.
+    coco_fastbus.ticks     = (g_m.sam_r & 2) ? 8 : 16;
+    coco_fastbus.rom_ticks = g_m.sam_r ? 8 : 16;
 #ifdef COCO_FASTBUS_PAGES
     // A CoCo 2 in a paged build: the same windows as pages.
     for (unsigned p = 0; p < 8; p++) {
@@ -844,13 +849,15 @@ static inline void fastbus_sync(void) {
         const uint8_t *rd = nullptr;
         uint8_t *wr = nullptr;
         if (a < coco_fastbus.ram_top) rd = wr = coco_fastbus.ram + a;
+        // A page has one cost, so at address-dependent speed ROM and
+        // cartridge pages take the full hook (PIZERO-132).
+        else if (coco_fastbus.rom_ticks != coco_fastbus.ticks) rd = nullptr;
         else if (a < coco_fastbus.rom_top) rd = coco_fastbus.rom + (a & 0x3FFF);
         else if (a < coco_fastbus.cart_top && coco_fastbus.cart_mask >= 0x1FFF)
             rd = coco_fastbus.cart + (a & coco_fastbus.cart_mask);
         coco_fastbus.rd[p] = rd;
         coco_fastbus.wr[p] = wr;
     }
-    coco_fastbus.ticks = 16;
     coco_fastbus.page_top = coco_fastbus.cart_top ? 0xFF00 : 0;
 #endif
 }
@@ -950,6 +957,16 @@ static inline __attribute__((always_inline)) void c3_slow(_Bool RnW, uint16_t A)
 #endif
 }
 
+// PIZERO-132: a CoCo 2 bus cycle's length in event ticks, from the SAM's
+// MPU rate R (mc6883.c's fast_cycle): 8 when fast, 16 when slow. Full speed
+// (R1 set, POKE 65497) makes every cycle fast; address-dependent speed
+// (R = 1, POKE 65495) all but RAM and PIA0 ($FF00-$FF1F). The real SAM's
+// 15, 17 and 25 tick cycles where the rate changes are not modelled: they
+// even out to within a few percent.
+static inline __attribute__((always_inline)) int sam_ticks(bool ram_or_pia0) {
+    return ((g_m.sam_r & 2) || (g_m.sam_r && !ram_or_pia0)) ? 8 : 16;
+}
+
 extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     (void)sptr;
     if (g_c3) { c3_slow(RnW, A); return; }   // PIZERO-133
@@ -964,6 +981,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     // Dragon32/64/CoCo1/2/3/MC10 + the '785 variant + fast/slow cycle state
     // machine. We're CoCo 2 only and don't care about cycle-accurate fast
     // mode: flat 16-tick slow cycle per access matches default speed.
+    // PIZERO-132: the SAM's rate is honoured since (sam_ticks).
     //
     // AMOLED-53 branch order: the overwhelming common case is A < 0xFF00
     // (RAM / ROM / cart ROM, i.e. every instruction fetch and almost every
@@ -975,16 +993,26 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     if (A < 0xFF00) {
         // Bulk of memory: RAM / ROM / cart ROM. With TY=1 (all-RAM mode)
         // everything below FF00 is RAM.
-        if (!(A & 0x8000) || g_m.sam_ty) S = RnW ? 0 : 7;
+        bool ram = !(A & 0x8000) || g_m.sam_ty;
+        if (ram)                          S = RnW ? 0 : 7;
         else if (A < 0xA000)              S = RnW ? 1 : 7;
         else if (A < 0xC000)              S = RnW ? 2 : 7;
         else                              S = RnW ? 3 : 7;
         g_m.sam->S = S;
-        ncycles = 16;
+        ncycles = sam_ticks(ram);
     } else if ((A & 0xFFE0) == 0xFFC0 && !RnW) {
-        // SAM register write: slow path.
-        ncycles = mc6883_mem_cycle(g_m.sam, RnW, A);
+        // SAM register write: slow path. Its length is set by the rate
+        // before the write, as on the SAM.
+        ncycles = sam_ticks(false);
+        mc6883_mem_cycle(g_m.sam, RnW, A);
         S = g_m.sam->S;
+        // PIZERO-132: shadow the rate, R0 at $FFD6/7 and R1 at $FFD8/9.
+        if (A >= 0xFFD6 && A <= 0xFFD9) {
+            unsigned bit = (A - 0xFFD6) >> 1;
+            if (A & 1) g_m.sam_r |=  (uint8_t)(1u << bit);
+            else       g_m.sam_r &= (uint8_t)~(1u << bit);
+            fastbus_sync();
+        }
         // Shadow the TY bit for our fast decode.
         if (A == 0xFFDE) { g_m.sam_ty = false; fastbus_sync(); }
         else if (A == 0xFFDF) { g_m.sam_ty = true; fastbus_sync(); }
@@ -1013,7 +1041,7 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
             default: S = 7; break; // FF60-FFBF: open bus
         }
         g_m.sam->S = S;
-        ncycles = 16;
+        ncycles = sam_ticks(io == 0);
     }
 
 #if PROFILE_MEM_CYCLE
@@ -1144,7 +1172,8 @@ extern "C" void HOT_FUNC(coco_mem_tick)(void *sptr, _Bool RnW, uint16_t A) {
 #else
     uint32_t pt0 = 0;
 #endif
-    mem_cycle_tail(16, pt0);
+    // PIZERO-132: the window the core used decides the length.
+    mem_cycle_tail(A < coco_fastbus.ram_top ? coco_fastbus.ticks : coco_fastbus.rom_ticks, pt0);
 }
 
 // PIZERO-131: a dummy cycle (VMA low, address $FFFF). The full decode always
@@ -1165,7 +1194,7 @@ extern "C" void HOT_FUNC(coco_mem_nvma)(void *sptr) {
 #else
     uint32_t pt0 = 0;
 #endif
-    mem_cycle_tail(16, pt0);
+    mem_cycle_tail(coco_fastbus.rom_ticks, pt0);        // PIZERO-132
 }
 
 // VDG sync signals on the real CoCo go to PIA0 control inputs:
@@ -1629,14 +1658,13 @@ static void HOT_FUNC(audio_catch_up_run)(uint32_t pend) {
 #ifdef CPU_PROF
         uint32_t ct0 = cpu_prof_now();
 #endif
-#ifdef COCO_FASTBUS_PAGES
-        uint32_t t = coco_fastbus.ticks;
-#else
-        const uint32_t t = 16;
-#endif
+        // PIZERO-132: a CoCo 2 at address-dependent speed mixes 8 and 16
+        // tick cycles in one run. At one level the integrator gives the same
+        // samples however the ticks are split, so take them 8 at a time.
+        const uint32_t t = g_c3 ? coco_fastbus.ticks : 8;
         audio_integ_run(&g_aud, g_dac_level, pend / t, t, g_aud_rate, audio_sample);
         if (pend % t) audio_integrate(pend % t);   // never expected: keep time exact
-        g_m.total_mem_cycles += pend / 16;
+        g_m.total_mem_cycles += pend / coco_fastbus.ticks;
         g_aud_tick = event_current_tick;
 #ifdef CPU_PROF
         g_cpu_prof.catch_clk += cpu_prof_now() - ct0;
@@ -1944,6 +1972,7 @@ extern "C" void coco_machine_cold_reset(void) {
     g_m.sam_ty = false;
     g_m.sam_f  = 0;
     g_m.sam_v  = 0;
+    g_m.sam_r  = 0;     // PIZERO-132: RESET clears the rate as well
     coco_machine_palette_reset();
 #ifdef GIME_TIMER
     gime_timer_reset(&g_gime);

@@ -1,149 +1,125 @@
-# Emulation pacing & CoCo high-speed (double-speed) behavior
+# CoCo high speed (SAM double speed) and emulation pacing
 
-Does running the emulated CoCo at "double speed" hold up on this hardware? Short
-answer: **the port does not run it at all today.** The SAM high-speed POKE is accepted
-but has no effect on speed: every memory access is charged the normal slow-cycle cost,
-so the guest keeps running at 1× (tracked as `PIZERO-132`). The rest of this doc explains the pacing model, why
-audio and video would stay correct if fast mode were honored, and why core-0 headroom
-would then be the limit.
+Short answer: **the CoCo 2 high-speed POKEs work** (PIZERO-132, 2026-10-14). A
+program that pokes the SAM's rate runs faster, as it would on a real CoCo, with
+60 fps video and full sound. The machine still starts at normal speed: nothing
+speeds it up unless the program asks.
 
-## There is no host fast-forward
+## The POKEs
 
-This port has **no host-side fast-forward / turbo toggle**: no key combo, no
-[`AUTORUN.md`](../AUTORUN.md) directive, no flag. The only "double speed" a CoCo 2 has
-is the **SAM high-speed POKE**, driven by the guest program itself:
+There is no host-side fast-forward or turbo key. The only speed-up is the one a
+CoCo 2 program asks for itself, through the SAM's MPU rate bits:
 
-- `POKE 65495,0`: *address-dependent* high speed (SAM `R = 1`). Only accesses outside
-  the display/IO region run fast. Effective ~1.3–1.5× on real hardware. The "safe" mode
-  real CoCo 1/2 hardware can mostly survive.
-- `POKE 65497,0`: *full* high speed (SAM `R = 2`). Every cycle runs fast, ~2×. On real
-  hardware this corrupts the video.
+| POKE | SAM rate | What runs fast | Measured speed-up |
+|---|---|---|---|
+| `POKE 65494,0` and `POKE 65496,0` | R = 0 | nothing (normal, 0.89 MHz) | 1× |
+| `POKE 65495,0` | R = 1, address-dependent | everything except RAM and PIA0 ($FF00-$FF1F): ROM, cartridge, other I/O, dummy cycles | 1.62× on a BASIC `FOR` loop |
+| `POKE 65497,0` | R = 2, full | every cycle (1.79 MHz) | 2.00× |
 
-## What the port actually does with it
+The measurement was a `10 TIMER=0:FOR I=1 TO 3000:NEXT:PRINT TIMER` loop: 188
+jiffies at normal speed, 116 at `POKE 65495`, 94 at `POKE 65497`. How much
+address-dependent speed gains depends on the program: BASIC runs from ROM, so it
+gains most; machine code running from RAM gains least.
 
-The vendored XRoar SAM (`lib/xroar_core/src/mc6883.c`) implements the speed change: a
-fast memory cycle costs **8 event-ticks** versus **16** for a normal cycle. But this
-port does not call it for ordinary accesses. `coco_mem_cycle` in
-`lib/coco_machine/src/coco_machine.cpp` uses its own fast-path address decode, inherited
-from the AMOLED port, which charges a **flat 16 ticks** for every RAM, ROM, cartridge
-and I/O access. Only a write to the SAM registers (`$FFC0-$FFDF`) goes through
-`mc6883_mem_cycle`, so the POKE does update the SAM's state, but nothing reads the new
-speed. The guest runs at 1× whatever it pokes.
+**Reset** (the board's RUN button, or the overlay's reset) clears the rate, as the
+real SAM's reset does, so a program that left the machine fast does not carry
+the speed into the next one.
 
-Honoring fast mode would mean charging `mc6883_mem_cycle`'s cycle cost (or an
-equivalent R-aware decode) on the fast path. The sections below are the analysis of
-what would follow.
+### Better than the real machine: the screen stays clean
 
-## The pacing model: fixed emulated *time* per frame
+On a real CoCo 2, full speed (`POKE 65497`) takes the SAM's time away from the
+VDG and the screen fills with garbage until the program pokes back to normal.
+Here the picture is drawn from RAM once a frame, independent of the CPU's rate,
+so the screen stays readable at full speed. Programs that blank or ignore the
+screen while fast are unaffected; programs that relied on the garbage as a cue
+will not see it.
 
-This is the key, non-obvious fact. The main loop does **not** run a fixed number of CPU
-instructions per frame; it runs a fixed amount of **emulated time**, measured in event
-ticks. In `lib/coco_machine/src/coco_machine.cpp`:
+### The CoCo 3 build
 
-```c
-// run_cpu_with_audio()
-g_m.cycles_remaining = (int32_t)cycles * 16;   // budget in event TICKS, not instructions
-```
+The CoCo 3 build honours its own 1.79 MHz bit (`POKE 65497,0`, the GIME's copy
+of the SAM rate) through the GIME emulation, and has since PIZERO-133. A
+full-screen animation at 1.79 MHz holds 60 fps with no late frames (PIZERO-220).
 
-and each memory access subtracts its own tick cost (`ncycles` in `coco_mem_cycle`,
-today always 16). So `coco_machine_run_cycles(CYCLES_PER_FRAME)` always advances:
+## How it is emulated
 
-```
-CYCLES_PER_FRAME × 16  =  14915 × 16  =  238,640 ticks  ≈  16.667 ms of emulated time
-```
+A bus cycle's length is counted in event ticks of the 14.318 MHz master clock:
+**16 ticks** for a normal cycle, **8** for a fast one. `sam_ticks` in
+`lib/coco_machine/src/coco_machine.cpp` decides it from the rate the SAM holds,
+using the same rule as XRoar's `mc6883_mem_cycle` (`lib/xroar_core/src/mc6883.c`,
+its `fast_cycle`): fast when R1 is set, or when R = 1 and the cycle is neither
+RAM nor PIA0. In all-RAM mode (SAM TY), everything below $FF00 counts as RAM.
 
-per frame. If fast accesses cost 8 ticks, full fast mode would fit up to ~29,830 cycles
-into the *same* emulated 16.667 ms window, which is exactly how real hardware behaves
-when you flip the SAM speed bit.
+The pieces:
 
-`CYCLES_PER_FRAME` / `FRAME_PERIOD_US` are defined per build in `src/main.cpp` (14915 /
-16667 µs for the default 60 Hz build).
+- **The rate is shadowed** in `g_m.sam_r` when the guest writes $FFD6-$FFD9, next
+  to the existing shadows of TY, F and V. A SAM register write takes the length
+  set by the rate before the write, as on the chip.
+- **The 6809 core's fast path** (PIZERO-131) moves RAM and ROM bytes without the
+  address decode. `struct coco_fastbus` (`lib/xroar_core/include/coco_fastbus.h`)
+  now carries two lengths: `ticks` for its RAM window, and `rom_ticks` for its ROM
+  and cartridge windows and for dummy cycles. `fastbus_sync` sets both from the
+  rate. They differ only at address-dependent speed.
+- **The audio catch-up** integrates runs of cycles that had no event in them. At
+  address-dependent speed one run mixes 8- and 16-tick cycles, so the catch-up
+  takes the ticks 8 at a time. At a steady DAC level the integrator gives exactly
+  the same samples however the ticks are split; `test_audio_integ`'s
+  `test_mixed_lengths_caught_up_in_eights` checks that sample for sample.
+- **Not modelled:** the real SAM spends 15, 17 or 25 ticks on a cycle where the
+  rate changes between fast and slow (re-interleaving with the VDG). Those even
+  out to within a few percent of the 8/16 model over a frame.
 
-## Why audio and video would stay correct
+## The pacing model: fixed emulated time per frame
 
-Because the per-frame emulated-time budget is constant, two things people worry about
-would be **non-issues**:
+The main loop does **not** run a fixed number of instructions a frame. It runs a
+fixed amount of **emulated time**, `CYCLES_PER_FRAME × 16 = 14915 × 16 = 238,640`
+event ticks, which is 16.667 ms. `coco_machine_run_cycles` stops the CPU when time
+reaches that budget (`g_budget_end`), and each cycle spends its own length. At full
+speed twice as many cycles fit into the same frame, which is exactly what the real
+machine does.
 
-- **Audio pitch.** Samples are generated event-tick-keyed (`EVENT_TICK_HZ = 14318180`
-  in `coco_machine.cpp`), and ticks-per-frame is constant → still **exactly 800
-  samples/frame** in fast mode → no pitch shift and no resampler distortion. (The
-  "fast-forward distortion" noted in [`video-audio-notes.md`](video-audio-notes.md) was a
-  *separate* startup bug, a producer burst overflowing a too-small ring, fixed by the
-  8192-deep primed ring. It was **not** the SAM speed.)
-- **Video.** Core 1's `libdvi` worker is fully decoupled and keeps emitting 60 Hz of
-  whatever `g_front` holds (see [`pipeline.md`](pipeline.md)). Guest speed never touches
-  it.
+That is why speed changes are safe for the rest of the system:
 
-## Where it would break: core-0 headroom
+- **Sound pitch** stays right. Samples are placed by event tick, and a frame is
+  always the same number of ticks, so it is still 800 samples a frame at any rate.
+- **Video** stays at 60 Hz. Core 1's video output is decoupled from the guest (see
+  [`pipeline.md`](pipeline.md)), and the frame is rendered once per 16.667 ms of
+  emulated time whatever the rate.
 
-_Update 2026-10-14: the numbers in this section predate the faster 6809 core
-and are kept for the record. Since PIZERO-131 the product build emulates a
-frame in about 6.1 ms (was about 11), and the 2× benchmark build
-(`pizero_cpu179`) holds 60 fps at about 12 ms. So full double speed would now
-fit. The CoCo 3 build runs 1.79 MHz for real at 60 fps (PIZERO-220). See
-Status._
+## What it costs: core 0's headroom
 
-Full fast mode executes ~2× as many 6809 memory cycles inside the same per-frame budget,
-so the **host cost of emulation roughly doubles**. The measured 1× frame budget on
-`pizero_stream_60` is **76.2%** (noted by the GIME flags in `platformio.ini`): ~12.7 ms
-of the 16.67 ms frame, leaving ~4 ms of slack. The split between emulation and
-render + blit has not been re-measured at that figure; the older README Performance
-numbers (~9.4 ms emulation, ~2.1 ms render + blit, 31% slack) predate the CoCo 3 extras,
-the SN76489 and the overlay work, and are superseded by it.
+The host does roughly twice the work per frame when every cycle is fast, so the
+question was whether it fits in 16.67 ms. Measured on `pizero_stream_60`
+(2026-10-14, a BASIC loop, `[run] cpu`):
 
-If emulation is still most of the frame (roughly 80%, as in the older numbers), a
-genuine doubling adds ~10 ms and blows the 16.67 ms budget on emulation alone. When
-that happens the pacing loop in `loop()` (`src/main.cpp`) takes its resync branch
-(`next_us = micros()`, dropping the deficit rather than catching up), and:
+| Rate | Emulation per frame | Late frames | Audio short |
+|---|---|---|---|
+| Normal | 6.2 ms | 0 | 0.0% |
+| `POKE 65495` | 12.4 ms (BASIC, mostly ROM) | 0 | 0.0% |
+| `POKE 65497` | 12.6 ms | 0 | 0.0% |
 
-- the guest ends up running **slower than the intended 2×** (frames stretch past
-  real-time), and
-- the audio producer now delivers 800 samples per *stretched* frame while core 1 still
-  drains 800 per real 16.67 ms → the ring **under-produces, drains its ~170 ms buffer,
-  and underruns** → audio dropouts after ~1 s of sustained overrun.
+Render and blit add about 2 ms, so full speed leaves about 2 ms of a 16.67 ms
+frame spare. Honouring the rate cost the normal-speed case about 0.1 ms a frame
+(6.1 to 6.2 ms), because the core's fast path now reads the cycle length instead
+of a constant, and about 2 KB of RAM (`pizero_stream_60` 421,376 bytes).
 
-Video would stay a clean 60 Hz throughout (decoupled core 1), just showing a machine
-running behind.
+If a future change pushes full speed past the frame, the pacing loop in
+`loop()` (`src/main.cpp`) drops the deficit rather than catching up: the guest
+runs slower than 2×, and the audio ring under-fills and underruns. The `[run]`
+line's `late` and `cmax`, and the `[aud]` line's `short`, show it.
 
-### Rule of thumb
+## History
 
-On those assumptions the break-even is roughly **~1.4×** real-time emulation load
-(down from the ~1.6–1.7× estimated at 31% slack):
-
-- **Address-dependent high speed** (`POKE 65495`, ~1.3–1.5×): marginal.
-- **Full high speed** (`POKE 65497`, ~2×): **would not hold up**. Core 0 could not
-  emulate it in real time, so pacing and audio would both suffer.
-
-## Status
-
-**2026-10-14.** The headroom question is answered by measurement, not by this
-analysis:
-
-- **Benchmark:** PIZERO-130 measured the cost of a 2× machine, 185.4 host
-  clocks per emulated cycle and 131.7% of a frame.
-- **Faster core:** PIZERO-131 brought that to about 101 clocks, so 2× fits:
-  `pizero_cpu179` runs at 60 fps with about 12 ms of emulation a frame.
-- **The CoCo 3 build** honors the GIME's 1.79 MHz bit. A full-screen animation
-  there holds 60 fps with no late frames and full sound (PIZERO-220,
-  `docs/coco3-feasibility.md`).
-- **The CoCo 2 still ignores the SAM speed bits** (PIZERO-132). Honoring them
-  is now a correctness change, not a performance risk.
-
-The text below is the original status.
-
-`PIZERO-48` (done) was the write-up of this analysis. It is a **code-level analysis,
-not measured on hardware**, and the on-device measurement is **not tracked by any open
-issue**. Measuring only makes sense once fast mode is honored (see above).
-
-The method, if it is picked up: use the per-second `[run] fps/cpu/blit` serial
-telemetry (`PIZERO-15`), run a tight high-speed-POKE loop on the guest, and watch
-whether core-0 cpu-ms crosses 16.67 ms and whether the audio breaks up. If full speed
-proves unusable, an option (as some ports do) is to **cap or ignore the SAM full-speed
-bit** while still honoring the address-dependent mode.
+- **PIZERO-48** (2026-06) wrote up the pacing model and predicted full speed would
+  overrun the frame, at about 18.8 ms of emulation.
+- **PIZERO-132** (2026-09-26) found the POKEs had never worked: the fast-path
+  decode inherited from the AMOLED port charged a flat 16 ticks for every access.
+- **PIZERO-130 and PIZERO-131** measured a 2× machine and made the 6809 core fast
+  enough to run one (`pizero_cpu179`, about 12 ms a frame).
+- **PIZERO-132** (2026-10-14) honoured the rate, and the measurements above
+  replaced the prediction.
 
 ## See also
 
 - [`pipeline.md`](pipeline.md): the decoupled two-core pipeline this relies on
-- [`video-audio-notes.md`](video-audio-notes.md): audio ring, metering, the (unrelated)
-  startup fast-forward bug
+- [`video-audio-notes.md`](video-audio-notes.md): the audio ring and its metering
 - [`../README.md`](../README.md): Performance section

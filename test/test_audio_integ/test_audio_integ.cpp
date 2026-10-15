@@ -176,6 +176,46 @@ static void test_accesses_to_boundary_is_exact(void) {
     }
 }
 
+// PIZERO-132: a CoCo 2 at address-dependent speed (POKE 65495) mixes 8 and
+// 16 tick cycles, and the machine catches each run of them up as 8 tick
+// steps. At one level that must give exactly the samples of stepping every
+// cycle at its own length.
+static void test_mixed_lengths_caught_up_in_eights(void) {
+    static struct access a[600000];
+    const unsigned n = 600000;
+    const uint32_t rates[1] = {48000};
+    int32_t level = 0;
+    for (unsigned i = 0; i < n; i++) {
+        a[i].ticks = (rnd() & 1) ? 8 : 16;
+        if (rnd() % 40 == 0) level = (int32_t)(rnd() % 64) * 60 - 1920;
+        a[i].level = level;
+        a[i].new_run = 0;
+    }
+    struct audio_integ so, sn = {0, 0, 0};
+    unsigned no = run_old(a, n, rates, &so);
+    g_run_ns = 0;
+    uint32_t pend = 0;
+    int32_t held = a[0].level;
+    for (unsigned i = 0; i < n; i++) {
+        if (a[i].level != held || rnd() % 300 == 0) {   // a level change or an event
+            audio_integ_run(&sn, held, pend / 8, 8, rates[0], run_emit);
+            pend = 0;
+            held = a[i].level;
+        }
+        pend += a[i].ticks;
+    }
+    audio_integ_run(&sn, held, pend / 8, 8, rates[0], run_emit);
+    TEST_ASSERT_TRUE(no > 0);
+    TEST_ASSERT_EQUAL_UINT32(no, g_run_ns);
+    for (unsigned i = 0; i < no; i++) {
+        TEST_ASSERT_EQUAL_INT(g_old[i].s, g_new[i].s);
+        TEST_ASSERT_EQUAL_UINT32(g_old[i].tk, g_new[i].tk);
+    }
+    TEST_ASSERT_EQUAL_INT32(so.acc, sn.acc);
+    TEST_ASSERT_EQUAL_UINT32(so.tk, sn.tk);
+    TEST_ASSERT_EQUAL_UINT32(so.terr, sn.terr);
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_constant_level_matches);
@@ -185,5 +225,6 @@ int main(int, char **) {
     RUN_TEST(test_events_constant_level_matches);
     RUN_TEST(test_events_changing_level_matches);
     RUN_TEST(test_events_odd_accesses_match);
+    RUN_TEST(test_mixed_lengths_caught_up_in_eights);
     return UNITY_END();
 }

@@ -90,7 +90,7 @@ static void map_pages(void) {
         coco3_bus_page(&bus, p, S, bank, &coco_fastbus.rd[p], &coco_fastbus.wr[p]);
     }
     coco_fastbus.rom = rom + 0x4000;
-    coco_fastbus.ticks = (uint16_t)tcc1014_cycle_ticks(gime);
+    coco_fastbus.ticks = coco_fastbus.rom_ticks = (uint16_t)tcc1014_cycle_ticks(gime);
     coco_fastbus.page_top = 0xFE00;
 }
 
