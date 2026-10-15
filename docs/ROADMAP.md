@@ -176,7 +176,7 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
   palette-walk experiment next). `PIZERO-32` (ACR on sinks that honor it).
 - **Audio by ear**: `PIZERO-41`, a listening test against desktop XRoar now that
   timing and the servo changed under it. The CoCo 2 SN76489 jukebox already
-  passed on a TV (`PIZERO-224`). `PIZERO-212`, the low-pass verdict.
+  passed on a TV (`PIZERO-224`). The 8 kHz low-pass passed by ear (`PIZERO-212`).
 - **Hardware sightings**: `PIZERO-137`, `144`, `151`, `155`, `200`.
 - **Tooling**: `PIZERO-110` (on-board self-test), `PIZERO-207` (ring accounting
   test), `PIZERO-88` (frame-time headroom, refresh), `PIZERO-42` (remove code
