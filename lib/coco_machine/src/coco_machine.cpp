@@ -1571,6 +1571,7 @@ static uint32_t          g_audio_err = 0;              // Bresenham accumulator
 static int32_t  g_dac_level = 0;                       // current DAC+1bit level (set on PIA1 write)
 static struct audio_integ g_aud;                       // the sample being integrated (audio_integ.h)
 static struct audio_lp g_lp;                           // PIZERO-212: the output low-pass (audio_lowpass.h)
+static struct audio_dc g_dc;                           // PIZERO-223: AC coupling, ahead of it
 
 // Recompute the cached audio level from PIA1 (called right after a PIA1 write).
 // Output gain. The 6-bit DAC swings 64 steps; a square wave's RMS == its peak,
@@ -1578,7 +1579,11 @@ static struct audio_lp g_lp;                           // PIZERO-212: the output
 // amplitude: 480 -> ~47% FS, 240 -> ~24%, 120 -> ~12%, 60 -> ~6% FS (-18 dB from
 // 480). Quieter = more sink headroom / less fatiguing harshness (does NOT change
 // the off-spec delivery distortion). Lower to soften, raise for louder.
-#define AUDIO_DAC_GAIN   60
+// PIZERO-223: 180, three times the old 60 (+9.5 dB). SN76489 chords at 60
+// peaked near -24 dBFS, so TVs were turned right up and muddied them; the DC
+// blocker (audio_dc_run) frees the headroom the offset used to take.
+#define AUDIO_DAC_GAIN   180
+#define AUDIO_GAIN_X     3         // the same factor for the SN76489
 // PIZERO-145: the gain is the volume setting, 0-15; 10 is AUDIO_DAC_GAIN.
 static int32_t g_dac_gain = AUDIO_DAC_GAIN;
 static int32_t g_volume = 10;
@@ -1587,13 +1592,14 @@ static inline void audio_update_level(void) {
     int dac6 = (PIA_VALUE_A(g_m.pia1) >> 2) & 0x3F;    // 6-bit DAC, 0..63
     // NB: the real CoCo single-bit sound is PIA1 CB2, not PB1 -- the old PB1 tap
     // was bogus and only injected a constant DC offset, so it's dropped.
-    g_dac_level = (dac6 - 32) * g_dac_gain;            // centred; +-1920 at volume 10
+    g_dac_level = (dac6 - 32) * g_dac_gain;            // centred; +-5760 at volume 10
 }
 
 static inline void audio_emit(int s) {
     // PIZERO-212: the audio_lowpass setting. Clamped after it, since a
     // band-limited edge overshoots. (It replaces PIZERO-30's fixed 2-pole IIR,
     // which was built out because it dulled the tone at the default level.)
+    s = audio_dc_run(&g_dc, s);   // PIZERO-223: AC coupled, as the CoCo's output is
     s = audio_lp_run(&g_lp, s);
     if (s > 32767) s = 32767; else if (s < -32768) s = -32768;
     // PIZERO-39: single-producer/single-consumer. The writer (core 0) owns ONLY
@@ -1621,7 +1627,7 @@ static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t t
 #ifdef CPU_PROF
     uint32_t t0 = cpu_prof_now();
 #endif
-    if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume / 10;   // PIZERO-143/145
+    if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume * AUDIO_GAIN_X / 10;   // PIZERO-143/145/223
     audio_emit(s);
 #ifdef CPU_PROF
     g_cpu_prof.samp_clk += cpu_prof_now() - t0;

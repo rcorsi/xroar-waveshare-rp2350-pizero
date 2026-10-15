@@ -89,6 +89,23 @@ static void test_full_scale_square_is_safe(void) {
     }
 }
 
+// PIZERO-223: the DC blocker takes a held level to exactly 0 and passes a
+// tone at full strength.
+static void test_dc_blocker(void) {
+    struct audio_dc f = {0, 0};
+    int32_t y = 0;
+    for (int i = 0; i < 48000; i++) y = audio_dc_run(&f, -5760);
+    TEST_ASSERT_EQUAL_INT32(0, y);
+    struct audio_dc g = {0, 0};
+    int32_t peak = 0;
+    for (int i = 0; i < 48000; i++) {
+        int32_t x = (int32_t)lround(10000.0 * sin(2 * M_PI * 440.0 * i / 48000.0)) + 3000;
+        int32_t o = audio_dc_run(&g, x);
+        if (i > 24000 && abs(o) > peak) peak = abs(o);
+    }
+    TEST_ASSERT_INT32_WITHIN(60, 10000, peak);
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_off_is_identity);
@@ -96,5 +113,6 @@ int main(int, char **) {
     RUN_TEST(test_response_at_8k);
     RUN_TEST(test_cutoff_moves);
     RUN_TEST(test_full_scale_square_is_safe);
+    RUN_TEST(test_dc_blocker);
     return UNITY_END();
 }
