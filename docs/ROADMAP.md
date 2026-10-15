@@ -29,7 +29,7 @@ a build of its own (`pizero_coco3`).
 - **Audio**: streaming data-island audio, the default since `PIZERO-45`. The
   rate servo (`PIZERO-121`) held the ring at its set-point with **0 skips over
   26.7 h**. SN76489 sound chip (`PIZERO-143`).
-- **High-speed POKEs on the CoCo 2** (`PIZERO-132`, awaiting hardware sign-off):
+- **High-speed POKEs on the CoCo 2** (`PIZERO-132`):
   `POKE 65495,0` and `POKE 65497,0` run the machine up to 2× at 60 fps with
   full sound; normal speed by default and after reset (`docs/cpu-speed.md`).
 - **CoCo 3 extras on the CoCo 2**: the GIME palette at `$FFB0-$FFBF`
