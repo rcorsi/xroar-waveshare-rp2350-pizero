@@ -839,8 +839,13 @@ static uint32_t g_pool0[APOOL][ALINE_BP_W];
 static uint32_t g_pool1[APOOL][ALINE_BP_W];
 static uint32_t g_pool2[APOOL][ALINE_BP_W];
 static int      g_pool_w     = 0;                  // next pool slot (IRQ-only)
-static int32_t  g_meter_acc  = 0;                  // 16.16 sample accumulator (IRQ-only)
-static int32_t  g_meter_step = 0;                  // 16.16 samples per active line (set at init)
+// PIZERO-223: whole numbers, in 480ths of a sample: each active line adds
+// AUDIO_SAMPLES_PER_FRAME, and every 480 is a sample, so a frame carries
+// exactly that many. The 16.16 step it replaces (800/480 truncated) sent
+// 47,999.7 samples a second against the 48,000 that ACR and the Audio
+// InfoFrame declare, so a TV's buffer drained and it had to keep correcting.
+static int32_t  g_meter_acc  = 0;                  // 480ths of a sample (IRQ-only)
+static int32_t  g_meter_step = 0;                  // samples per frame (set at init)
 #ifdef AV_60HZ
 #define AUDIO_SAMPLES_PER_FRAME 800                // 48000 Hz / 60 Hz refresh (PIZERO-45)
 #else
@@ -939,7 +944,7 @@ static void __not_in_flash_func(stream_audio_cb)(void) {
     // Meter free-runs (acc stays in [0,1) sample): resetting at v==0 discarded the
     // fractional carry -> 923 vs the producer's 924 samp/frame -> slow ring drift.
     g_meter_acc += g_meter_step;
-    int n = g_meter_acc >> 16;
+    int n = g_meter_acc / 480;
     if (n > 4) n = 4;
     if (n <= 0) {                                  // no island this line: plain framing
         dvi0.dma_list_active.l0[2].read_addr = g_bp0;
@@ -947,7 +952,7 @@ static void __not_in_flash_func(stream_audio_cb)(void) {
         dvi0.dma_list_active.l2[1].read_addr = g_bk2;
         return;
     }
-    g_meter_acc -= (int32_t)n << 16;
+    g_meter_acc -= (int32_t)n * 480;
     int16_t lr[8];
     for (int f = 0; f < n; ++f) { int16_t s = stream_next_sample(); lr[2*f] = lr[2*f+1] = s; }
     dvi_data_packet_t pkt;
@@ -1708,8 +1713,8 @@ void setup() {
             dvi_setup_active_audio_line(&DVI_TIMING, dvi0.dma_cfg, &dvi0.dma_list_active,
                                         g_pool0[w], g_pool1[w], g_pool2[w], sil, 1, true);
         dvi_setup_active_hdmi_framing(&DVI_TIMING, dvi0.dma_cfg, &dvi0.dma_list_active, g_bp0, g_bk1, g_bk2);
-        // 16.16 samples per active line so AUDIO_SAMPLES_PER_FRAME spreads over 480.
-        g_meter_step = (int32_t)(((int64_t)AUDIO_SAMPLES_PER_FRAME << 16) / 480);
+        // AUDIO_SAMPLES_PER_FRAME spread over the 480 active lines.
+        g_meter_step = AUDIO_SAMPLES_PER_FRAME;   // PIZERO-223: exact, see g_meter_acc
 #ifdef AV_AUDIO_SYNTH
         for (int i = 0; i < SYNTH_TBL; ++i)
             g_sine[i] = (int16_t)(6000.0f * sinf((float)i * (2.0f * 3.14159265f / SYNTH_TBL)));   // ~18% FS
