@@ -41,7 +41,8 @@ static void sync_now(void) {
 }
 
 extern "C" bool soak_log_begin(const char *fw, const char *env, bool watchdog_reboot,
-                               uint32_t freezes, const char *freeze_phase, const char *reset_reason) {
+                               uint32_t freezes, const char *freeze_phase, const char *reset_reason,
+                               const char *postmortem) {
     FRESULT fr = f_mkdir(LOG_DIR);
     if (fr != FR_OK && fr != FR_EXIST) { Serial.printf("[soak] cannot create %s (%d)\r\n", LOG_DIR, fr); return false; }
     char path[48];
@@ -71,6 +72,7 @@ extern "C" bool soak_log_begin(const char *fw, const char *env, bool watchdog_re
              watchdog_reboot ? "watchdog-reboot" : "power-on",
              (unsigned long)freezes, freeze_phase, reset_reason, board);
     if (!append(head)) return false;
+    if (postmortem && postmortem[0] && (!append(postmortem) || !append("\r\n"))) return false;   // PIZERO-227
     sync_now();
     Serial.printf("[soak] logging to %s every %u s, clock %s (%s)\r\n", path, SOAK_INTERVAL_S, clock, src);
     return g_open;

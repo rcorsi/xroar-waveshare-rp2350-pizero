@@ -57,6 +57,8 @@ RE_FREEZE = re.compile(
     r".*?~(\d+) frames \(~(\d+)s\)"
 )
 RE_BOOT = re.compile(r"XRoar on RP2350-PiZero")
+# PIZERO-227: where core 0 really was at the freeze the boot recovered from.
+RE_POSTMORTEM = re.compile(r"\[watchdog\] post-mortem: (.*)$")
 RE_SILENT = re.compile(r"=== SILENT for (\d+)s")
 RE_USB_ADD = re.compile(r"\[usb\] device attached")
 RE_USB_DEL = re.compile(r"\[usb\] device removed")
@@ -240,6 +242,7 @@ def parse_log(path: str) -> dict:
     under = Counter()
     rfail = Counter()
     freeze_phases: list[str] = []
+    postmortems: list[str] = []
     freezes_before_log: list[str] = []   # reported at boot, but predating this log
     session_start: str | None = None     # first telemetry timestamp of this boot
     session_last: str | None = None      # most recent telemetry timestamp
@@ -383,6 +386,11 @@ def parse_log(path: str) -> dict:
                 under.see(int(m.group(3)))
                 continue
 
+            m = RE_POSTMORTEM.search(body)
+            if m:
+                postmortems.append(m.group(1).strip())
+                continue
+
             m = RE_FREEZE.search(body)
             if m:
                 # The watchdog reports a freeze AFTER rebooting, so the message
@@ -519,6 +527,7 @@ def parse_log(path: str) -> dict:
             "freezes_before_run": freezes.baseline,   # already on the counter
             "freezes_ambiguous_first_boot": freezes_before_log,
             "freeze_phases": freeze_phases,
+            "postmortems": postmortems,
             "reboots_seen": reboots,
             "power_ons_seen": power_ons,
             "reset_reasons": reset_reasons,
@@ -651,6 +660,8 @@ def cmd_analyse(args: argparse.Namespace) -> int:
           + (f" | {len(crash['freezes_ambiguous_first_boot'])} at the first boot, "
              f"ambiguous: {crash['freezes_ambiguous_first_boot']}"
              if crash["freezes_ambiguous_first_boot"] else ""))
+    for pm in crash.get("postmortems", []):
+        print(f"  post-mortem {pm}")
     print(f"frame budget  {g['frame_budget_us']}")
     fb = frame_budget_pct(g["frame_budget_us"], g.get("env_from_log") or args.env)
     if fb:

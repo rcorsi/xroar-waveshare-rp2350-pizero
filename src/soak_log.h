@@ -22,9 +22,11 @@ extern "C" {
 #endif
 
 // Open this boot's log file and write its header. Returns false when the
-// file could not be made (the soak carries on without it).
+// file could not be made (the soak carries on without it). postmortem is the
+// last freeze's [watchdog] post-mortem line (PIZERO-227), or empty.
 bool soak_log_begin(const char *fw, const char *env, bool watchdog_reboot,
-                    uint32_t freezes, const char *freeze_phase, const char *reset_reason);
+                    uint32_t freezes, const char *freeze_phase, const char *reset_reason,
+                    const char *postmortem);
 
 // Called once a second with this second's telemetry lines; writes every
 // 60th, and the first. Cheap when nothing is due.
