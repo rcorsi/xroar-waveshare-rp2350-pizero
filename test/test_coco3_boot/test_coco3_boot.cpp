@@ -280,6 +280,83 @@ static void test_port_render(void) {
         check_port_render(modes[i].what, modes[i].w, modes[i].w[5].a ? 7 : 5);
 }
 
+// PIZERO-214: type at BASIC through the keyboard matrix. Each character is
+// held for 3 fields and released for 3, slow enough for BASIC's debounce,
+// and ENTER is followed by 20.
+// '\n' is ENTER, '|' too (for COCO3_TYPE on a command line), and '~' waits
+// a second, as in autorun.txt.
+static bool key_of(char ch, int *col, int *row, bool *shift) {
+    static const char *rows[] = { "@ABCDEFG", "HIJKLMNO", "PQRSTUVW", "XYZ\x01\x02\x03\x04 ",
+                                  "01234567", "89:;,-./" };
+    static const char *shifted[] = { "", "", "", "", "0!\"#$%&'", "()*+<=>?" };
+    *shift = false;
+    if (ch == '\n' || ch == '|') { *col = 0; *row = 6; return true; }
+    if (ch >= 'a' && ch <= 'z') ch -= 32;
+    for (int r = 0; r < 6; r++)
+        for (int c = 0; c < 8; c++) {
+            if (rows[r][c] == ch) { *col = c; *row = r; return true; }
+            if (shifted[r][0] && shifted[r][c] == ch && !(r == 4 && c == 0)) {
+                *col = c; *row = r; *shift = true; return true;
+            }
+        }
+    return false;
+}
+
+static void type(const char *s) {
+    for (; *s; s++) {
+        if (*s == '~') {                         // as autorun.txt: wait a second
+            for (int f = 0; f < 60; f++) c3_run_ticks(FRAME_TICKS);
+            continue;
+        }
+        int col, row; bool shift;
+        if (!key_of(*s, &col, &row, &shift)) continue;
+        if (shift) c3_key(7, 6, 1);
+        c3_key(col, row, 1);
+        for (int f = 0; f < 3; f++) c3_run_ticks(FRAME_TICKS);
+        c3_key(col, row, 0);
+        if (shift) c3_key(7, 6, 0);
+        // After ENTER, BASIC stores or runs the line and misses keys meanwhile.
+        int idle = (row == 6 && col == 0) ? 20 : 3;
+        for (int f = 0; f < idle; f++) c3_run_ticks(FRAME_TICKS);
+    }
+}
+
+static void print_screen(void) {
+    char row[33];
+    for (int r = 0; r < 16; r++) { screen_row(r, row); printf("  |%s|\n", row); }
+}
+
+static void test_typing(void) {
+    if (!load_rom()) TEST_IGNORE_MESSAGE("set COCO_ROM_DIR to a folder with coco3.rom (32 KB)");
+    TEST_ASSERT_TRUE(c3_init(g_rom, 1));
+    c3_set_port_render(1);
+    for (int f = 0; f < 180; f++) c3_run_ticks(FRAME_TICKS);
+    type("PRINT 6*7+(1<2)\n");
+    for (int f = 0; f < 30; f++) c3_run_ticks(FRAME_TICKS);
+    print_screen();
+    TEST_ASSERT_TRUE_MESSAGE(screen_has(" 41 "), "PRINT 6*7+(1<2) did not show 41");
+    // COCO3_TYPE: type more (| is ENTER), run COCO3_FRAMES fields (default
+    // 120), then COCO3_DUMP has the picture.
+    const char *more = getenv("COCO3_TYPE");
+    if (more && more[0]) {
+        type(more);
+        const char *nf = getenv("COCO3_FRAMES");
+        int frames = nf ? atoi(nf) : 120;
+        for (int f = 0; f < frames; f++) c3_run_ticks(FRAME_TICKS);
+        print_screen();
+        printf("  gime ff90=%02x ff91=%02x ff92=%02x ff93=%02x ff94=%02x ff95=%02x ff98=%02x ff99=%02x\n",
+               c3_gime_reg(0), c3_gime_reg(1), c3_gime_reg(2), c3_gime_reg(3), c3_gime_reg(4),
+               c3_gime_reg(5), c3_gime_reg(8), c3_gime_reg(9));
+        printf("  palette");
+        for (int i = 0; i < 16; i++) printf(" %d", c3_gime_reg(16 + i));
+        printf("\n");
+        dump();
+        const char *rp = getenv("COCO3_RAM");    // all 128 KB, physical order
+        FILE *f = rp && rp[0] ? fopen(rp, "wb") : NULL;
+        if (f) { for (uint32_t z = 0; z < 0x20000; z++) fputc(c3_phys(z), f); fclose(f); }
+    }
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_row_skip);
@@ -287,5 +364,6 @@ int main(int, char **) {
     RUN_TEST(test_fast_path_matches);
     RUN_TEST(test_fast_path_remap);
     RUN_TEST(test_port_render);
+    RUN_TEST(test_typing);
     return UNITY_END();
 }

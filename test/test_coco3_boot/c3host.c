@@ -2,8 +2,9 @@
 //
 // The firmware's own CPU core, PIAs and the vendored GIME, wired the way
 // upstream's src/coco3.c wires them, with coco3_bus.h doing what the
-// firmware's machine does with the GIME's decode. No keyboard, sound, disk
-// or cartridge: enough to boot Super Extended Color BASIC and look at it.
+// firmware's machine does with the GIME's decode. No sound, disk or
+// cartridge: enough to boot Super Extended Color BASIC and look at it.
+// PIZERO-214: and a keyboard matrix, so a test can type at BASIC.
 //
 // PIZERO-213: c3_init's fast flag turns on the firmware's fast path, the
 // 6809 core reading and writing whole MMU pages itself (coco_fastbus.h), so
@@ -45,6 +46,8 @@ static uint8_t rom[COCO3_ROM_SIZE];
 static uint16_t fb[COCO3_FB_W * COCO3_FB_H];
 static event_ticks run_end;                // event tick at which this run stops
 static int fast;                           // PIZERO-213: the fast path is on
+static uint8_t keys[8];                    // PIZERO-214: rows held, per column
+static uint8_t gime_regs[32];              // $FF90-$FF9F, $FFB0-$FFBF as last written
 
 static struct part *make(const struct partdb_entry *e, void *options) {
     struct part *p = e->funcs->allocate();
@@ -118,6 +121,8 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
     default:
         break;
     }
+    if (!RnW && (A & 0xFFF0) == 0xFF90) gime_regs[A & 15] = cpu->D;
+    if (!RnW && (A & 0xFFF0) == 0xFFB0) gime_regs[16 + (A & 15)] = cpu->D & 0x3F;
     if (!RnW && ((A & 0xFFFE) == 0xFF90 || (A & 0xFFF0) == 0xFFA0 || (A & 0xFFE0) == 0xFFC0))
         map_pages();
     gime->IL1 = (PIA_VALUE_A(pia0) | 0x80) != 0xff;
@@ -137,6 +142,16 @@ static void cycle_tail(int ncycles) {
     MC6809_IRQ_SET(cpu, pia0->a.irq || pia0->b.irq || gime->IRQ);
     MC6809_FIRQ_SET(cpu, pia1->a.irq || pia1->b.irq || gime->FIRQ);
     set_deadline();
+}
+
+// PIZERO-214: the matrix as upstream's keyboard does it: a column PIA0 B
+// drives low pulls its held keys' rows low on PIA0 A.
+static void kbd_preread(void *sptr) {
+    (void)sptr;
+    uint8_t cols = PIA_VALUE_B(pia0), rows = 0xff;
+    for (int c = 0; c < 8; c++)
+        if (!(cols & (1 << c))) rows &= ~keys[c];
+    pia0->a.in_sink = rows;
 }
 
 static uint16_t fetch_vram(void *sptr, uint32_t A) { (void)sptr; return coco3_bus_fetch_vram(&bus, A); }
@@ -184,6 +199,9 @@ int c3_init(const uint8_t *rom32k, int fast_path) {
     pia0->a.in_sink = pia0->b.in_sink = 0xff;
     pia1->a.in_sink = pia1->b.in_sink = 0xff;
     pia1->b.in_sink &= ~(1 << 0);
+    memset(keys, 0, sizeof keys);
+    memset(gime_regs, 0, sizeof gime_regs);
+    pia0->a.data_preread = DELEGATE_AS0(void, kbd_preread, NULL);
 
     tcc1014_notify_mode(gime);
     mc6821_reset(pia0);
@@ -219,6 +237,11 @@ const uint16_t *c3_fb(void) { return fb; }
 uint8_t c3_phys(uint32_t Z) { return *coco3_ram_at(&bus, Z); }
 void c3_poke(uint32_t Z, uint8_t v) { *coco3_ram_at(&bus, Z) = v; }
 void c3_set_pc(uint16_t pc) { cpu->reg_pc = pc; }
+void c3_key(int col, int row, int down) {
+    if (down) keys[col & 7] |= (uint8_t)(1 << row);
+    else keys[col & 7] &= (uint8_t)~(1 << row);
+}
+uint8_t c3_gime_reg(int r) { return gime_regs[r & 31]; }
 void c3_set_port_render(int on) {
     gime->port_render = on;
     gime->port_vram[0] = on == 1 ? ram[0] : NULL;   // 2: through fetch_vram
