@@ -316,7 +316,8 @@ static void type(const char *s) {
         c3_key(col, row, 0);
         if (shift) c3_key(7, 6, 0);
         // After ENTER, BASIC stores or runs the line and misses keys meanwhile.
-        int idle = (row == 6 && col == 0) ? 20 : 3;
+        static const char *gap = getenv("COCO3_KEYGAP");   // fields between keys
+        int idle = (row == 6 && col == 0) ? 20 : (gap ? atoi(gap) : 3);
         for (int f = 0; f < idle; f++) c3_run_ticks(FRAME_TICKS);
     }
 }

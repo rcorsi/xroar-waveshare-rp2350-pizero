@@ -2,7 +2,7 @@
 """serial_type.py: type a BASIC listing into the board over USB serial (PIZERO-214).
 
 The firmware types what arrives on the serial link (serial_keyboard = on, the
-default), one key every 5 fields. This sends a file a line at a time and waits
+default), one key every 6 fields. This sends a file a line at a time and waits
 for each line to be typed, plus a second after its ENTER: BASIC at 0.89 MHz
 takes over a third of a second to store a long line and misses keys meanwhile
 (found on the CoCo 3 by the host typist in test/test_coco3_boot). Lines that
@@ -18,7 +18,9 @@ import time
 import serial
 
 FIELD = 1 / 60
-PER_KEY = 5 * FIELD          # hold 3 fields, gap 2 (main.cpp pump_keyboard)
+# main.cpp pump_keyboard: the press field, 3 held (the last releases), 2 of
+# gap, so a key every 6 fields; a little over, so the board never falls behind.
+PER_KEY = 6.3 * FIELD
 
 
 def main():
@@ -38,7 +40,7 @@ def main():
             if i < len(parts) - 1:
                 time.sleep(1)
         s.write(b'\r')
-        time.sleep(PER_KEY + 1.0)
+        time.sleep(PER_KEY + 1.5)
     s.close()
 
 
