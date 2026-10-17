@@ -972,6 +972,11 @@ static inline int __not_in_flash_func(stream_meter)(void) {
     g_meter_acc += g_meter_step;
     int n = g_meter_acc / STREAM_METER_LINES;
     if (n > 4) n = 4;
+#ifdef AV_AUDIO_FULL_PACKETS
+    // PIZERO-232: send only full 4-sample packets, as an ordinary source does,
+    // one every 2.4-2.6 lines, instead of 1-2 samples on nearly every line.
+    if (n < 4) return 0;
+#endif
     if (n > 0) g_meter_acc -= (int32_t)n * STREAM_METER_LINES;
     return n;
 }
