@@ -7,8 +7,9 @@ ticket (`PIZERO-NN`) and the deep docs (`README.md`, `docs/`). The short ranked
 list of what to pick up next is `roadmap.jsonl` (shown at the top of
 `issues.html`).
 
-_Last updated: 2026-10-15 (CoCo 2 high-speed POKEs, `PIZERO-132`; HDMI audio
-packets fixed and the jukebox clean on a second TV, `PIZERO-223`, `224`)._
+_Last updated: 2026-10-17 (HDMI audio delivery reworked, clean on two screens
+that garbled it, `PIZERO-232`, `233`; output gain doubled, `PIZERO-230`; one LCD
+still raspy, parked as `PIZERO-234`)._
 
 ## Where things stand
 
@@ -23,15 +24,20 @@ a build of its own (`pizero_coco3`).
 ## Shipped / working
 
 - **Video**: libdvi/PIO DVI, 320×240 → true **640×480p60** at 252 MHz
-  (`PIZERO-45`); CoCo VDG render + blit, NTSC artifact color (`PIZERO-43`), F8
+  (`PIZERO-45`), horizontal blanking 8/92/60 so the control period before
+  video meets HDMI's 12px minimum (`PIZERO-233`); CoCo VDG render + blit, NTSC artifact color (`PIZERO-43`), F8
   cycles artifact colors per game (`PIZERO-186`). Screen fonts: the classic set,
   the 6847T1, and our 6847T2 by default (`PIZERO-166`).
 - **Audio**: streaming data-island audio, the default since `PIZERO-45`. The
   rate servo (`PIZERO-121`) held the ring at its set-point with **0 skips over
   26.7 h**. SN76489 sound chip (`PIZERO-143`). Sample packets follow IEC 60958
-  with a 48 kHz channel status, at exactly 48,000 samples/s, three times louder
-  by default and AC coupled (`PIZERO-223`); the SN76489 jukebox plays cleanly on
-  a second Samsung, so the fuzz on the test TV is that TV's (`PIZERO-224`).
+  with a 48 kHz channel status, at exactly 48,000 samples/s, AC coupled
+  (`PIZERO-223`); six times the old level at the default volume (`PIZERO-223`,
+  `230`). Pitch and tone match the ROM, cycle exact (`PIZERO-41`). Delivery
+  reworked (`PIZERO-232`): audio on the vblank lines too, full 4-sample packets,
+  trailing guard bands, ACR on every 8th vblank line. Two screens that garbled
+  the old delivery (the main monitor and the Samsung test TV of `PIZERO-224`)
+  now play cleanly.
 - **High-speed POKEs on the CoCo 2** (`PIZERO-132`):
   `POKE 65495,0` and `POKE 65497,0` run the machine up to 2× at 60 fps with
   full sound; normal speed by default and after reset (`docs/cpu-speed.md`).
@@ -163,22 +169,25 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 
 ## Fixes and checks still owed (low urgency)
 
-- **Bugs**: `PIZERO-202` (volume ignores the DAC path), `PIZERO-158` (serial
+- **Bugs**: `PIZERO-158` (serial
   typing drops a character), `PIZERO-195` (audio blip on launch), `PIZERO-204`
   (clock seeded hours ahead), `PIZERO-100` (SAM base `$0000`), `PIZERO-198`
   (fdctrace env crash), `PIZERO-159` (chained USB-C hubs), `PIZERO-157` (pad
   Switch mode).
 - **Hot-plug**: `PIZERO-51`. Software paths are disproved; test unplug and
   replug through the hub before considering a VBUS switch mod.
-- **Other screens**: `PIZERO-99`, and `PIZERO-120` (the centre band on one LCD;
-  palette-walk experiment next). `PIZERO-32` (ACR on sinks that honor it).
-- **Audio by ear**: `PIZERO-41`, a listening test against desktop XRoar now that
-  timing and the servo changed under it. The CoCo 2 SN76489 jukebox already
-  passed on a TV (`PIZERO-224`). The 8 kHz low-pass passed by ear (`PIZERO-212`).
+- **Other screens**: `PIZERO-99`; `PIZERO-233` (recheck the dev monitor and the
+  upstairs Samsung on the new audio delivery). One LCD shows the centre band
+  (`PIZERO-120`) and raspy, quiet audio (`PIZERO-234`, parked: the board's
+  samples are clean, the Mac is clean on it; a Raspberry Pi at 640x480p60 would
+  tell the monitor from our signal). `PIZERO-32` (ACR CTS, now only the 24 MHz
+  fallback).
+- **Audio**: `PIZERO-231` (does hard-driven music clip at volume 11-15).
 - **Hardware sightings**: `PIZERO-137`, `144`, `151`, `155`, `200`.
 - **Tooling**: `PIZERO-110` (on-board self-test), `PIZERO-207` (ring accounting
   test), `PIZERO-88` (frame-time headroom, refresh), `PIZERO-42` (remove code
-  behind retired flags), `PIZERO-106` (issues.html tag pills, user check).
+  behind retired flags; the `PIZERO-234` test envs stay while it is parked),
+  `PIZERO-106` (issues.html tag pills, user check).
 - **Kit and case**: `PIZERO-93` (power and keyboard advice in `kit.md`),
   `PIZERO-97`, `PIZERO-102`, `PIZERO-185` (no-name SD cards).
 
