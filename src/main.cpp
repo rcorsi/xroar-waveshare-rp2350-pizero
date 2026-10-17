@@ -1065,12 +1065,15 @@ static void __not_in_flash_func(audio_vblank_info_cb)(void) {
     }
 #elif defined(AV_STREAM_AUDIO) && defined(AV_VBLANK_AUDIO)
     // PIZERO-232: an audio island in the active block, or on every
-    // AV_VBLANK_INFO_EVERY-th line the info island. An info line skips the
-    // meter, so the next audio line takes the carry (<= 4 samples).
+    // AV_VBLANK_INFO_EVERY-th line the info island. An info line still counts
+    // its share into the meter (or a frame carries ~791 samples, not 800, and
+    // the ring overflows), so the next audio line takes the carry.
     const uint vs = dvi0.timing_state.v_state, vc = dvi0.timing_state.v_ctr;
     const int vbi = (vs == DVI_STATE_FRONT_PORCH) ? (int)vc : (10 + (int)vc);  // fp 0-9, bp 10-42
     const uint32_t *a0 = g_info[0], *a1 = g_info[1], *a2 = g_info[2];
-    if (vbi % AV_VBLANK_INFO_EVERY != 0) {
+    if (vbi % AV_VBLANK_INFO_EVERY == 0) {
+        g_meter_acc += g_meter_step;
+    } else {
         const int n = stream_meter();
         if (n > 0) {
             const int w = g_vpool_w;
