@@ -162,7 +162,7 @@ static const struct dvi_timing dvi_timing_640x480p_57hz_240mhz = {
     .h_sync_polarity = false,
     // PIZERO-30: h_fp=14, h_bp=130 -> h_total = 880, refresh = 24e6/(880*525) =
     // 51.9481 Hz == exactly 32000/616 -> 616 audio samples/frame = 154 packets.
-#if defined(AV_60HZ) && defined(AV_HDMI_STRICT_FRAMING)
+#if defined(AV_60HZ) && defined(AV_HDMI_WIDE_BP)
     .h_front_porch   = 4,    // PIZERO-232: 4/96/60/640, 4px moved to the back porch (see h_back_porch)
 #elif defined(AV_60HZ)
     .h_front_porch   = 8,    // PIZERO-45: 800-total split (8/96/56/640) so the 56px back porch fits ONE audio island
@@ -174,10 +174,11 @@ static const struct dvi_timing dvi_timing_640x480p_57hz_240mhz = {
     .h_front_porch   = 14,
 #endif
     .h_sync_width    = 96,
-#if defined(AV_60HZ) && defined(AV_HDMI_STRICT_FRAMING)
+#if defined(AV_60HZ) && defined(AV_HDMI_WIDE_BP)
     // PIZERO-232: at 56 the control period between the audio island's trailing
     // guard and the video guard is 10px (1 word + the 8px video preamble); HDMI
     // asks for at least 12. 60 gives 14px. h_total stays 800, so still 60.0 Hz.
+    // Off: with the 4px front porch the MS2109 capture stick lost the signal.
     .h_back_porch    = 60,
 #elif defined(AV_60HZ)
     .h_back_porch    = 56,   // PIZERO-45: 28 words -- just fits one streaming island; h_total=800 -> 60.0 Hz
