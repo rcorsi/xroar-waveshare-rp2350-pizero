@@ -173,6 +173,12 @@ older ~52 Hz timing is kept as the fallback. RISK: `h_bp=56`
 (28 words vs ~27 needed) and `h_fp=8` are tight. If a monitor balks, fall back to
 ~277/288 MHz for a wider back porch.
 
+**PIZERO-233:** the product now splits the line 8/92/60/640 (`AV_HDMI_WIDE_BP`). At
+`h_bp=56` the control period between the audio island's trailing guard and the video
+guard was 10px, below HDMI's 12px minimum; 60 gives 14px. The 4px come from the sync
+pulse: taking them from the front porch (4/96/60) lost the MS2109 capture stick.
+Confirmed on the main monitor and the capture stick.
+
 ---
 
 ## Pointers
