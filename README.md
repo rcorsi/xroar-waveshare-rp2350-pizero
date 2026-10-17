@@ -1,6 +1,6 @@
 # CoCo Zero
 
-**A Tandy Color Computer 2 on a board the size of a stick of gum.** Plug in a TV, a USB-C keyboard
+**A Tandy Color Computer 2 on a 65 x 30 mm board.** Plug in a TV, a USB-C keyboard
 or gamepad, and a microSD card, and it starts Color BASIC. The picture and the sound both go
 over one video cable, at 60 frames per second.
 
