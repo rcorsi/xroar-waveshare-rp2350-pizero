@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoCo 2 vs CoCo Zero</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --ink: #1d1d1f;
+    --muted: #6b6760;
+    --old-bg: #e3ddd0;
+    --old-ink: #5a544a;
+    --old-mark: #a8442f;
+    --new-bg: #ffffff;
+    --new-ink: #1d1d1f;
+    --new-mark: #1f8a4c;
+    --accent: #2f6fb3;
+    --rule: #d3ccbd;
+    --cat: #8a8273;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416;
+      --ink: #ececec;
+      --muted: #9a958c;
+      --old-bg: #24221f;
+      --old-ink: #a39c90;
+      --old-mark: #e0745d;
+      --new-bg: #1c2128;
+      --new-ink: #f2f2f2;
+      --new-mark: #4cc985;
+      --accent: #6aa8ec;
+      --rule: #34312c;
+      --cat: #8f887c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin: 0 0 6px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .heads, .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .heads > div {
+    padding: 18px 20px 14px;
+    border-radius: 14px 14px 0 0;
+  }
+  .heads .old { background: var(--old-bg); color: var(--old-ink); }
+  .heads .new { background: var(--new-bg); color: var(--new-ink); box-shadow: 0 -1px 0 var(--rule) inset; }
+  .heads h2 { margin: 0; font-size: 1.35rem; }
+  .heads p { margin: 2px 0 0; font-size: 0.9rem; opacity: 0.8; }
+  .old .tag { font-family: "Courier New", monospace; letter-spacing: 0.04em; }
+  .new h2 { color: var(--accent); }
+  .row > div { padding: 14px 20px; border-top: 1px solid var(--rule); }
+  .row .old { background: var(--old-bg); color: var(--old-ink); }
+  .row .new { background: var(--new-bg); color: var(--new-ink); }
+  .row:last-child .old { border-radius: 0 0 0 14px; }
+  .row:last-child .new { border-radius: 0 0 14px 0; }
+  .cat {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--cat);
+    margin-bottom: 4px;
+  }
+  .item { display: flex; gap: 10px; align-items: flex-start; }
+  .mark { flex: none; width: 1.3em; height: 1.3em; border-radius: 50%; display: grid; place-items: center;
+          font-weight: 700; font-size: 0.85rem; color: #fff; margin-top: 1px; }
+  .old .mark { background: var(--old-mark); }
+  .new .mark { background: var(--new-mark); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.92em; }
+  .foot { color: var(--muted); font-size: 0.85rem; margin-top: 22px; }
+  @media (max-width: 640px) {
+    .heads, .row { grid-template-columns: 1fr; }
+    .heads .new { display: none; }
+    .heads .old { border-radius: 14px 14px 0 0; }
+    .row .old { border-radius: 0 !important; }
+    .row .new { border-top: 1px dashed var(--rule); }
+    .row:last-child .new { border-radius: 0 0 14px 14px; }
+    .row .new .cat::after { content: " (CoCo Zero)"; }
+    .row .old .cat::after { content: " (CoCo 2)"; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>CoCo 2 vs CoCo Zero</h1>
+  <p class="sub">The same Color BASIC you remember. Everything around it, fixed.</p>
+
+  <div class="heads">
+    <div class="old"><h2 class="tag">Tandy CoCo 2</h2><p>1983, tired, beloved</p></div>
+    <div class="new"><h2>CoCo Zero</h2><p>2026, the size of a stick of gum</p></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Picture</span><div class="item"><span class="mark">✕</span><span>RF out to channel 3 or 4: fuzz, shimmer and a fight with the TV's tuner.</span></div></div>
+    <div class="new"><span class="cat">Picture</span><div class="item"><span class="mark">✓</span><span>A sharp digital picture at 60 frames a second, with the NTSC artifact colours recreated (F8 swaps them per game).</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Sound</span><div class="item"><span class="mark">✕</span><span>A 6-bit DAC squeezed through the same RF signal, so the picture's buzz comes along for free.</span></div></div>
+    <div class="new"><span class="cat">Sound</span><div class="item"><span class="mark">✓</span><span>Clean digital sound over the same one cable, plus the Games Master Cartridge's three-voice sound chip built in.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Speed</span><div class="item"><span class="mark">✕</span><span><code>POKE 65497,0</code> doubles the speed and scrambles the screen.</span></div></div>
+    <div class="new"><span class="cat">Speed</span><div class="item"><span class="mark">✓</span><span>Both high-speed POKEs work, up to twice as fast, and the screen stays clean at full speed.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Storage</span><div class="item"><span class="mark">✕</span><span>Cassette tapes at 1,500 baud. Floppy drives cost extra, and so did the controller.</span></div></div>
+    <div class="new"><span class="cat">Storage</span><div class="item"><span class="mark">✓</span><span>A microSD card full of disks, programs and cartridges. Disks are writable, and NitrOS-9 boots.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Loading a game</span><div class="item"><span class="mark">✕</span><span>Type <code>CLOADM</code>, press PLAY, wait, and hope the volume knob was right.</span></div></div>
+    <div class="new"><span class="cat">Loading a game</span><div class="item"><span class="mark">✓</span><span>Pick it from an on-screen list (F9 to F12), or have it start by itself at power-on.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Text</span><div class="item"><span class="mark">✕</span><span>Lower case shows as inverse capitals on most models.</span></div></div>
+    <div class="new"><span class="cat">Text</span><div class="item"><span class="mark">✓</span><span>A choice of fonts, with true lower case by default.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Keyboard</span><div class="item"><span class="mark">✕</span><span>No Ctrl, no Alt, no function keys, and no auto-repeat.</span></div></div>
+    <div class="new"><span class="cat">Keyboard</span><div class="item"><span class="mark">✓</span><span>A USB keyboard. Each key types what is printed on it, with auto-repeat.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Joysticks</span><div class="item"><span class="mark">✕</span><span>Analog sticks that drift, on cables that tangle.</span></div></div>
+    <div class="new"><span class="cat">Joysticks</span><div class="item"><span class="mark">✓</span><span>A USB gamepad works as both joysticks, and it can pick and start games too.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Screenshots</span><div class="item"><span class="mark">✕</span><span>Point a camera at the TV and try not to catch the scan lines.</span></div></div>
+    <div class="new"><span class="cat">Screenshots</span><div class="item"><span class="mark">✓</span><span>Print Screen saves a picture straight to the card.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Settings</span><div class="item"><span class="mark">✕</span><span>None to speak of. What it does at power-on is fixed in ROM.</span></div></div>
+    <div class="new"><span class="cat">Settings</span><div class="item"><span class="mark">✓</span><span>A text file on the card, for every game or just one, editable on screen.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Size and power</span><div class="item"><span class="mark">✕</span><span>A keyboard-sized case with a mains cord, and 40-year-old capacitors inside.</span></div></div>
+    <div class="new"><span class="cat">Size and power</span><div class="item"><span class="mark">✓</span><span>The size of a stick of gum, powered by a phone charger. A printable case shaped like a CoCo 2 is optional.</span></div></div>
+  </div>
+
+  <div class="row">
+    <div class="old"><span class="cat">Upgrades</span><div class="item"><span class="mark">✕</span><span>Want a CoCo 3? Buy a CoCo 3.</span></div></div>
+    <div class="new"><span class="cat">Upgrades</span><div class="item"><span class="mark">✓</span><span>CoCo 3 palette and timer on the CoCo 2, and an experimental firmware that is a whole 128 KB CoCo 3.</span></div></div>
+  </div>
+
+  <p class="foot">The CoCo Zero is XRoar running on a Waveshare RP2350-PiZero. Bring your own ROMs, from hardware you own.</p>
+</main>
+</body>
+</html>
