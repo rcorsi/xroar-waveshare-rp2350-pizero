@@ -167,9 +167,11 @@ a **DC blocker** (`audio_dc_run`, a one-pole high-pass near 5 Hz) makes the outp
 AC coupled like the real CoCo's, so a parked DAC no longer sits as an offset taking
 headroom; then the **`audio_lowpass`** filter (`audio_lp_run`, 8 kHz by default)
 softens the hard square-wave steps; then a clamp. Both filters are in
-`lib/coco_machine/src/audio_lowpass.h`. The level is set by `AUDIO_DAC_GAIN` (180)
-and `AUDIO_GAIN_X` (3, the SN76489's matching factor) in `coco_machine.cpp`, three
-times the pre-PIZERO-223 level, scaled by the `volume` setting.
+`lib/coco_machine/src/audio_lowpass.h`. The level is set by `AUDIO_DAC_GAIN` (360)
+and `AUDIO_GAIN_X` (6, the SN76489's matching factor) in `coco_machine.cpp`, six
+times the pre-PIZERO-223 level (PIZERO-223 tripled it, PIZERO-230 doubled it), scaled
+by the `volume` setting. At volume 10 a full DAC swing peaks near -3 dBFS in the
+worst AC-coupled case; volumes above 10 may clip on such waveforms.
 
 Samples go into an 8192-deep **SPSC ring** (`audio_emit`, `AUDIO_RING_SAMPLES`).
 Core 0 owns the write index `g_audio_w` and publishes with a `__dmb()`; the consumer

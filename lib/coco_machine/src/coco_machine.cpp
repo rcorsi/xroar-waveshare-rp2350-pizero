@@ -1582,8 +1582,13 @@ static struct audio_dc g_dc;                           // PIZERO-223: AC couplin
 // PIZERO-223: 180, three times the old 60 (+9.5 dB). SN76489 chords at 60
 // peaked near -24 dBFS, so TVs were turned right up and muddied them; the DC
 // blocker (audio_dc_run) frees the headroom the offset used to take.
-#define AUDIO_DAC_GAIN   180
-#define AUDIO_GAIN_X     3         // the same factor for the SN76489
+// PIZERO-230: 360, doubled again (+6 dB). Measured off the HDMI stream, a full
+// 0-63 swing at 180 put a square wave near -15 dBFS. At 360 it is 22,680 p-p:
+// about -9 dBFS for a square, and about -3 dBFS for the worst AC-coupled case
+// (narrow pulses push one side out to nearly the whole swing, plus the
+// low-pass overshoot). Volumes above 10 may clip on such waveforms.
+#define AUDIO_DAC_GAIN   360
+#define AUDIO_GAIN_X     6         // the same factor for the SN76489
 // PIZERO-145: the gain is the volume setting, 0-15; 10 is AUDIO_DAC_GAIN.
 static int32_t g_dac_gain = AUDIO_DAC_GAIN;
 static int32_t g_volume = 10;
@@ -1592,7 +1597,7 @@ static inline void audio_update_level(void) {
     int dac6 = (PIA_VALUE_A(g_m.pia1) >> 2) & 0x3F;    // 6-bit DAC, 0..63
     // NB: the real CoCo single-bit sound is PIA1 CB2, not PB1 -- the old PB1 tap
     // was bogus and only injected a constant DC offset, so it's dropped.
-    g_dac_level = (dac6 - 32) * g_dac_gain;            // centred; +-5760 at volume 10
+    g_dac_level = (dac6 - 32) * g_dac_gain;            // centred; +-11520 at volume 10
 }
 
 static inline void audio_emit(int s) {
