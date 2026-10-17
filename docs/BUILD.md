@@ -59,6 +59,7 @@ buildable on its own.
 | `pizero_wdtest` | `pizero_stream` | `-DWATCHDOG_SELFTEST` | single-buffered | wedges core 0 to prove watchdog recovery (PIZERO-33); each freeze moves to the next kind (spin in `loop()`, spin with interrupts off, spin inside a timer interrupt, hard fault) so one flash shows every post-mortem (PIZERO-227) | ~81% |
 | `pizero_wavmeas` | `pizero_base` | `-DAUDIO_WAV_DUMP -DFB_SINGLE` | single-buffered | no data-island audio: dumps the emulator's sound as WAV over USB (PIZERO-41) | ~73% |
 | `pizero_chord` | `pizero_stream_60` | `+ -DAV_AUDIO_SYNTH -DAV_AUDIO_SYNTH_CHORD` | single-buffered | the product, but the HDMI sound is a C major chord made on core 1, repeating 4 s of sines, 4 s of squares, 1 s of silence, to tell the HDMI link from the TV by ear (PIZERO-223) | ~81% |
+| `pizero_vic1` | `pizero_stream_60` | `+ -DAV_AVI_VIC=1` | single-buffered | the product, but the AVI InfoFrame says CEA 640x480p60 (VIC 1) instead of unknown (VIC 0), for a monitor that buzzes on our audio (PIZERO-234) | ~83% |
 | `pizero_wavmeas_boot` | `pizero_wavmeas` | `+ -DAUDIO_WAV_DUMP_BOOT` | single-buffered | `pizero_wavmeas`, but boots as usual (the card's autorun runs, so a program's own music plays) and records 20 s when Ctrl-W (0x17) arrives on USB serial; no picture or HDMI sound (PIZERO-223) | ~77% |
 | `native` | (none) | `platform = native`, Unity | n/a | host unit tests, no board (PIZERO-109): `pio test -e native`, 16 suites, 222 cases | n/a |
 
@@ -122,6 +123,7 @@ All flags are plain `-D` macros consumed in `src/main.cpp`. The **master switch 
 | `AV_HDMI_STRICT_FRAMING` | **(PIZERO-232, product)** A 2px trailing guard band after every vblank island. In `pizero_stream_60`, so every env built on it. |
 | `AV_HDMI_WIDE_BP` | **(PIZERO-233, product)** 640x480p60 horizontal blanking 8/92/60 instead of 8/96/56, so the control period before video is 14px (HDMI minimum 12; it is 10). The 4px come from the sync pulse: taking them from the front porch (4/96/60) lost the MS2109 capture stick. In `pizero_stream_60`. |
 | `AV_AUDIO_FULL_PACKETS` | **(PIZERO-232, product)** With `AV_STREAM_AUDIO`: the meter sends only full 4-sample audio packets, one every 2.4-2.6 lines, instead of 1-2 samples on nearly every line. In `pizero_stream_60`, so every env built on it. |
+| `AV_AVI_VIC=<n>` | **(PIZERO-234, test)** The Video Identification Code in the AVI InfoFrame. Default 0 (unknown); 1 is CEA 640x480p60. Env `pizero_vic1`. |
 | `AV_ACR_CTS=<n>` | ACR CTS value (default 25176). **Monitor-dependent** (PIZERO-32); inert on sinks that ignore ACR (like the dev monitor). See video-audio-notes.md. |
 | `AUDIO_WAV_DUMP_BOOT` | With `AUDIO_WAV_DUMP`: keep the normal boot and autorun, and start the recording on Ctrl-W from USB serial instead of at attach (20 s instead of 9). PIZERO-223. |
 | `AUDIO_WAV_DUMP` | Stream the source ring as base64 WAV over USB-CDC (source measurement, no video link). Diagnostic for PIZERO-41. The old `AUDIO_OUTPUT_LPF` flag is gone: the output low-pass is the `audio_lowpass` setting since PIZERO-212. |

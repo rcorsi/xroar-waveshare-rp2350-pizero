@@ -1766,7 +1766,10 @@ void setup() {
 #else
         // M2 final: vblank carries AVI/AudioIF/ACR; live audio is on ACTIVE lines.
         dvi_data_packet_t ipk[3];
-        dvi_di_set_avi_infoframe(&ipk[0], 0);
+#ifndef AV_AVI_VIC
+#define AV_AVI_VIC 0   // PIZERO-234: Video Identification Code; 1 = CEA 640x480p60
+#endif
+        dvi_di_set_avi_infoframe(&ipk[0], AV_AVI_VIC);
         dvi_di_set_audio_infoframe(&ipk[1], 1 /*2ch*/, DVI_AUDIO_SF_48K, DVI_AUDIO_SS_16);
 #if defined(AV_STD_TIMING) || defined(AV_60HZ)
         dvi_di_set_acr(&ipk[2], 25200, 6144);    // in-spec 25.2 MHz pixel -> CTS=25200 (STD-TIMING / PIZERO-45 60Hz)
