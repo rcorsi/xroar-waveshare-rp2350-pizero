@@ -62,6 +62,7 @@ buildable on its own.
 | `pizero_vic1` | `pizero_stream_60` | `+ -DAV_AVI_VIC=1` | single-buffered | the product, but the AVI InfoFrame says CEA 640x480p60 (VIC 1) instead of unknown (VIC 0), for a monitor that buzzes on our audio (PIZERO-234) | ~83% |
 | `pizero_aif` | `pizero_vic1` | `+ -DAV_AIF_REFER_STREAM -DAV_VBLANK_INFO_EVERY=3` | single-buffered | `pizero_vic1`, plus the Audio InfoFrame's rate and size as 'refer to stream' and the info/ACR island on every 3rd vblank line (~840 ACR/s) (PIZERO-234) | ~83% |
 | `pizero_drive8` | `pizero_aif` | `+ -DDVI_PAD_DRIVE=2 -DDVI_PAD_SLEWFAST=1` | single-buffered | `pizero_aif` with the TMDS pads at 8 mA and fast slew instead of 2 mA slew-limited (PIZERO-234) | ~83% |
+| `pizero_slew2` | `pizero_aif` | `+ -DDVI_PAD_SLEWFAST=1` | single-buffered | `pizero_aif` with fast slew at the default 2 mA (PIZERO-234) | ~83% |
 | `pizero_wavmeas_boot` | `pizero_wavmeas` | `+ -DAUDIO_WAV_DUMP_BOOT` | single-buffered | `pizero_wavmeas`, but boots as usual (the card's autorun runs, so a program's own music plays) and records 20 s when Ctrl-W (0x17) arrives on USB serial; no picture or HDMI sound (PIZERO-223) | ~77% |
 | `native` | (none) | `platform = native`, Unity | n/a | host unit tests, no board (PIZERO-109): `pio test -e native`, 16 suites, 222 cases | n/a |
 
