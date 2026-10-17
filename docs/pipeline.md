@@ -27,17 +27,17 @@ core 0  (emulation + audio generation)        core 1  (display + audio encode)
   └─ 6-bit DAC (PIA1) integrate-and-dump (+ SN76489)
        └─ 48 kHz mono → SPSC ring ───── g_audio_w/g_audio_r ──┐
                                                               ▼
-                                          per active line, in the DMA IRQ:
-                                          meter 0–4 samples → build audio
-                                          island (TERC4/BCH) → repoint DMA
-                                          (ACR + InfoFrames sit on vblank lines)
+                                          per line (active + vblank), DMA IRQ:
+                                          meter → full 4-sample packet every
+                                          ~2.6 lines → audio island → repoint
+                                          (ACR + InfoFrames every 8th vblank line)
 ```
 
 - **core 0** runs the emulator and produces both a video framebuffer and a stream of
   audio samples.
 - **core 1** does nothing but drive the display: it re-encodes the framebuffer to TMDS
-  forever, and (in the audio builds) encodes one audio data island per active scanline
-  from inside the DVI DMA IRQ.
+  forever, and (in the audio builds) encodes audio data islands from inside the DVI
+  DMA IRQ, spread over the active and vblank lines (PIZERO-232).
 - Two lock-free hand-offs connect them: a published framebuffer pointer (`g_front`) and
   a single-producer/single-consumer audio ring (`g_audio_w`/`g_audio_r`).
 
@@ -181,7 +181,17 @@ owns `g_audio_r`.
 
 Audio sample packets are TERC4-encoded with BCH parity into data islands
 (`lib/libdvi/dvi_data_island.c`). **ACR** (clock regeneration) and the **AVI / Audio
-InfoFrames** are emitted on the vblank lines.
+InfoFrames** are emitted on every 8th vblank line.
+
+Delivery (PIZERO-232): the meter spreads a frame's 800 samples over all 523
+non-sync lines, so the sink never sees the ~1.4 ms gap a frame that audio on the
+active lines alone left, and it sends only full 4-sample packets, as an ordinary
+source does. An active line carries the island in its back porch; a vblank line
+carries one island in its active block (audio, or the info island), never in its
+back porch, which blanks the dev monitor (PIZERO-34). Each vblank island ends
+with its trailing guard band. The old delivery (1-2 samples on nearly every
+active line, the info island on every vblank line, about 2,700 ACR a second)
+garbled the sound on one monitor that played a Mac's audio cleanly.
 
 Each sample subframe follows IEC 60958 (PIZERO-223, `dvi_di_set_audio_samples`):
 validity 0, a consumer channel status (linear PCM, 48 kHz, 16 bits) sent one bit a
