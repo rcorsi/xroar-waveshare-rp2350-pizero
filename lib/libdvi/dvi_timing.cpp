@@ -372,6 +372,11 @@ void dvi_setup_scanline_for_vblank_island(const struct dvi_timing *t,
 		buf0[off + 4] = g0; buf1[off + 4] = g12; buf2[off + 4] = g12;
 		dvi_di_encode_header(&buf0[off + 5], &pkts[k], hv, true);
 		dvi_di_encode_subpacket(&buf1[off + 5], &buf2[off + 5], &pkts[k]);
+#ifdef AV_HDMI_STRICT_FRAMING
+		// PIZERO-232: HDMI closes every data island with a 2px trailing guard
+		// band, as dvi_setup_active_audio_line already does; these had none.
+		buf0[off + 21] = g0; buf1[off + 21] = g12; buf2[off + 21] = g12;
+#endif
 	}
 #else
 	(void)pre; (void)g0; (void)g12; (void)pkts; (void)npkts;   // DIAGNOSTIC: control-only
