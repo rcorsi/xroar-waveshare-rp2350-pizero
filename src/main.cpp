@@ -852,6 +852,28 @@ static int32_t  g_meter_step = 0;                  // samples per frame (set at 
 #else
 #define AUDIO_SAMPLES_PER_FRAME 924                // 48000 Hz / ~51.95 Hz refresh
 #endif
+#ifdef AV_VBLANK_AUDIO
+// PIZERO-232: audio on the vblank lines too, so the 43-line (~1.4 ms) gap each
+// frame closes and the meter spreads a frame's samples over all 523 non-sync
+// lines. The audio island goes in the vblank ACTIVE block, where the info
+// island has always worked; islands in the vblank back porch blank the dev
+// monitor (PIZERO-34). One island per line, so every AV_VBLANK_INFO_EVERY-th
+// line carries AVI + Audio InfoFrame + ACR instead (6 a frame at 8, 360 ACR a
+// second, down from about 2,700). A slot is in flight for one line, so three
+// is margin; each is a full 640-pixel block (3 x 3 x 320 words, 11.5 KB).
+#define STREAM_METER_LINES 523
+#ifndef AV_VBLANK_INFO_EVERY
+#define AV_VBLANK_INFO_EVERY 8
+#endif
+#define VPOOL 3
+#define VPOOL_ISL 8                                // first island's word offset (dvi_setup_scanline_for_vblank_island)
+static uint32_t g_vpool0[VPOOL][320];
+static uint32_t g_vpool1[VPOOL][320];
+static uint32_t g_vpool2[VPOOL][320];
+static int      g_vpool_w = 0;                     // next vblank pool slot (IRQ-only)
+#else
+#define STREAM_METER_LINES 480
+#endif
 static int16_t  g_stream_last = 0;                 // hold-last on ring underrun (IRQ-only)
 static volatile uint32_t g_stream_under = 0;       // ring-underrun (hold-last) count (diagnostic)
 #ifdef AV_AUDIO_SYNTH
@@ -936,6 +958,30 @@ static inline int16_t __not_in_flash_func(stream_next_sample)(void) {
 #endif
 }
 
+// Meter one line: how many samples (0..4) it carries. Free-runs (acc stays in
+// [0,1) sample): resetting at v==0 discarded the fractional carry -> 923 vs the
+// producer's 924 samp/frame -> slow ring drift.
+static inline int __not_in_flash_func(stream_meter)(void) {
+    g_meter_acc += g_meter_step;
+    int n = g_meter_acc / STREAM_METER_LINES;
+    if (n > 4) n = 4;
+    if (n > 0) g_meter_acc -= (int32_t)n * STREAM_METER_LINES;
+    return n;
+}
+
+// Encode n samples as one audio island into a pool slot's three lane buffers.
+static inline void __not_in_flash_func(stream_encode)(int n, uint32_t *b0, uint32_t *b1, uint32_t *b2) {
+    int16_t lr[8];
+    for (int f = 0; f < n; ++f) { int16_t s = stream_next_sample(); lr[2*f] = lr[2*f+1] = s; }
+    dvi_data_packet_t pkt;
+    dvi_di_set_audio_samples(&pkt, lr, n, g_aud_framectr);
+    g_aud_framectr = (g_aud_framectr + (uint32_t)n) % 192u;
+    dvi_di_compute_parity(&pkt);
+    const int hv = ((!DVI_TIMING.v_sync_polarity) ? 2 : 0) | ((!DVI_TIMING.h_sync_polarity) ? 1 : 0);
+    dvi_di_encode_header(&b0[5], &pkt, hv, true);  // island at offset 5 (after preamble+guard)
+    dvi_di_encode_subpacket(&b1[5], &b2[5], &pkt);
+}
+
 // DMA IRQ, ACTIVE scanline (fires during the PREVIOUS line's scanout): meter this
 // line's sample count, encode one audio island into the next rotating-pool slot,
 // and point the back-porch DMA blocks at it -- or at the no-island framing when
@@ -943,29 +989,16 @@ static inline int16_t __not_in_flash_func(stream_next_sample)(void) {
 // encode (PIZERO-36); same-line back-porch encoding would not (Option A).
 static void __not_in_flash_func(stream_audio_cb)(void) {
     g_wd_core1_lines++;                            // PIZERO-227: core 1 is alive
-    // Meter free-runs (acc stays in [0,1) sample): resetting at v==0 discarded the
-    // fractional carry -> 923 vs the producer's 924 samp/frame -> slow ring drift.
-    g_meter_acc += g_meter_step;
-    int n = g_meter_acc / 480;
-    if (n > 4) n = 4;
+    const int n = stream_meter();
     if (n <= 0) {                                  // no island this line: plain framing
         dvi0.dma_list_active.l0[2].read_addr = g_bp0;
         dvi0.dma_list_active.l1[1].read_addr = g_bk1;
         dvi0.dma_list_active.l2[1].read_addr = g_bk2;
         return;
     }
-    g_meter_acc -= (int32_t)n * 480;
-    int16_t lr[8];
-    for (int f = 0; f < n; ++f) { int16_t s = stream_next_sample(); lr[2*f] = lr[2*f+1] = s; }
-    dvi_data_packet_t pkt;
-    dvi_di_set_audio_samples(&pkt, lr, n, g_aud_framectr);
-    g_aud_framectr = (g_aud_framectr + (uint32_t)n) % 192u;
-    dvi_di_compute_parity(&pkt);
     const int w = g_pool_w;
     g_pool_w = (w + 1) % APOOL;
-    const int hv = ((!DVI_TIMING.v_sync_polarity) ? 2 : 0) | ((!DVI_TIMING.h_sync_polarity) ? 1 : 0);
-    dvi_di_encode_header(&g_pool0[w][5], &pkt, hv, true);          // island at offset 5 (after preamble+guard)
-    dvi_di_encode_subpacket(&g_pool1[w][5], &g_pool2[w][5], &pkt);
+    stream_encode(n, g_pool0[w], g_pool1[w], g_pool2[w]);
     dvi0.dma_list_active.l0[2].read_addr = g_pool0[w];
     dvi0.dma_list_active.l1[1].read_addr = g_pool1[w];
     dvi0.dma_list_active.l2[1].read_addr = g_pool2[w];
@@ -1017,6 +1050,27 @@ static void __not_in_flash_func(audio_vblank_info_cb)(void) {
         dvi0.dma_list_vblank_nosync.l1[2].read_addr = g_info[1];
         dvi0.dma_list_vblank_nosync.l2[2].read_addr = g_info[2];
     }
+#elif defined(AV_STREAM_AUDIO) && defined(AV_VBLANK_AUDIO)
+    // PIZERO-232: an audio island in the active block, or on every
+    // AV_VBLANK_INFO_EVERY-th line the info island. An info line skips the
+    // meter, so the next audio line takes the carry (<= 4 samples).
+    const uint vs = dvi0.timing_state.v_state, vc = dvi0.timing_state.v_ctr;
+    const int vbi = (vs == DVI_STATE_FRONT_PORCH) ? (int)vc : (10 + (int)vc);  // fp 0-9, bp 10-42
+    const uint32_t *a0 = g_info[0], *a1 = g_info[1], *a2 = g_info[2];
+    if (vbi % AV_VBLANK_INFO_EVERY != 0) {
+        const int n = stream_meter();
+        if (n > 0) {
+            const int w = g_vpool_w;
+            g_vpool_w = (w + 1) % VPOOL;
+            stream_encode(n, &g_vpool0[w][VPOOL_ISL], &g_vpool1[w][VPOOL_ISL], &g_vpool2[w][VPOOL_ISL]);
+            a0 = g_vpool0[w]; a1 = g_vpool1[w]; a2 = g_vpool2[w];
+        } else {
+            a0 = g_ctrl[0]; a1 = g_ctrl[1]; a2 = g_ctrl[2];
+        }
+    }
+    dvi0.dma_list_vblank_nosync.l0[3].read_addr = a0;
+    dvi0.dma_list_vblank_nosync.l1[2].read_addr = a1;
+    dvi0.dma_list_vblank_nosync.l2[2].read_addr = a2;
 #else
     dvi0.dma_list_vblank_nosync.l0[3].read_addr = g_info[0];
     dvi0.dma_list_vblank_nosync.l1[2].read_addr = g_info[1];   // lane 1 active block is [2] after split
@@ -1720,7 +1774,15 @@ void setup() {
             dvi_setup_active_audio_line(&DVI_TIMING, dvi0.dma_cfg, &dvi0.dma_list_active,
                                         g_pool0[w], g_pool1[w], g_pool2[w], sil, 1, true);
         dvi_setup_active_hdmi_framing(&DVI_TIMING, dvi0.dma_cfg, &dvi0.dma_list_active, g_bp0, g_bk1, g_bk2);
-        // AUDIO_SAMPLES_PER_FRAME spread over the 480 active lines.
+#ifdef AV_VBLANK_AUDIO
+        // PIZERO-232: lay each vblank pool slot as a one-island active block,
+        // the same layout as the info island; the IRQ rewrites the island words.
+        for (int w = 0; w < VPOOL; ++w)
+            dvi_setup_scanline_for_vblank_island(&DVI_TIMING, dvi0.dma_cfg, false, &dvi0.dma_list_vblank_nosync,
+                                                 sil, 1, g_vpool0[w], g_vpool1[w], g_vpool2[w]);
+        Serial.printf("[disp] PIZERO-232: audio on vblank lines too, info every %d\r\n", AV_VBLANK_INFO_EVERY);
+#endif
+        // AUDIO_SAMPLES_PER_FRAME spread over the STREAM_METER_LINES lines.
         g_meter_step = AUDIO_SAMPLES_PER_FRAME;   // PIZERO-223: exact, see g_meter_acc
 #ifdef AV_AUDIO_SYNTH
         for (int i = 0; i < SYNTH_TBL; ++i)
