@@ -61,6 +61,7 @@ buildable on its own.
 | `pizero_chord` | `pizero_stream_60` | `+ -DAV_AUDIO_SYNTH -DAV_AUDIO_SYNTH_CHORD` | single-buffered | the product, but the HDMI sound is a C major chord made on core 1, repeating 4 s of sines, 4 s of squares, 1 s of silence, to tell the HDMI link from the TV by ear (PIZERO-223) | ~81% |
 | `pizero_vic1` | `pizero_stream_60` | `+ -DAV_AVI_VIC=1` | single-buffered | the product, but the AVI InfoFrame says CEA 640x480p60 (VIC 1) instead of unknown (VIC 0), for a monitor that buzzes on our audio (PIZERO-234) | ~83% |
 | `pizero_aif` | `pizero_vic1` | `+ -DAV_AIF_REFER_STREAM -DAV_VBLANK_INFO_EVERY=3` | single-buffered | `pizero_vic1`, plus the Audio InfoFrame's rate and size as 'refer to stream' and the info/ACR island on every 3rd vblank line (~840 ACR/s) (PIZERO-234) | ~83% |
+| `pizero_drive8` | `pizero_aif` | `+ -DDVI_PAD_DRIVE=2 -DDVI_PAD_SLEWFAST=1` | single-buffered | `pizero_aif` with the TMDS pads at 8 mA and fast slew instead of 2 mA slew-limited (PIZERO-234) | ~83% |
 | `pizero_wavmeas_boot` | `pizero_wavmeas` | `+ -DAUDIO_WAV_DUMP_BOOT` | single-buffered | `pizero_wavmeas`, but boots as usual (the card's autorun runs, so a program's own music plays) and records 20 s when Ctrl-W (0x17) arrives on USB serial; no picture or HDMI sound (PIZERO-223) | ~77% |
 | `native` | (none) | `platform = native`, Unity | n/a | host unit tests, no board (PIZERO-109): `pio test -e native`, 16 suites, 222 cases | n/a |
 
@@ -126,6 +127,7 @@ All flags are plain `-D` macros consumed in `src/main.cpp`. The **master switch 
 | `AV_AUDIO_FULL_PACKETS` | **(PIZERO-232, product)** With `AV_STREAM_AUDIO`: the meter sends only full 4-sample audio packets, one every 2.4-2.6 lines, instead of 1-2 samples on nearly every line. In `pizero_stream_60`, so every env built on it. |
 | `AV_AVI_VIC=<n>` | **(PIZERO-234, test)** The Video Identification Code in the AVI InfoFrame. Default 0 (unknown); 1 is CEA 640x480p60. Env `pizero_vic1`. |
 | `AV_AIF_REFER_STREAM` | **(PIZERO-234, test)** The Audio InfoFrame's sample frequency and size are 0, 'refer to stream header', as CEA-861 asks for L-PCM; the channel status carries 48 kHz and 16 bits. Env `pizero_aif`. |
+| `DVI_PAD_DRIVE=<0-3>`, `DVI_PAD_SLEWFAST=<0/1>` | **(PIZERO-234, test)** TMDS pad drive (2/4/8/12 mA) and fast slew, in `lib/libdvi/dvi_serialiser.cpp`. Default 0/0, libdvi's 2 mA slew-limited. Env `pizero_drive8`. |
 | `AV_ACR_CTS=<n>` | ACR CTS value (default 25176). **Monitor-dependent** (PIZERO-32); inert on sinks that ignore ACR (like the dev monitor). See video-audio-notes.md. |
 | `AUDIO_WAV_DUMP_BOOT` | With `AUDIO_WAV_DUMP`: keep the normal boot and autorun, and start the recording on Ctrl-W from USB serial instead of at attach (20 s instead of 9). PIZERO-223. |
 | `AUDIO_WAV_DUMP` | Stream the source ring as base64 WAV over USB-CDC (source measurement, no video link). Diagnostic for PIZERO-41. The old `AUDIO_OUTPUT_LPF` flag is gone: the output low-pass is the `audio_lowpass` setting since PIZERO-212. |

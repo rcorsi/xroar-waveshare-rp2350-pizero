@@ -12,9 +12,18 @@ static void dvi_configure_pad(uint gpio, bool invert) {
 	// 2 mA drive, enable slew rate limiting (this seems fine even at 720p30, and
 	// the 3V3 LDO doesn't get warm like when turning all the GPIOs up to 11).
 	// Also disable digital receiver.
+	// PIZERO-234: DVI_PAD_DRIVE (0-3 = 2/4/8/12 mA) and DVI_PAD_SLEWFAST to
+	// try a stronger signal on a receiver that loses our audio packets.
+#ifndef DVI_PAD_DRIVE
+#define DVI_PAD_DRIVE 0
+#endif
+#ifndef DVI_PAD_SLEWFAST
+#define DVI_PAD_SLEWFAST 0
+#endif
 	hw_write_masked(
 		&padsbank0_hw->io[gpio],
-		(0 << PADS_BANK0_GPIO0_DRIVE_LSB),
+		((uint32_t)DVI_PAD_DRIVE << PADS_BANK0_GPIO0_DRIVE_LSB) |
+		(DVI_PAD_SLEWFAST ? PADS_BANK0_GPIO0_SLEWFAST_BITS : 0u),
 		PADS_BANK0_GPIO0_DRIVE_BITS | PADS_BANK0_GPIO0_SLEWFAST_BITS | PADS_BANK0_GPIO0_IE_BITS
 	);
 	gpio_set_outover(gpio, invert ? GPIO_OVERRIDE_INVERT : GPIO_OVERRIDE_NORMAL);
