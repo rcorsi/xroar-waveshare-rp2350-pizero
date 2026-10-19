@@ -134,12 +134,16 @@ Everything above works on hardware. Known gaps:
 [`docs/BUILD.md`](docs/BUILD.md)), makes the board a 128 KB CoCo 3. It needs the CoCo 3 ROM on the
 card at `/coco/roms/coco3.rom` (32 KB).
 - **What runs:** Super Extended Color BASIC boots to OK and runs at 60 fps at both 0.89 and
-  1.79 MHz. HSCREEN graphics draw, and a full-screen animation at 1.79 MHz keeps full speed and
-  sound.
+  1.79 MHz, with sound. WIDTH 40 text, the palette, the GIME timer and HSCREEN graphics all
+  checked on the board.
+- **Games:** 128K games run: Space Raid, Starcast and Galactus all work. 512K games don't, and
+  can't on this board; a game that checks says so, one that doesn't crashes or hangs. Results
+  per title are in [`docs/coco3-titles.md`](docs/coco3-titles.md).
 - **Not yet:**
-  - WIDTH 40, palette POKEs and the GIME timer are still to be checked on hardware (PIZERO-214).
+  - 80-column text and the other 640-wide modes aren't readable: they're squeezed into the
+    320-wide picture (PIZERO-134).
   - The ALT, CTRL, F1 and F2 keys aren't mapped (PIZERO-215).
-  - 80-column text shows at half width (PIZERO-134).
+  - NitrOS-9 Level 2 needs a boot floppy built for the board (PIZERO-236).
 - **Choosing the machine:** how you pick CoCo 3 mode, one firmware or two, is not decided yet
   (PIZERO-135).
 - **Larger USB-C hubs** with several hub chips inside don't work yet. A simple hub does

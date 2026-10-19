@@ -109,17 +109,18 @@ measured outcome in `docs/coco3-feasibility.md`. Done so far:
   frames a second). **`PIZERO-220`**: fixed, no late frames, done 2026-10-15.
 - **`PIZERO-214`**: WIDTH 40, palette, the GIME timer and HSCREEN 1 and 2
   checked on the board, and sound at both speeds, done 2026-10-19.
+- **`PIZERO-228`**: seven real titles on the board, done 2026-10-19: 128K
+  games work, 512K games cannot (`docs/coco3-titles.md`). NitrOS-9 Level 2
+  needs a floppy built for the board, **`PIZERO-236`**.
 
 Next, in order:
 
-1. **`PIZERO-228`**: real CoCo 3 titles on the board, a result recorded for
-   each, so the README's CoCo 3 claim rests on software.
-2. **`PIZERO-135`**: how CoCo 3 mode is chosen (one firmware or two). The
+1. **`PIZERO-135`**: how CoCo 3 mode is chosen (one firmware or two). The
    other half, audio below real time, mostly falls away now that it runs at
    full speed.
-3. **`PIZERO-215`**: ALT, CTRL, F1, F2 and the second fire buttons (includes
+2. **`PIZERO-215`**: ALT, CTRL, F1, F2 and the second fire buttons (includes
    `PIZERO-205`'s F1 caveat). Most CoCo 3 software needs them.
-4. Then **`PIZERO-216`** (LOADM under a non-default MMU map), **`PIZERO-217`**
+3. Then **`PIZERO-216`** (LOADM under a non-default MMU map), **`PIZERO-217`**
    (tearing), **`PIZERO-134`** and **`PIZERO-179`** (640-wide modes and the
    path to show them), **`PIZERO-170`** (GIME timer reload quirk),
    **`PIZERO-178`** (render cost per mode, largely answered by 218-220).
