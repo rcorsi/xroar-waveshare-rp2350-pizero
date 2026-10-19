@@ -7,7 +7,7 @@ ticket (`PIZERO-NN`) and the deep docs (`README.md`, `docs/`). The short ranked
 list of what to pick up next is `roadmap.jsonl` (shown at the top of
 `issues.html`).
 
-_Last updated: 2026-10-17 (HDMI audio delivery reworked, clean on two screens
+_Last updated: 2026-10-19 (HDMI audio delivery reworked, clean on two screens
 that garbled it, `PIZERO-232`, `233`; output gain doubled, `PIZERO-230`; one LCD
 still raspy, parked as `PIZERO-234`)._
 
@@ -107,14 +107,16 @@ measured outcome in `docs/coco3-feasibility.md`. Done so far:
   renderer; 60 fps at both speeds.
 - **`PIZERO-219`**: worst case measured (full-screen HCLS at 1.79 MHz: 3-5 late
   frames a second). **`PIZERO-220`**: fixed, no late frames, done 2026-10-15.
+- **`PIZERO-214`**: WIDTH 40, palette, the GIME timer and HSCREEN 1 and 2
+  checked on the board, and sound at both speeds, done 2026-10-19.
 
 Next, in order:
 
-1. **`PIZERO-135`**: how CoCo 3 mode is chosen (one firmware or two). The
+1. **`PIZERO-228`**: real CoCo 3 titles on the board, a result recorded for
+   each, so the README's CoCo 3 claim rests on software.
+2. **`PIZERO-135`**: how CoCo 3 mode is chosen (one firmware or two). The
    other half, audio below real time, mostly falls away now that it runs at
    full speed.
-2. **`PIZERO-214`**: check WIDTH 40, palette POKEs, the GIME timer and the
-   HSCREEN modes on hardware.
 3. **`PIZERO-215`**: ALT, CTRL, F1, F2 and the second fire buttons (includes
    `PIZERO-205`'s F1 caveat). Most CoCo 3 software needs them.
 4. Then **`PIZERO-216`** (LOADM under a non-default MMU map), **`PIZERO-217`**
@@ -123,6 +125,11 @@ Next, in order:
    **`PIZERO-178`** (render cost per mode, largely answered by 218-220).
 
 Related CPU-speed item: **`PIZERO-211`** (RAM back from the fast 6809 core).
+
+## After the CoCo 3: the AY-3-8910
+
+**`PIZERO-149`** (AY-3-8910 / YM2149 sound chip), raised to high on
+2026-10-19, starts as soon as the CoCo 3 work above is done.
 
 ## Next: experience features (small, unblocked)
 
@@ -144,7 +151,8 @@ Good change-of-pace work between CoCo 3 stages. None waits on anything.
 
 ## Add-on hardware (bigger, unstarted)
 
-- **Sound**: `PIZERO-148` (Orchestra-90CC), `PIZERO-149` (AY-3-8910).
+- **Sound**: `PIZERO-148` (Orchestra-90CC). (`PIZERO-149`, the AY-3-8910,
+  is scheduled after the CoCo 3, above.)
 - **Video**: `PIZERO-16` (TMS9918A), `PIZERO-176` (MC6845 80-column card);
   the new-device chain `PIZERO-83` (decision) → `PIZERO-84` (linear 320×240) and
   `PIZERO-89` (wide text).
