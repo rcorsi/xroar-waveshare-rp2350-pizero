@@ -34,9 +34,11 @@ def main():
         print(line)
         parts = line.split('~')
         for i, part in enumerate(parts):
-            if part:
-                s.write(part.encode('ascii'))
-                time.sleep(len(part) * PER_KEY + 0.2)
+            # One key at a time: a whole line sent at once gave ?SN ERROR on
+            # the board, and the same listing paced key by key ran clean.
+            for ch in part:
+                s.write(ch.encode('ascii'))
+                time.sleep(PER_KEY)
             if i < len(parts) - 1:
                 time.sleep(1)
         s.write(b'\r')
