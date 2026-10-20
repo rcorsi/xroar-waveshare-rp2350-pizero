@@ -13,7 +13,7 @@ the card, launched from the **F12** list.
 | Galactus | `galactus-2.dsk` | autostarts | Works. |
 | Golaxian | `GOLAXIAN.DSK` | autostarts | Needs 512K. Checks the memory and says so ("512K REQUIRED", "128K DETECTED"). |
 | Montezuma's Revenge | `montrev.dsk` | `RUN"MONTREV"` | Needs 512K (this copy). Title screen shows; ENTER gives `?IE ERROR` with a nonsense line number. |
-| Sinistar preview v0.02 | `sinistar.dsk` | `RUN"SINI"` | Needs 512K (its readme says so). Hangs loading `M4TAIL.BNK`. Its first screen is 80 columns and unreadable here. |
+| Sinistar preview v0.02 | `sinistar.dsk` | `RUN"SINI"` | Needs 512K (its readme says so). Hangs loading `M4TAIL.BNK`. Its first screen is 80 columns: unreadable on the first run, readable since PIZERO-134. |
 | NitrOS-9 Level 2 | `nos9l2.dsk` | `DOS` | Boot fails. The image is for CoCo SDC hardware, not a floppy (PIZERO-236). |
 
 ## What it shows
@@ -25,8 +25,9 @@ the card, launched from the **F12** list.
   Montezuma's Revenge and Sinistar, maps memory pages that only exist on 512K.
   On 128K those page numbers wrap onto memory already in use, so it crashes or
   hangs, as it would on a real 128K CoCo 3.
-- **80-column screens are not readable yet.** 640-wide modes are squeezed into
-  the 320-wide picture, and text breaks up (PIZERO-134).
+- **80-column screens** were unreadable on the first run, squeezed into a
+  320-wide picture. Since PIZERO-134 the CoCo 3 shows all 640 pixels a line,
+  and Sinistar's 80-column opening screen reads properly.
 
 ## Why the two 512K failures look the way they do
 

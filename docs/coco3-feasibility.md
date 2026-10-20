@@ -92,7 +92,10 @@ Two structural notes:
 
 - **320-wide modes drop straight in.** Our framebuffer is 320 wide and libdvi
   doubles it to 640, which is exactly what the GIME's 320-wide modes want.
-- **640-wide modes cannot use a framebuffer.** A 640x240 RGB565 buffer is
+- **640-wide modes cannot use a framebuffer.** _(Overtaken: PIZERO-134 uses
+  a 640x240 framebuffer of one-byte colours, looked up in a palette by the
+  RP2350's hardware TMDS encoder, the same 153,600 bytes as the RGB565 one.)_
+  A 640x240 RGB565 buffer is
   307,200 bytes, more than twice what is free. The route is per-scanline
   generation into libdvi's scanline queue (`dvi_scanbuf_main_16bpp`), which
   needs two line buffers of 1,280 bytes instead. That is a real change to the

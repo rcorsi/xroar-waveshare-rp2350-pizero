@@ -21,9 +21,9 @@
 // upstream does with RAM_ORG(17, 9, 0): the GIME's 19-bit Z wraps.
 //
 // VIDEO: the GIME hands over each finished scanline as 912 six-bit colours
-// (one per 14.318 MHz pixel). The 640 pixels around the active area are
-// halved to the framebuffer's 320 columns: a 256- or 320-wide mode is exact,
-// a 640-wide one (80 columns) loses every other pixel until PIZERO-134. The
+// (one per 14.318 MHz pixel). The 640 pixels around the active area go to
+// the framebuffer: all of them with VIDEO_640 (PIZERO-134), else halved to
+// 320 columns, where a 640-wide mode (80 columns) loses every other pixel. The
 // active area is centred vertically: 192 lines start at row 24, as the
 // CoCo 2 picture does, and 225 lines at row 7.
 //
@@ -199,8 +199,8 @@ static inline uint32_t coco3_bus_line_sum(const uint8_t *src, int n) {
 }
 
 // One scanline from the GIME. npixels says which form: COCO3_FB_W (its
-// port_render form, PIZERO-218: the shown pixels already halved) or a whole
-// scanline, of which the 640 around the active area are halved here.
+// port_render form, PIZERO-218: the shown pixels, already reduced to it) or
+// a whole scanline, of which the 640 around the active area are taken here.
 static inline void coco3_bus_render_line(struct coco3_bus *b, const uint8_t *data,
                                          unsigned npixels) {
     int row = coco3_bus_row(b, b->line++);

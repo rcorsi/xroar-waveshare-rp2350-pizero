@@ -22,7 +22,7 @@ Stage 4 then needed three more steps to reach 60 fps:
   directly, through a table rebuilt whenever the map changes.
 - **PIZERO-218:** a port-side GIME renderer. It replaced the per-scanline
   sink that halved upstream's 912 samples. The GIME draws each active line
-  once at the 320 pixels the port shows, reads VRAM directly, and skips a
+  once at the pixels the port shows (all 640 since PIZERO-134), reads VRAM directly, and skips a
   line whose inputs have not changed since the last frame.
 - **PIZERO-219 and PIZERO-220:** the worst case, a full-screen HCLS loop at
   1.79 MHz, measured and fixed:
@@ -34,8 +34,8 @@ Stage 4 then needed three more steps to reach 60 fps:
     0% short.
 
 Stage 4's verification list is half done. It boots to OK and draws HSCREEN 2.
-WIDTH 40, the palette POKE and the GIME timer are PIZERO-214. 80-column text
-is still halved (PIZERO-134).
+WIDTH 40, the palette POKE and the GIME timer passed on the board
+(PIZERO-214). 80-column text shows whole since PIZERO-134.
 
 Of the open questions below, the first (how CoCo 3 mode is chosen) is still
 open in PIZERO-135. Until it is settled the CoCo 3 is a separate build. The
@@ -147,9 +147,9 @@ this mode the GIME owns the palette, timer and interrupts; our partial
 card like the other ROMs, with a boot page when it is missing.
 
 First milestone: 32 and 40 column text and the 320 and 256 wide graphics
-modes. The 640-wide modes, which include 80-column text, need the picture
-generated a line at a time instead of from a framebuffer (PIZERO-134);
-halving them to 320 makes 80-column text unreadable.
+modes. The 640-wide modes, which include 80-column text, came next
+(PIZERO-134): a 640x240 framebuffer of one-byte colours, the same size as the
+RGB565 one, looked up in a palette by core 1's hardware TMDS encoder.
 
 ## Out of scope
 

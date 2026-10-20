@@ -96,7 +96,10 @@ and draws while the 6809 runs:
 
 The picture is drawn while the beam moves, so it can tear: the HCLS colour
 bands moving down the screen are what a real CoCo 3 shows too (PIZERO-217).
-640-wide modes are halved to 320 (PIZERO-134).
+640-wide modes show whole (PIZERO-134): the CoCo 3 build's framebuffer is
+640x240 one-byte GIME colours, and core 1 looks each up in a 256-entry RGB565
+palette as it encodes the line on the RP2350's SIO hardware TMDS encoder
+(`dvi_static_framebuf_main_pal8`, `tmds_encode_pal8_sio` in `lib/libdvi`).
 
 ### 3. Framebuffer hand-off (core 0 → core 1)
 

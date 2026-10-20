@@ -50,7 +50,8 @@ a build of its own (`pizero_coco3`).
   renderer draws each changed scanline straight into the framebuffer
   (`PIZERO-218`). 60 fps at 0.89 and 1.79 MHz, HSCREEN 2 drawn; a full-screen
   HCLS loop at 1.79 MHz holds 60 fps with no late frames and full sound
-  (`PIZERO-219`, `220`). 80-column modes show at half width (`PIZERO-134`).
+  (`PIZERO-219`, `220`). 80-column and the other 640-wide modes show whole
+  (`PIZERO-134`).
 - **Storage**: microSD ROM/disk/cartridge load and autorun (`PIZERO-182`, `183`:
   drives remembered across power-off). **Writable `.DSK` drives**: SAVE from
   BASIC and NitrOS-9, W lock per drive, N makes a named blank disk, R renames
@@ -121,8 +122,7 @@ Next, in order:
 2. **`PIZERO-215`**: ALT, CTRL, F1, F2 and the second fire buttons (includes
    `PIZERO-205`'s F1 caveat). Most CoCo 3 software needs them.
 3. Then **`PIZERO-216`** (LOADM under a non-default MMU map), **`PIZERO-217`**
-   (tearing), **`PIZERO-134`** and **`PIZERO-179`** (640-wide modes and the
-   path to show them), **`PIZERO-170`** (GIME timer reload quirk),
+   (tearing), **`PIZERO-170`** (GIME timer reload quirk),
    **`PIZERO-178`** (render cost per mode, largely answered by 218-220).
 
 Related CPU-speed item: **`PIZERO-211`** (RAM back from the fast 6809 core).
