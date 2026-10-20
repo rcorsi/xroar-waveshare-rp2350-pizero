@@ -1,8 +1,8 @@
 # CoCo Zero
 
-**A Tandy Color Computer 2 and Color Computer 3 on a 65 x 30 mm board.** Plug in a TV, a USB-C
-keyboard or gamepad, and a microSD card, and it starts Color BASIC, or Super Extended Color BASIC
-as a CoCo 3. The picture and the sound both go over one video cable, at 60 frames per second.
+**A Tandy Color Computer on a 65 x 30 mm board.** Plug in a TV, a USB-C keyboard or gamepad,
+and a microSD card, and it starts Color BASIC as a CoCo 2, or Super Extended Color BASIC as a
+CoCo 3. The picture and the sound both go over one video cable, at 60 frames per second.
 
 It is [XRoar](https://www.6809.org.uk/xroar/), the CoCo emulator, running on a
 [Waveshare RP2350-PiZero](https://www.waveshare.com/rp2350-pizero.htm), a microcontroller board the
