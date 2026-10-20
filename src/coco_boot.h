@@ -66,6 +66,8 @@ bool coco_boot_load_file(const char *path, uint8_t *buf, uint32_t len);        /
 struct coco_settings;
 bool coco_boot_load_settings(struct coco_settings *out);
 // PIZERO-154: apply a settings-format file on top of *out (a game's NAME.TXT).
+// PIZERO-242: profile, then settings.txt, then game_file (or NULL).
+bool coco_boot_load_settings_for(const char *game_file, struct coco_settings *out, bool *game_found);
 bool coco_boot_apply_settings_file(const char *path, struct coco_settings *out);
 
 // PIZERO-201: the clock (the always-on timer). init seeds it at power-on

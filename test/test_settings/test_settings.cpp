@@ -229,7 +229,7 @@ static void test_the_template_parses_back_to_the_defaults(void) {
     int n = settings_template(tmpl, sizeof tmpl);
     TEST_ASSERT_TRUE(n > 0 && n < (int)sizeof tmpl);
     settings_defaults(&s);
-    s.volume = 3; s.sn76489 = false;                  // so the template must reset them
+    s.volume = 3;                                     // so the template must reset it
     char *line = tmpl;
     while (*line) {
         char *nl = strchr(line, '\n');

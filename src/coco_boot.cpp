@@ -245,14 +245,10 @@ extern "C" const struct dsk_catalog *coco_boot_dsk_catalog(void) {
 // Every bad line is reported on serial and skipped; nothing here is fatal.
 // Returns false (with defaults in *out) when there is no file.
 extern "C" bool coco_boot_load_settings(struct coco_settings *out) {
-    settings_defaults(out);
-    return coco_boot_apply_settings_file("0:/coco/settings.txt", out);
+    return coco_boot_load_settings_for(nullptr, out, nullptr);
 }
 
-// PIZERO-154: apply one settings-format file on top of *out, as it stands:
-// settings.txt over the defaults, or a game's NAME.TXT over settings.txt.
-// Returns false when there is no such file (and *out is unchanged).
-extern "C" bool coco_boot_apply_settings_file(const char *path, struct coco_settings *out) {
+static bool apply_settings_file(const char *path, struct coco_settings *out, bool quiet) {
     FIL f;
     if (f_open(&f, path, FA_READ) != FR_OK) return false;
     char line[96], name[32];
@@ -261,12 +257,37 @@ extern "C" bool coco_boot_apply_settings_file(const char *path, struct coco_sett
         n++;
         name[0] = '\0';
         int r = settings_parse_line(out, line, name, sizeof name);
+        if (quiet) continue;
         if (r == SET_UNKNOWN)   Serial.printf("[settings] %s line %d: unknown setting '%s', ignored\r\n", path, n, name);
         if (r == SET_BAD_VALUE) Serial.printf("[settings] %s line %d: bad value for '%s', ignored\r\n", path, n, name);
         if (r == SET_SYNTAX)    Serial.printf("[settings] %s line %d: expected 'name = value', ignored\r\n", path, n);
     }
     f_close(&f);
     return true;
+}
+
+// PIZERO-154: apply one settings-format file on top of *out, as it stands.
+// Returns false when there is no such file (and *out is unchanged).
+extern "C" bool coco_boot_apply_settings_file(const char *path, struct coco_settings *out) {
+    return apply_settings_file(path, out, false);
+}
+
+// PIZERO-242: the settings in force, in layers: the machine profile, then
+// settings.txt, then the game's own file (game_file, or NULL). The machine
+// is the last machine line of the two files, so it is found first, quietly.
+// *game_found says whether game_file existed. Returns whether settings.txt did.
+extern "C" bool coco_boot_load_settings_for(const char *game_file, struct coco_settings *out,
+                                            bool *game_found) {
+    static struct coco_settings t;
+    settings_defaults(&t);
+    apply_settings_file("0:/coco/settings.txt", &t, true);
+    if (game_file) apply_settings_file(game_file, &t, true);
+    settings_defaults(out);
+    settings_profile(out, t.machine);
+    bool have = apply_settings_file("0:/coco/settings.txt", out, false);
+    bool game = game_file && apply_settings_file(game_file, out, false);
+    if (game_found) *game_found = game;
+    return have;
 }
 
 // PIZERO-201: the clock. The RP2350 has no RTC and this board no backup

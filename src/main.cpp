@@ -1252,16 +1252,19 @@ static char g_game_path[96];
 static char g_game_settings[96];
 
 static void settings_for_game(const char *game) {
-    coco_boot_load_settings(&g_settings);
     g_game_path[0] = g_game_settings[0] = '\0';
+    char p[96];
+    bool have_game = false;
     if (game && game[0] && strlen(game) < sizeof g_game_path) {
         strcpy(g_game_path, game);
-        char p[96];
-        if (settings_game_path(game, p, sizeof p) &&
-            coco_boot_apply_settings_file(p, &g_settings)) {
-            strcpy(g_game_settings, p);
-            Serial.printf("[settings] with %s\r\n", p);
-        }
+        have_game = settings_game_path(game, p, sizeof p);
+    }
+    // PIZERO-242: the machine's profile, settings.txt, then the game's file.
+    bool found = false;
+    coco_boot_load_settings_for(have_game ? p : nullptr, &g_settings, &found);
+    if (found) {
+        strcpy(g_game_settings, p);
+        Serial.printf("[settings] with %s\r\n", p);
     }
     settings_apply();
 }
@@ -1347,10 +1350,10 @@ static void switch_machine(bool coco3, uint8_t what, int kind, const char *path)
 // The machine `game` (settings.txt with the game's own file on top) asks for.
 static bool machine_wanted(const char *game) {
     static struct coco_settings t;
-    coco_boot_load_settings(&t);
     char p[96];
-    if (game && game[0] && settings_game_path(game, p, sizeof p)) coco_boot_apply_settings_file(p, &t);
-    return t.coco3;
+    bool g = game && game[0] && settings_game_path(game, p, sizeof p);
+    coco_boot_load_settings_for(g ? p : nullptr, &t, nullptr);
+    return settings_is_coco3(&t);
 }
 
 // PIZERO-186: F8. The next artifact color setting (on, swapped, off, on),
@@ -1393,8 +1396,8 @@ static const char *on_file_saved(const char *path) {
         settings_for_game(g_game_path);
 #ifdef COCO3
         // PIZERO-135: machine changed: restart as it, at the BASIC prompt.
-        if (g_settings.coco3 != IS_COCO3() && machine_available(g_settings.coco3))
-            switch_machine(g_settings.coco3, HO_BASIC, -1, nullptr);
+        if (settings_is_coco3(&g_settings) != IS_COCO3() && machine_available(settings_is_coco3(&g_settings)))
+            switch_machine(settings_is_coco3(&g_settings), HO_BASIC, -1, nullptr);
 #endif
         return TEK_MSG_APPLIED;
     }
@@ -1416,9 +1419,9 @@ static void settings_apply(void) {
     coco_machine_set_lowercase(st->lowercase);
     coco_machine_palette_set_default(st->color_set ? st->color : nullptr, st->color_set);
     dvi_sio_tmds_encode = st->video_hw_encode;   // PIZERO-175: from the next scanline
-    Serial.printf("[settings] sn76489=%s volume=%u audio_lowpass=%u artifact_colors=%s gime_palette=%s gime_timer=%s "
+    Serial.printf("[settings] machine=%s sn76489=%s volume=%u audio_lowpass=%u artifact_colors=%s gime_palette=%s gime_timer=%s "
                   "autorun=%s reset_button=%s serial_keyboard=%s joystick_swap=%s font=%s lowercase=%s key_repeat=%s/%ums/%u video_encoder=%s soak_log=%s colors_overridden=%04x\r\n",
-                  st->sn76489 ? "on" : "off", st->volume, (unsigned)st->lowpass_hz,
+                  SETTINGS_MACHINE_NAMES[st->machine], st->sn76489 ? "on" : "off", st->volume, (unsigned)st->lowpass_hz,
                   st->artifact == ART_OFF ? "off" : st->artifact == ART_SWAPPED ? "swapped" : "on",
                   st->gime_palette ? "on" : "off", st->gime_timer ? "on" : "off",
                   st->autorun ? "on" : "off", st->reset_to_basic ? "basic" : "autorun", st->serial_keyboard ? "on" : "off",
@@ -2031,7 +2034,7 @@ void setup() {
     {
         static struct coco_settings pre;
         coco_boot_load_settings(&pre);
-        g_coco3_mode = pre.coco3;
+        g_coco3_mode = settings_is_coco3(&pre);
     }
     // A switch (switch_machine) chose the machine and what to do next.
     handoff_read();
@@ -2232,8 +2235,8 @@ void setup() {
     if (game[0]) settings_for_game(game);    // PIZERO-154: layered on settings.txt
 #ifdef COCO3
     // PIZERO-135: the game autorun starts asks for the other machine.
-    if (game[0] && g_settings.coco3 != IS_COCO3() && machine_available(g_settings.coco3))
-        switch_machine(g_settings.coco3, HO_NORMAL, -1, nullptr);
+    if (game[0] && settings_is_coco3(&g_settings) != IS_COCO3() && machine_available(settings_is_coco3(&g_settings)))
+        switch_machine(settings_is_coco3(&g_settings), HO_NORMAL, -1, nullptr);
 #endif
     if (miss_kind) {
         char body[160];
@@ -2875,6 +2878,10 @@ static int info_lines(char lines[][33], int max) {
     INFO("FW     %s", FW_VERSION);
     INFO("DATE   %s", FW_DATE);
     INFO("BUILD  %s", FW_ENV);
+    {                                            // PIZERO-242: the machine profile
+        static const char *const m[3] = { "COCO ZERO", "COCO 2", "COCO 3" };
+        INFO("MACH   %s", m[g_settings.machine < 3 ? g_settings.machine : 0]);
+    }
     INFO("%s", "");
     uint32_t chip_id = *((volatile uint32_t *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
     uint32_t rev = (chip_id & SYSINFO_CHIP_ID_REVISION_BITS) >> SYSINFO_CHIP_ID_REVISION_LSB;
