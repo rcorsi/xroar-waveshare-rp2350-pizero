@@ -18,8 +18,8 @@ closed in two weeks, 33 of them features, 5 bugs). The ten days to 2026-10-10
 were bring-up and stability: NitrOS-9, writable drives, and the first
 laptop-free soak. That soak came out well, so the stability work now runs in
 the background. From 2026-10-12 to 2026-10-13 the CoCo 3 track went from a
-benchmark to a 128 KB CoCo 3 running at 60 fps at both 0.89 and 1.79 MHz, in
-a build of its own (`pizero_coco3`).
+benchmark to a 128 KB CoCo 3 running at 60 fps at both 0.89 and 1.79 MHz,
+and on 2026-10-20 it joined the CoCo 2 in one firmware (`PIZERO-135`).
 
 ## Shipped / working
 
@@ -44,8 +44,8 @@ a build of its own (`pizero_coco3`).
 - **CoCo 3 extras on the CoCo 2**: the GIME palette at `$FFB0-$FFBF`
   (`PIZERO-85`, `55`) and the GIME timer at `$FF90-$FF95` (`PIZERO-62`), both
   on by default.
-- **A 128 KB CoCo 3**, its own build for now (env `pizero_coco3`, loads
-  `/coco/roms/coco3.rom`): the vendored GIME is the bus (`PIZERO-133`), the
+- **A 128 KB CoCo 3**, in the product firmware (`machine = coco3`, or a
+  game's own file switches to it, `PIZERO-135`; loads `/coco/roms/coco3.rom`): the vendored GIME is the bus (`PIZERO-133`), the
   6809 reads and writes MMU pages directly (`PIZERO-213`), and a port-side GIME
   renderer draws each changed scanline straight into the framebuffer
   (`PIZERO-218`). 60 fps at 0.89 and 1.79 MHz, HSCREEN 2 drawn; a full-screen
@@ -114,17 +114,15 @@ measured outcome in `docs/coco3-feasibility.md`. Done so far:
   games work, 512K games cannot (`docs/coco3-titles.md`).
 - **`PIZERO-236`**: NitrOS-9 Level 2 boots from a floppy that
   `scripts/mkos9disk.py --level 2` builds, done 2026-10-20.
+- **`PIZERO-215`**: ALT, CTRL, F1 and F2, and the second fire buttons (R2,
+  L2), done 2026-10-20.
+- **`PIZERO-135`**: one firmware, either machine; a game's own settings file
+  switches to the CoCo 3, done 2026-10-20.
 
-Next, in order:
-
-1. **`PIZERO-135`**: how CoCo 3 mode is chosen (one firmware or two). The
-   other half, audio below real time, mostly falls away now that it runs at
-   full speed.
-2. **`PIZERO-215`**: ALT, CTRL, F1, F2 and the second fire buttons (includes
-   `PIZERO-205`'s F1 caveat). Most CoCo 3 software needs them.
-3. Then **`PIZERO-216`** (LOADM under a non-default MMU map), **`PIZERO-217`**
-   (tearing), **`PIZERO-170`** (GIME timer reload quirk),
-   **`PIZERO-178`** (render cost per mode, largely answered by 218-220).
+What is left is small: **`PIZERO-216`** (LOADM under a non-default MMU map),
+**`PIZERO-217`** (tearing), **`PIZERO-170`** (GIME timer reload quirk),
+**`PIZERO-178`** (render cost per mode, largely answered by 218-220) and
+**`PIZERO-237`** (faster 640-wide screenshots, a host test of that path).
 
 Related CPU-speed item: **`PIZERO-211`** (RAM back from the fast 6809 core).
 

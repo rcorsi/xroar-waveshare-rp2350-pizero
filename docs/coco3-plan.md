@@ -37,9 +37,10 @@ Stage 4's verification list is half done. It boots to OK and draws HSCREEN 2.
 WIDTH 40, the palette POKE and the GIME timer passed on the board
 (PIZERO-214). 80-column text shows whole since PIZERO-134.
 
-Of the open questions below, the first (how CoCo 3 mode is chosen) is still
-open in PIZERO-135. Until it is settled the CoCo 3 is a separate build. The
-second (audio below real time) no longer arises at full speed.
+The open questions below are settled (PIZERO-135, 2026-10-20): one firmware
+is either machine, chosen by `machine` in `settings.txt` or a game's own
+settings file, switching by restarting the board; audio below real time no
+longer arises at full speed.
 
 ## Why this order
 
@@ -155,13 +156,15 @@ RGB565 one, looked up in a palette by core 1's hardware TMDS encoder.
 
 512 KB (the board has no PSRAM), the 6309, save states.
 
-## Open questions (PIZERO-135, before stage 4)
+## Open questions (PIZERO-135, before stage 4): answered 2026-10-20
 
-1. How is CoCo 3 mode chosen: automatically when `coco3.rom` is on the card,
-   by an `autorun.txt` directive, or a separate firmware build?
+1. How is CoCo 3 mode chosen? **One firmware, `machine = coco2 | coco3`.** In
+   `settings.txt` it picks the machine at power-on; in a game's own file it
+   switches when the game is launched. The two machines lay out RAM
+   differently, so a switch restarts the board (a tagged watchdog reset, the
+   choice carried in `/coco/log/switch.txt`) rather than swapping live.
 2. Below real time the machine makes fewer sound samples than the video link
-   plays, and the audio servo's 0.13% correction cannot cover 20%. Lower pitch, or
-   normal pitch with gaps?
+   plays. **Moot:** the CoCo 3 runs at full speed (PIZERO-213, 218, 220).
 
 ## Verification
 

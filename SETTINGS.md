@@ -32,7 +32,8 @@ A disk, program or cartridge can have its own settings file: the same name
 with `.TXT` in place of its extension, in the same folder. `ORBIT.TXT` goes
 with `/coco/bin/ORBIT.BIN`, `/coco/cart/ORBIT.CCC` or `/coco/dsk/ORBIT.DSK`.
 It uses the same names as `settings.txt`, `color_` lines included, and only
-needs the lines that differ:
+needs the lines that differ. A CoCo 3 game's file says `machine = coco3`, and
+launching the game switches the board to a CoCo 3 (see `machine` below):
 
 ```
 # /coco/bin/ORBIT.TXT
@@ -71,6 +72,7 @@ key_repeat        = on
 key_repeat_delay  = 500
 key_repeat_rate   = 10
 video_encoder     = hardware
+machine           = coco2
 dpad              = joystick
 pad_bottom        = fire
 pad_right         = fire
@@ -111,6 +113,7 @@ delete the rest.
 | `key_repeat_delay` | `100`-`2000` | `500` | Milliseconds a key is held before it starts repeating. |
 | `key_repeat_rate` | `1`-`30` | `10` | Repeats a second. Above 12 it is held to 12, so BASIC sees every press. |
 | `video_encoder` | `hardware` / `software` | `hardware` | How the picture is encoded for the display. `hardware` uses the encoder built into the RP2350 chip, which takes half the time. `software` is the older method, kept in case a display shows a problem with `hardware`. The picture should look the same either way. The INFO page (F12, then Left) shows which one is in use. |
+| `machine` | `coco2` / `coco3` | `coco2` | Which CoCo the board is: a Tandy Color Computer 2, or a 128 KB Color Computer 3 (needs `coco3.rom` on the card). In `settings.txt` it picks the machine at power-on and after RUN; saving a change restarts the board as the other machine, at the BASIC prompt. In a game's own settings file it switches when that game is launched: the board restarts, about two seconds, and starts the game. Launching a game without one goes back to `settings.txt`'s machine. Without `coco3.rom` a page says so and the board stays a CoCo 2. |
 | `dpad`, `pad_...` | see below | | What the gamepad's D-pad and each button do. See [Gamepad buttons](#gamepad-buttons). |
 | `color_NAME` | `#RRGGBB` | the 6847's | Overrides one palette color. See below. |
 

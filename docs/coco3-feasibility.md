@@ -11,8 +11,8 @@ report, `docs/measurements/2026-09.jsonl`, and `docs/cpu-speed.md`._
 
 This study's conclusion held for RAM and for the 512 KB answer, and was
 overtaken for the CPU. The 6809 was made fast enough (PIZERO-131), and a
-128 KB CoCo 3 now runs at full speed in its own build, `pizero_coco3`
-(PIZERO-133). Per [`coco3-plan.md`](coco3-plan.md), measured on the bench
+128 KB CoCo 3 now runs at full speed (PIZERO-133), in the same firmware as
+the CoCo 2 since PIZERO-135. Per [`coco3-plan.md`](coco3-plan.md), measured on the bench
 board:
 
 | | 0.89 MHz | 1.79 MHz |

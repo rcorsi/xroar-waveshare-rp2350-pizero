@@ -1266,6 +1266,93 @@ static void settings_for_game(const char *game) {
     settings_apply();
 }
 
+// PIZERO-135: switching machine. The two lay out RAM differently, so a
+// switch restarts the board (a full watchdog reset, tagged in scratch[4] so
+// it is not counted as a freeze), carrying the machine to boot and what to do
+// next in a small file on the card: RAM does not survive the restart (the
+// boot reuses SRAM, wd_post.cpp) and the scratch registers are all in use.
+// The file is used once: setup() reads it and deletes it, and only believes
+// it after a tagged restart, so RUN or a power cycle boots as settings.txt
+// says.
+static void present_card(void);
+enum { HO_NORMAL = 0,      // boot as usual (autorun too) on the given machine
+       HO_BASIC = 1,       // the BASIC prompt: a settings change, nothing to run
+       HO_LAUNCH = 2 };    // launch path as the overlay would (kind is CAT_*)
+#define MACHINE_SWITCH_MAGIC 0x5C0C0135u    // scratch[4]: a deliberate switch restart
+#define HO_FILE "0:/coco/log/switch.txt"
+struct machine_handoff {
+    bool     valid;
+    uint8_t  coco3, what;
+    int8_t   kind;
+    char     path[96];
+};
+static struct machine_handoff g_boot_handoff;   // this boot's, valid only after a switch
+static bool g_switch_restart = false;           // setup(): scratch[4] said so
+
+// The record, read and deleted. One line: coco3 what kind path.
+static void handoff_read(void) {
+    char buf[160];
+    uint32_t n = 0;
+    if (!coco_boot_load_text(HO_FILE, buf, sizeof buf - 1, &n)) return;
+    f_unlink(HO_FILE);
+    if (!g_switch_restart) return;              // a leftover, not this restart's
+    buf[n] = '\0';
+    unsigned c3 = 0, what = 0;
+    int kind = -1, used = 0;
+    if (sscanf(buf, "%u %u %d %n", &c3, &what, &kind, &used) < 3) return;
+    char *p = buf + used;
+    p[strcspn(p, "\r\n")] = '\0';
+    g_boot_handoff.valid = true;
+    g_boot_handoff.coco3 = c3 != 0;
+    g_boot_handoff.what = (uint8_t)what;
+    g_boot_handoff.kind = (int8_t)kind;
+    snprintf(g_boot_handoff.path, sizeof g_boot_handoff.path, "%s", p);
+}
+
+// Whether the card holds what that machine needs to start.
+static bool machine_available(bool coco3) {
+    char p[80];
+    FILINFO fi;
+    if (!coco_boot_resolve("rom", coco3 ? "coco3.rom" : "bas12.rom", p, sizeof p)) return false;
+    return f_stat(p, &fi) == FR_OK && fi.fsize == (coco3 ? 32768u : 8192u);
+}
+
+// Restart as the other machine, then do `what`. Returns only if the record
+// cannot be written, and then nothing changes.
+static void switch_machine(bool coco3, uint8_t what, int kind, const char *path) {
+    Serial.printf("[machine] switching to %s, restarting\r\n", coco3 ? "CoCo 3" : "CoCo 2");
+    coco_boot_flush_drives();                      // a written disk reaches the card first
+    char line[160];
+    int n = snprintf(line, sizeof line, "%u %u %d %s\n", coco3 ? 1u : 0u, (unsigned)what, kind,
+                     path ? path : "");
+    f_mkdir("0:/coco/log");
+    if (n <= 0 || n >= (int)sizeof line || !coco_boot_save_text(HO_FILE, line, (uint32_t)n)) {
+        Serial.print("[machine] cannot write the switch record: not switching\r\n");
+        return;
+    }
+    coco_boot_card_clear();
+    coco_boot_card_center(7, coco3 ? "STARTING THE COCO 3" : "STARTING THE COCO 2");
+    present_card();
+    Serial.flush();
+    delay(300);
+    // A full reset, like PIZERO-51's: a core reset alone left the display's
+    // DMA and PIO running and the next boot stalled starting them.
+    // watchdog_reboot clears scratch[4] for a plain reboot, so the tag goes
+    // in after it; the reset comes 30 ms later.
+    watchdog_reboot(0, 0, 30);
+    watchdog_hw->scratch[4] = MACHINE_SWITCH_MAGIC;
+    while (true) tight_loop_contents();
+}
+
+// The machine `game` (settings.txt with the game's own file on top) asks for.
+static bool machine_wanted(const char *game) {
+    static struct coco_settings t;
+    coco_boot_load_settings(&t);
+    char p[96];
+    if (game && game[0] && settings_game_path(game, p, sizeof p)) coco_boot_apply_settings_file(p, &t);
+    return t.coco3;
+}
+
 // PIZERO-186: F8. The next artifact color setting (on, swapped, off, on),
 // put into effect and written into the running game's own settings file, or
 // settings.txt when nothing was launched, keeping the rest of the file.
@@ -1304,6 +1391,11 @@ static const char *on_file_saved(const char *path) {
                         && strcasecmp(path, mine) == 0;
     if (strcmp(path, "0:/coco/settings.txt") == 0 || running_game) {
         settings_for_game(g_game_path);
+#ifdef COCO3
+        // PIZERO-135: machine changed: restart as it, at the BASIC prompt.
+        if (g_settings.coco3 != IS_COCO3() && machine_available(g_settings.coco3))
+            switch_machine(g_settings.coco3, HO_BASIC, -1, nullptr);
+#endif
         return TEK_MSG_APPLIED;
     }
     if (strcmp(path, "0:/coco/autorun.txt") == 0) return TEK_MSG_NEXT;
@@ -1500,6 +1592,15 @@ static bool disk_run_command(char *out, size_t out_sz) {
 static void perform_launch(void) {
     int kind = g_launch_kind;
     g_launch_kind = -1;
+#ifdef COCO3
+    // PIZERO-135: a game for the other machine restarts the board as it.
+    bool want = machine_wanted(g_launch_path);
+    if (want != IS_COCO3()) {
+        if (machine_available(want)) switch_machine(want, HO_LAUNCH, kind, g_launch_path);
+        Serial.printf("[machine] %s wants the %s, which the card cannot start: running it here\r\n",
+                      g_launch_path, want ? "CoCo 3" : "CoCo 2");
+    }
+#endif
     g_autotype = nullptr;                         // drop anything still queued
     g_bin_settle = 0;
     Serial.printf("[launch] %s %s\r\n",
@@ -1613,6 +1714,10 @@ void setup() {
     bool usb_replug_reboot = (watchdog_hw->reason & WATCHDOG_REASON_TIMER_BITS)
                              && watchdog_hw->scratch[0] == WD_MAGIC
                              && watchdog_hw->scratch[4] == USB_REPLUG_MAGIC;
+    // PIZERO-135: a machine switch is deliberate too, and not a freeze.
+    g_switch_restart = (watchdog_hw->reason & WATCHDOG_REASON_TIMER_BITS)
+                       && watchdog_hw->scratch[4] == MACHINE_SWITCH_MAGIC;
+    if (g_switch_restart) usb_replug_reboot = true;
     watchdog_hw->scratch[4] = 0;   // consume the sentinel
 
     // PIZERO-98: a UF2 flash also reboots THROUGH THE WATCHDOG, so "timer reset
@@ -1643,8 +1748,9 @@ void setup() {
         g_freeze_count = watchdog_hw->scratch[3] >> 8;
         if (g_freeze_count > 1000000u) g_freeze_count = 0;
         g_last_freeze_phase = watchdog_hw->scratch[1];
-        Serial.print("[usb] re-enumeration reboot (device hot-replug, PIZERO-51) -> "
-                     "mounting whatever is attached now\r\n");
+        if (g_switch_restart) Serial.print("[machine] restart to switch machine (PIZERO-135)\r\n");
+        else Serial.print("[usb] re-enumeration reboot (device hot-replug, PIZERO-51) -> "
+                          "mounting whatever is attached now\r\n");
         Serial.flush();
     } else if (freeze_reboot) {
         g_freeze_count = watchdog_hw->scratch[3] >> 8;
@@ -1927,6 +2033,16 @@ void setup() {
         coco_boot_load_settings(&pre);
         g_coco3_mode = pre.coco3;
     }
+    // A switch (switch_machine) chose the machine and what to do next.
+    handoff_read();
+    if (g_boot_handoff.valid) {
+        g_coco3_mode = g_boot_handoff.coco3;
+        g_run_button_reset = false;            // the reset can read as RUN; it was us
+        Serial.printf("[machine] restarted to switch: %s, then %s %s\r\n",
+                      g_coco3_mode ? "CoCo 3" : "CoCo 2",
+                      g_boot_handoff.what == HO_LAUNCH ? "launch" : g_boot_handoff.what == HO_BASIC ? "BASIC" : "boot",
+                      g_boot_handoff.path);
+    }
     // PIZERO-133: a CoCo 3 runs Super Extended Color BASIC only. Without a
     // good coco3.rom the page says so, and the board carries on as a CoCo 2.
     if (g_coco3_mode && !coco_boot_load_coco3_rom(g_coco_rom)) {
@@ -2035,6 +2151,7 @@ void setup() {
     // reset_button = basic turns it off for that boot only. A Space or BREAK
     // tap before the typing starts cancels it (hid_keyboard_apply).
     bool autorun_on = g_settings.autorun && !(g_run_button_reset && g_settings.reset_to_basic);
+    if (g_boot_handoff.what != HO_NORMAL) autorun_on = false;   // PIZERO-135: a launch or BASIC
     bool have_autorun = false;
     if (autorun_on) have_autorun = coco_boot_load_autorun(&autorun);
     else Serial.printf("[autorun] off for this boot (%s): autorun.txt not read\r\n",
@@ -2113,6 +2230,11 @@ void setup() {
         }
     }
     if (game[0]) settings_for_game(game);    // PIZERO-154: layered on settings.txt
+#ifdef COCO3
+    // PIZERO-135: the game autorun starts asks for the other machine.
+    if (game[0] && g_settings.coco3 != IS_COCO3() && machine_available(g_settings.coco3))
+        switch_machine(g_settings.coco3, HO_NORMAL, -1, nullptr);
+#endif
     if (miss_kind) {
         char body[160];
         snprintf(body, sizeof body, MSG_ARMISS_BODY, miss_kind, miss_name);
@@ -2124,6 +2246,10 @@ void setup() {
     disk_overlay_set_info(info_lines);                         // PIZERO-156: F1 INFO
     text_editor_init(present_card, on_file_saved);             // PIZERO-146
     g_kt.coco3 = coco_machine_is_coco3();       // PIZERO-215: CTRL, ALT, F1, F2
+    if (g_boot_handoff.what == HO_LAUNCH) {      // PIZERO-135: what the switch was for
+        g_launch_kind = g_boot_handoff.kind;
+        snprintf(g_launch_path, sizeof g_launch_path, "%s", g_boot_handoff.path);
+    }
     g_machine_running = true;
     Serial.print("[main] coco_machine running\r\n");
     Serial.printf("[mem] free heap %d bytes (bank-switched carts need their size + %d)\r\n",
@@ -2196,10 +2322,11 @@ void loop() {
                       g_hp_last[0], g_hp_last[1], g_hp_last[2], g_hp_last[3],
                       g_hp_last[4], g_hp_last[5], g_hp_last[6], g_hp_last[7]);
         Serial.flush();
+        watchdog_reboot(0, 0, 30);                     // reboot in ~30 ms (lets serial drain)
 #ifndef WATCHDOG_DISABLE
+        // PIZERO-135: after the call, which clears scratch[4] for a plain reboot.
         watchdog_hw->scratch[4] = USB_REPLUG_MAGIC;   // tag: deliberate reboot, NOT a freeze
 #endif
-        watchdog_reboot(0, 0, 30);                     // reboot in ~30 ms (lets serial drain)
         for (;;) tight_loop_contents();                // wait for the reset
     }
 #endif

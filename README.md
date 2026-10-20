@@ -28,8 +28,8 @@ size of a Raspberry Pi Zero.
 - Print Screen saves a screenshot to the card.
 - Can start a game automatically at power-on.
 - Fits a printable case shaped like a CoCo 2.
-- Experimental: a separate firmware that is a 128 KB **CoCo 3** instead, at full speed (see
-  Status).
+- Also a 128 KB **CoCo 3**, in the same firmware: a setting, or a CoCo 3 game's own settings
+  file, switches machine (experimental; see Status).
 
 ## What you need
 
@@ -132,19 +132,20 @@ Everything above works on hardware. Known gaps:
   `POKE 65496,0` go back to normal, and a reset always does. Details and measurements in
   [`docs/cpu-speed.md`](docs/cpu-speed.md).
 
-**CoCo 3 (experimental).** A separate firmware, built from the `pizero_coco3` environment (see
-[`docs/BUILD.md`](docs/BUILD.md)), makes the board a 128 KB CoCo 3. It needs the CoCo 3 ROM on the
-card at `/coco/roms/coco3.rom` (32 KB).
+**CoCo 3 (experimental).** The same firmware can be a 128 KB CoCo 3. It needs the CoCo 3 ROM on
+the card at `/coco/roms/coco3.rom` (32 KB).
+- **Choosing the machine:** `machine = coco3` in `settings.txt` starts the board as a CoCo 3.
+  Better, put `machine = coco3` in a CoCo 3 game's own settings file (`STARCAST.TXT` next to
+  `STARCAST.DSK`): launching it from the lists restarts the board as a CoCo 3, about two seconds,
+  and starts the game. Launching a CoCo 2 game switches back the same way. RUN and power-on start
+  the machine `settings.txt` names. Without `coco3.rom` a page says so and the board stays a
+  CoCo 2.
 - **What runs:** Super Extended Color BASIC boots to OK and runs at 60 fps at both 0.89 and
   1.79 MHz, with sound. WIDTH 40 and WIDTH 80 text, the palette, the GIME timer and HSCREEN
   graphics all checked on the board.
 - **Games:** 128K games run: Space Raid, Starcast and Galactus all work. 512K games don't, and
   can't on this board; a game that checks says so, one that doesn't crashes or hangs. Results
   per title are in [`docs/coco3-titles.md`](docs/coco3-titles.md).
-- **Not yet:**
-  - The ALT, CTRL, F1 and F2 keys aren't mapped (PIZERO-215).
-- **Choosing the machine:** how you pick CoCo 3 mode, one firmware or two, is not decided yet
-  (PIZERO-135).
 - **Larger USB-C hubs** with several hub chips inside don't work yet. A simple hub does
   (PIZERO-159).
 - **Gamepads:** tested with a GameSir Tegenaria Lite in its Android and automatic modes. Its
@@ -346,7 +347,7 @@ telemetry of the default build at the BASIC prompt, 2026-10-13):
 | Blit and the rest of the loop | ~2.4 ms | 320×240 RGB565 blit, USB host, audio |
 | **Total** | **~9 ms** | at least 7.6 ms (about 45%) to spare in the tightest frame |
 
-The CoCo 3 build (`pizero_coco3`) runs about twice the cycles at 1.79 MHz and draws each scanline
+As a CoCo 3 (`machine = coco3`) it runs about twice the cycles at 1.79 MHz and draws each scanline
 as it goes, with no separate render or blit: about 13 ms a frame at the BASIC prompt and at most
 15.2 ms in a full-screen animation (PIZERO-220).
 

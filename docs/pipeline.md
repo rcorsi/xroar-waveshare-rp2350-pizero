@@ -71,7 +71,7 @@ guest's GIME palette writes to `$FFB0-$FFBF` and holds the `color_*` settings
   written each frame.
 - After `libdvi`'s 2× scale-out this appears as **512×384 inside 640×480**.
 
-### 2a. The CoCo 3 build instead (core 0, `pizero_coco3`)
+### 2a. As a CoCo 3 instead (core 0, `machine = coco3`)
 
 The CoCo 3 build (`-DCOCO3`, PIZERO-133) has no VDG buffer, no
 `coco_machine_render_frame` and no blit: the main loop sets `render` and `blit`
