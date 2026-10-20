@@ -216,6 +216,9 @@ void coco_machine_release_all_keys_src(int src);
  * Center is 32767; all start centered with fire released. */
 void coco_machine_set_joystick_axis(int port, int axis, uint16_t value);
 void coco_machine_set_joystick_fire(int port, _Bool pressed);
+/* PIZERO-215: a CoCo 3 joystick's second button (PA2 right, PA3 left);
+ * ignored on a CoCo 2, where those lines are only keyboard rows. */
+void coco_machine_set_joystick_fire2(int port, _Bool pressed);
 void coco_machine_release_all_joysticks(void);
 
 /* PIZERO-55/85: the 16-entry palette register file the blit reads per pixel.

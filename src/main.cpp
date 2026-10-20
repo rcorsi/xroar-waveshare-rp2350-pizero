@@ -582,6 +582,7 @@ static void hid_key_repeat(void) {
 static uint8_t  g_kb_codes[6];                // the keyboard's keys held now
 static uint8_t  g_pad_nav[6];                 // the pad's, as overlay keys
 static uint16_t g_pad_buttons_now = 0;        // the pad's buttons held now
+static uint8_t g_pad_raw[10];                 // PIZERO-215: the last report's first bytes, for [pad]
 static uint16_t g_pad_inert = 0;              // held when the overlay closed
 static bool     g_pad_dpad_inert = false;
 
@@ -2475,9 +2476,13 @@ void loop() {
         { static uint32_t last_pad = 0;      // PIZERO-13: only while a pad talks
           uint32_t n = g_pad_decoded;
           if (n != last_pad)
-              tprintf("[pad] reports=%lu/s right-joystick x=%u y=%u fire=%u\r\n",
+              tprintf("[pad] reports=%lu/s right-joystick x=%u y=%u fire=%u buttons=%04x "
+                      "raw=%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\r\n",
                             (unsigned long)(n - last_pad), (unsigned)(g_pad_x >> 10),
-                            (unsigned)(g_pad_y >> 10), (unsigned)g_pad_fire);
+                            (unsigned)(g_pad_y >> 10), (unsigned)g_pad_fire,
+                            (unsigned)g_pad_buttons_now,    // PIZERO-215: PAD_BIT(PAD_B_*)
+                            g_pad_raw[0], g_pad_raw[1], g_pad_raw[2], g_pad_raw[3], g_pad_raw[4],
+                            g_pad_raw[5], g_pad_raw[6], g_pad_raw[7], g_pad_raw[8], g_pad_raw[9]);
           last_pad = n; }
 #ifdef AV_STREAM_AUDIO
         // PIZERO-38/39 audio-ring health: fill should hover near AUDIO_RING/2 with
@@ -2636,6 +2641,7 @@ void tuh_hid_report_received_cb(uint8_t daddr, uint8_t idx,
             // PIZERO-169: Home opens the overlay; while it is open the pad
             // drives it and does nothing to the machine.
             g_pad_buttons_now = st.buttons;
+            memcpy(g_pad_raw, report, len < sizeof g_pad_raw ? len : sizeof g_pad_raw);   // PIZERO-215
             static bool home_held = false, home_armed = false;
             bool home = st.buttons & PAD_BIT(PAD_B_HOME);
             bool home_new = home && !home_held;
@@ -2673,6 +2679,7 @@ void tuh_hid_report_received_cb(uint8_t daddr, uint8_t idx,
                 coco_machine_set_joystick_axis(p ^ sw, 0, ps.axis[p][0]);
                 coco_machine_set_joystick_axis(p ^ sw, 1, ps.axis[p][1]);
                 coco_machine_set_joystick_fire(p ^ sw, ps.fire[p]);
+                coco_machine_set_joystick_fire2(p ^ sw, ps.fire2[p]);   // PIZERO-215
             }
             // PIZERO-164: the keys the pad's buttons are mapped to, on the
             // pad's own layer of the key matrix; redrawn only on a change.

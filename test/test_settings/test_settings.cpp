@@ -76,7 +76,11 @@ static void test_every_setting(void) {
     // PIZERO-164: pad buttons and the D-pad.
     TEST_ASSERT_EQUAL_UINT8(K_ENTER, s.pad.act[PAD_B_START]);          // default
     TEST_ASSERT_EQUAL_INT(SET_OK, line("pad_start = S"));      TEST_ASSERT_EQUAL_UINT8(K_S, s.pad.act[PAD_B_START]);
+    TEST_ASSERT_EQUAL_UINT8(PAD_ACT_FIRE2, s.pad.act[PAD_B_R2]);        // PIZERO-215 defaults
+    TEST_ASSERT_EQUAL_UINT8(PAD_ACT_FIRE2_RIGHT, s.pad.act[PAD_B_L2]);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("pad_l2 = fire"));      TEST_ASSERT_EQUAL_UINT8(PAD_ACT_FIRE, s.pad.act[PAD_B_L2]);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("pad_l3 = fire2"));     TEST_ASSERT_EQUAL_UINT8(PAD_ACT_FIRE2, s.pad.act[PAD_B_L3]);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("pad_r3 = Fire2_Right")); TEST_ASSERT_EQUAL_UINT8(PAD_ACT_FIRE2_RIGHT, s.pad.act[PAD_B_R3]);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("pad_select = break")); TEST_ASSERT_EQUAL_UINT8(K_BREAK, s.pad.act[PAD_B_SELECT]);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("pad_top = none"));     TEST_ASSERT_EQUAL_UINT8(PAD_ACT_NONE, s.pad.act[PAD_B_TOP]);
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("pad_start = tab"));

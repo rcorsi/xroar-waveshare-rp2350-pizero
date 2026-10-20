@@ -78,8 +78,8 @@ pad_left          = fire_right
 pad_top           = space
 pad_l1            = fire_right
 pad_r1            = fire
-pad_l2            = none
-pad_r2            = none
+pad_l2            = fire2_right
+pad_r2            = fire2
 pad_select        = none
 pad_start         = enter
 pad_l3            = none
@@ -134,6 +134,8 @@ style pads), and each can be one of:
 
 - `fire`: the fire button of the joystick the left stick (and D-pad) drives;
 - `fire_right`: the fire button of the joystick the right stick drives;
+- `fire2`, `fire2_right`: the second button of those joysticks. Only the
+  CoCo 3 has second buttons; on a CoCo 2 these do nothing;
 - `none`;
 - a CoCo key: a letter, a digit, one of `@ : ; , - . /`, or `space`,
   `enter`, `clear`, `break`, `shift`, `up`, `down`, `left`, `right`.
@@ -145,7 +147,7 @@ style pads), and each can be one of:
 | `pad_left` | left face button (X, square) | `fire_right` |
 | `pad_top` | top face button (Y, triangle) | `space` |
 | `pad_l1`, `pad_r1` | shoulder buttons | `fire_right`, `fire` |
-| `pad_l2`, `pad_r2` | triggers | `none` |
+| `pad_l2`, `pad_r2` | triggers | `fire2_right`, `fire2` |
 | `pad_select`, `pad_start` | the two small buttons left and right of center | `none`, `enter` |
 | `pad_l3`, `pad_r3` | pressing a stick in | `none` |
 

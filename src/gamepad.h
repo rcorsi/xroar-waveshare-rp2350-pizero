@@ -192,7 +192,11 @@ static inline bool pad_decode_xinput(const uint8_t *r, uint16_t len, struct pad_
 //   b2  L2 01, R2 02, select 04, start 08, home 10, L3 20, R3 40
 //   b3  low nibble = hat: 0=N clockwise to 7=NW, 0x0F idle
 //   b4 LX, b5 LY, b6 RX, b7 RY   00 = left/up, 80 = center, FF = right/down
-//   b8 R2, b9 L2   analog 0-255 (the digital bits above are enough)
+//   b8 R2, b9 L2   analog 0-255
+//
+// PIZERO-215: the triggers are read from b8 and b9, not the digital bits: a
+// pad seen 2026-10-20 sets R2's bit at rest with its analog value at 3, so
+// the bit alone held the CoCo 3's second button (and a keyboard row) down.
 //
 // The M button is not here: it sends a Print Screen keystroke from the pad's
 // second interface, as if it were a keyboard (seen in the PIZERO-164 sweep).
@@ -206,9 +210,11 @@ static inline bool pad_decode_hidgp(const uint8_t *r, uint16_t len, struct pad_s
     if (s->dpad > 8) s->dpad = 8;
     static const uint8_t B1[8] = { PAD_B_BOTTOM, PAD_B_RIGHT, 0xFF, PAD_B_LEFT,
                                    PAD_B_TOP, 0xFF, PAD_B_L1, PAD_B_R1 };
-    static const uint8_t B2[8] = { PAD_B_L2, PAD_B_R2, PAD_B_SELECT, PAD_B_START,
+    static const uint8_t B2[8] = { 0xFF, 0xFF, PAD_B_SELECT, PAD_B_START,
                                    PAD_B_HOME, PAD_B_L3, PAD_B_R3, 0xFF };
     s->buttons = (uint16_t)(pad_bits(r[1], B1) | pad_bits(r[2], B2));
+    if (r[9] >= 0x80) s->buttons |= PAD_BIT(PAD_B_L2);
+    if (r[8] >= 0x80) s->buttons |= PAD_BIT(PAD_B_R2);
     return true;
 }
 
@@ -227,6 +233,10 @@ enum {
     PAD_ACT_FIRE = 0x40,         // fire of the joystick the LEFT stick and D-pad drive
     PAD_ACT_FIRE_RIGHT = 0x41,   // fire of the joystick the RIGHT stick drives
     PAD_ACT_NONE = 0x42,
+    // PIZERO-215: a CoCo 3 joystick's second button, which a CoCo 2 does not
+    // have (there the action does nothing).
+    PAD_ACT_FIRE2 = 0x43,        // second button of the LEFT stick's joystick
+    PAD_ACT_FIRE2_RIGHT = 0x44,  // second button of the RIGHT stick's joystick
 };
 
 // The CoCo keys an action needs (duplicated here so this header stands alone).
@@ -244,11 +254,16 @@ struct pad_map {
 
 // Defaults: the fire buttons as before PIZERO-164 (bottom, right, R1 fire the
 // left stick's joystick; left and L1 the right stick's), plus Start = ENTER
-// and top = SPACE, the two keys most games want to start. The rest do nothing.
+// and top = SPACE, the two keys most games want to start. PIZERO-215: the
+// triggers are the CoCo 3's second buttons, R2 the left stick's joystick's
+// and L2 the right stick's, beside the shoulder buttons that fire each. The
+// rest do nothing.
 static inline void pad_map_defaults(struct pad_map *m) {
     for (int i = 0; i < PAD_BUTTONS; i++) m->act[i] = PAD_ACT_NONE;
     m->act[PAD_B_BOTTOM] = m->act[PAD_B_RIGHT] = m->act[PAD_B_R1] = PAD_ACT_FIRE;
     m->act[PAD_B_LEFT] = m->act[PAD_B_L1] = PAD_ACT_FIRE_RIGHT;
+    m->act[PAD_B_R2] = PAD_ACT_FIRE2;
+    m->act[PAD_B_L2] = PAD_ACT_FIRE2_RIGHT;
     m->act[PAD_B_START] = PAD_K_ENTER;
     m->act[PAD_B_TOP] = PAD_K_SPACE;
     m->dpad_arrows = false;
@@ -260,6 +275,7 @@ static inline void pad_map_defaults(struct pad_map *m) {
 struct pad_out {
     uint16_t axis[2][2];
     bool     fire[2];
+    bool     fire2[2];           // PIZERO-215: the CoCo 3's second buttons
     uint8_t  keys[PAD_KEYS_MAX];
     uint8_t  nkeys;
 };
@@ -267,6 +283,7 @@ struct pad_out {
 static inline void pad_centered(struct pad_out *o) {
     o->axis[0][0] = o->axis[0][1] = o->axis[1][0] = o->axis[1][1] = PAD_CENTER;
     o->fire[0] = o->fire[1] = false;
+    o->fire2[0] = o->fire2[1] = false;
     o->nkeys = 0;
 }
 
@@ -274,6 +291,7 @@ static inline void pad_resolve(const struct pad_state *s, const struct pad_map *
                                struct pad_out *o) {
     for (int i = 0; i < 2; i++) { o->axis[i][0] = s->axis[i][0]; o->axis[i][1] = s->axis[i][1]; }
     o->fire[0] = o->fire[1] = false;
+    o->fire2[0] = o->fire2[1] = false;
     o->nkeys = 0;
     for (int b = 0; b < PAD_BUTTONS; b++) {
         if (!(s->buttons & PAD_BIT(b))) continue;
@@ -281,6 +299,8 @@ static inline void pad_resolve(const struct pad_state *s, const struct pad_map *
         uint8_t a = m->act[b];
         if (a == PAD_ACT_FIRE) o->fire[0] = true;
         else if (a == PAD_ACT_FIRE_RIGHT) o->fire[1] = true;
+        else if (a == PAD_ACT_FIRE2) o->fire2[0] = true;
+        else if (a == PAD_ACT_FIRE2_RIGHT) o->fire2[1] = true;
         else if (a < 0x40 && o->nkeys < PAD_KEYS_MAX) o->keys[o->nkeys++] = a;
     }
     if (s->dpad < 8) {

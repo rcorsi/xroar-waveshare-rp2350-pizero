@@ -109,12 +109,13 @@ On the CoCo 3, Ctrl, Alt, F1 and F2 are its own CTRL, ALT, F1 and F2 keys.
 
 **In a game, on the gamepad:** the left stick (or D-pad) is the right joystick, the one nearly all
 software reads, and the right stick is the left joystick. A, B and R1 fire the right joystick; X
-and L1 fire the left one. Start is ENTER and the top button is SPACE. Every button can be remapped,
+and L1 fire the left one. On the CoCo 3, R2 and L2 are those joysticks' second buttons. Start is
+ENTER and the top button is SPACE. Every button can be remapped,
 per game too (`pad_start = s`, `dpad = arrows`).
 
 **On the board:** RUN restarts to the BASIC prompt, skipping autorun (see `reset_button`). BOOT is only for flashing.
 
-**F1** shows the firmware version, the chip, the board's serial number, the clock, uptime, free
+**The INFO page** (F12, then Left) shows the firmware version, the chip, the board's serial number, the clock, uptime, free
 memory and USB devices.
 
 ## Status

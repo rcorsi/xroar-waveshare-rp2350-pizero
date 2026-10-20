@@ -25,7 +25,8 @@
 //   key_repeat_delay  = 100-2000              milliseconds before it starts
 //   key_repeat_rate   = 1-30                  repeats a second (12 at most in effect)
 //   dpad              = joystick | arrows     D-pad moves the stick, or presses arrows
-//   pad_<button>      = fire | fire_right | none | a CoCo key   (PIZERO-164)
+//   pad_<button>      = fire | fire_right | fire2 | fire2_right | none | a CoCo key
+//                       (PIZERO-164; fire2 and fire2_right PIZERO-215)
 //                       buttons: bottom right left top l1 r1 l2 r2
 //                                select start l3 r3 (Home opens the overlay)
 //                       keys: a-z 0-9 @ : ; , - . / space enter clear
@@ -237,6 +238,8 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
         uint8_t a;
         if (!strcmp(v, "fire"))            a = PAD_ACT_FIRE;
         else if (!strcmp(v, "fire_right")) a = PAD_ACT_FIRE_RIGHT;
+        else if (!strcmp(v, "fire2"))      a = PAD_ACT_FIRE2;
+        else if (!strcmp(v, "fire2_right")) a = PAD_ACT_FIRE2_RIGHT;
         else if (!strcmp(v, "none"))       a = PAD_ACT_NONE;
         else if ((a = kt_key_by_name(v)) == K_INVALID) return SET_BAD_VALUE;
         s->pad.act[bi] = a;
@@ -424,9 +427,11 @@ static inline int settings_template(char *out, size_t n) {
     for (int b = 0; b < PAD_BUTTONS && k < (int)n; b++) {
         if (!PAD_BUTTON_NAMES[b]) continue;       // Home: the overlay's button
         uint8_t a = d.pad.act[b];
-        char key[16] = "none";                    // longest is "fire_right"
+        char key[16] = "none";                    // longest is "fire2_right"
         if (a == PAD_ACT_FIRE) strcpy(key, "fire");
         else if (a == PAD_ACT_FIRE_RIGHT) strcpy(key, "fire_right");
+        else if (a == PAD_ACT_FIRE2) strcpy(key, "fire2");
+        else if (a == PAD_ACT_FIRE2_RIGHT) strcpy(key, "fire2_right");
         else if (a < 0x40) kt_key_name(a, key);
         k += snprintf(out + k, n - (size_t)k, "pad_%s = %s\n", PAD_BUTTON_NAMES[b], key);
     }

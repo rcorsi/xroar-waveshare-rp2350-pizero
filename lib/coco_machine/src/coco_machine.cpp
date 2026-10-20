@@ -307,6 +307,7 @@ extern "C" void coco_pia1b_postwrite(void *sptr) {
 // comparator is (joy_compare.h). Centered and released until a pad reports.
 static uint16_t g_joy_axis[2][2] = { { 32767, 32767 }, { 32767, 32767 } };
 static uint8_t  g_joy_fire = 0;      // bit0 = port 0 (PA0), bit1 = port 1 (PA1)
+                                     // PIZERO-215: bits 2-3 the second buttons (PA2, PA3)
 
 extern "C" void coco_machine_set_joystick_axis(int port, int axis, uint16_t value) {
     if ((unsigned)port > 1 || (unsigned)axis > 1) return;
@@ -317,6 +318,12 @@ extern "C" void coco_machine_set_joystick_fire(int port, _Bool pressed) {
     if ((unsigned)port > 1) return;
     if (pressed) g_joy_fire |=  (uint8_t)(1u << port);
     else         g_joy_fire &= (uint8_t)~(1u << port);
+}
+
+extern "C" void coco_machine_set_joystick_fire2(int port, _Bool pressed) {
+    if ((unsigned)port > 1) return;
+    if (pressed) g_joy_fire |=  (uint8_t)(4u << port);
+    else         g_joy_fire &= (uint8_t)~(4u << port);
 }
 
 extern "C" void coco_machine_release_all_joysticks(void) {
@@ -336,8 +343,9 @@ extern "C" void HOT_FUNC(coco_pia0_preread_a)(void *sptr) {
         }
     }
     // Fire buttons pull PA0/PA1 low whichever column is strobed (upstream:
-    // row_sink &= ~(buttons & 3)).
-    rows &= (uint8_t)~(g_joy_fire & 3);
+    // row_sink &= ~(buttons & 3)); on a CoCo 3 the second buttons PA2/PA3
+    // too (upstream coco3.c: buttons & 15).
+    rows &= (uint8_t)~(g_joy_fire & (g_c3 ? 15 : 3));
     // Comparator on PA7: CB2 picks the port, CA2 the axis (two separate
     // selects, unlike the sound mux, which reads them as one 2-bit code).
     if (g_m.pia1) {

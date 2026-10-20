@@ -105,6 +105,14 @@ static void test_fire_buttons(void) {
     TEST_ASSERT_TRUE(s.fire[1]);
     rest(r); r[5] |= 0x80; dec(PAD_DS4, r, 10, &s);    // triangle: nothing
     TEST_ASSERT_FALSE(s.fire[0]); TEST_ASSERT_FALSE(s.fire[1]);
+    // PIZERO-215: the triggers are the CoCo 3's second buttons.
+    rest(r); r[6] = 0x08; dec(PAD_DS4, r, 10, &s);     // R2
+    TEST_ASSERT_TRUE(s.fire2[0]); TEST_ASSERT_FALSE(s.fire2[1]);
+    TEST_ASSERT_FALSE(s.fire[0]); TEST_ASSERT_FALSE(s.fire[1]);
+    rest(r); r[6] = 0x04; dec(PAD_DS4, r, 10, &s);     // L2
+    TEST_ASSERT_TRUE(s.fire2[1]); TEST_ASSERT_FALSE(s.fire2[0]);
+    rest(r); dec(PAD_DS4, r, 10, &s);
+    TEST_ASSERT_FALSE(s.fire2[0]); TEST_ASSERT_FALSE(s.fire2[1]);
 }
 
 static void test_non_input_reports_are_ignored(void) {
@@ -281,18 +289,32 @@ static uint16_t buttons_of(enum pad_kind k, const uint8_t *r, uint16_t len) {
 
 static void test_hidgp_every_button_from_the_sweep(void) {
     // Bytes as captured on the GameSir in Android mode (PIZERO-164 sweep).
-    struct { uint8_t b1, b2; int button; } cases[] = {
-        { 0x01, 0, PAD_B_BOTTOM }, { 0x02, 0, PAD_B_RIGHT }, { 0x08, 0, PAD_B_LEFT },
-        { 0x10, 0, PAD_B_TOP },    { 0x40, 0, PAD_B_L1 },    { 0x80, 0, PAD_B_R1 },
-        { 0, 0x01, PAD_B_L2 },     { 0, 0x02, PAD_B_R2 },    { 0, 0x04, PAD_B_SELECT },
-        { 0, 0x08, PAD_B_START },  { 0, 0x10, PAD_B_HOME },  { 0, 0x20, PAD_B_L3 },
-        { 0, 0x40, PAD_B_R3 },
+    // PIZERO-215: the triggers come from their analog bytes (b8 R2, b9 L2),
+    // with the digital bit set as the pad sets it on a full pull.
+    struct { uint8_t b1, b2, b8, b9; int button; } cases[] = {
+        { 0x01, 0, 0, 0, PAD_B_BOTTOM }, { 0x02, 0, 0, 0, PAD_B_RIGHT }, { 0x08, 0, 0, 0, PAD_B_LEFT },
+        { 0x10, 0, 0, 0, PAD_B_TOP },    { 0x40, 0, 0, 0, PAD_B_L1 },    { 0x80, 0, 0, 0, PAD_B_R1 },
+        { 0, 0x01, 0, 0xFF, PAD_B_L2 },  { 0, 0x02, 0xFF, 0, PAD_B_R2 }, { 0, 0x04, 0, 0, PAD_B_SELECT },
+        { 0, 0x08, 0, 0, PAD_B_START },  { 0, 0x10, 0, 0, PAD_B_HOME },  { 0, 0x20, 0, 0, PAD_B_L3 },
+        { 0, 0x40, 0, 0, PAD_B_R3 },
     };
     for (unsigned i = 0; i < sizeof cases / sizeof cases[0]; i++) {
         uint8_t r[10]; grest(r);
-        r[1] = cases[i].b1; r[2] = cases[i].b2;
+        r[1] = cases[i].b1; r[2] = cases[i].b2; r[8] = cases[i].b8; r[9] = cases[i].b9;
         TEST_ASSERT_EQUAL_HEX16(PAD_BIT(cases[i].button), buttons_of(PAD_HIDGP, r, 10));
     }
+}
+
+// PIZERO-215: as seen at rest on the board, R2's bit set with its trigger at
+// 3 of 255. That is not a press.
+static void test_hidgp_trigger_bit_at_rest_is_not_a_press(void) {
+    uint8_t r[10]; grest(r);
+    r[2] = 0x02; r[8] = 0x03;
+    TEST_ASSERT_EQUAL_HEX16(0, buttons_of(PAD_HIDGP, r, 10));
+    grest(r); r[9] = 0x7F;                            // L2 under half way
+    TEST_ASSERT_EQUAL_HEX16(0, buttons_of(PAD_HIDGP, r, 10));
+    grest(r); r[9] = 0x80;
+    TEST_ASSERT_EQUAL_HEX16(PAD_BIT(PAD_B_L2), buttons_of(PAD_HIDGP, r, 10));
 }
 
 static void test_xinput_buttons_and_triggers(void) {
@@ -322,7 +344,7 @@ static void test_a_mapping_moves_fire_and_keys(void) {
     m.act[PAD_B_BOTTOM] = K_S;                 // e.g. a game that starts on S
     m.act[PAD_B_L2] = PAD_ACT_FIRE;
     struct pad_out o;
-    uint8_t r[10]; grest(r); r[1] = 0x01; r[2] = 0x01;              // bottom + L2
+    uint8_t r[10]; grest(r); r[1] = 0x01; r[2] = 0x01; r[9] = 0xFF; // bottom + L2
     TEST_ASSERT_TRUE(pad_read(PAD_HIDGP, r, 10, &m, &o));
     TEST_ASSERT_EQUAL_UINT8(1, o.nkeys); TEST_ASSERT_EQUAL_UINT8(K_S, o.keys[0]);
     TEST_ASSERT_TRUE(o.fire[0]);
@@ -463,6 +485,7 @@ int main(void) {
     RUN_TEST(test_xinput_fire_buttons);
     RUN_TEST(test_xinput_rejects_other_reports);
     RUN_TEST(test_hidgp_identity_and_rest);
+    RUN_TEST(test_hidgp_trigger_bit_at_rest_is_not_a_press);
     RUN_TEST(test_hidgp_captured_sweep);
     RUN_TEST(test_hidgp_hat);
     RUN_TEST(test_hidgp_every_button_from_the_sweep);
