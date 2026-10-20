@@ -203,6 +203,26 @@ void __dvi_func(dvi_static_framebuf_main_16bpp)(struct dvi_inst *inst, const uin
 	__builtin_unreachable();
 }
 
+#if !PICO_RP2040
+// PIZERO-134: as above, from one-byte palette indices at full resolution, on
+// the SIO hardware encoder.
+void __dvi_func(dvi_static_framebuf_main_pal8)(struct dvi_inst *inst, const uint8_t * volatile *framebuf_ptr, const uint16_t *palette) {
+	const uint h = inst->timing->v_active_lines / DVI_VERTICAL_REPEAT;
+	const uint w = inst->timing->h_active_pixels;
+	const uint words_per_channel = w / DVI_SYMBOLS_PER_WORD;
+	while (1) {
+		const uint8_t *framebuf = *framebuf_ptr;
+		for (uint y = 0; y < h; ++y) {
+			uint32_t *tmdsbuf;
+			queue_remove_blocking_u32(&inst->q_tmds_free, &tmdsbuf);
+			tmds_encode_pal8_sio(framebuf + y * w, palette, tmdsbuf, w, words_per_channel);
+			queue_add_blocking_u32(&inst->q_tmds_valid, &tmdsbuf);
+		}
+	}
+	__builtin_unreachable();
+}
+#endif
+
 static void __dvi_func(dvi_dma_irq_handler)(struct dvi_inst *inst) {
 	// Every fourth interrupt marks the start of the horizontal active region. We
 	// now have until the end of this region to generate DMA blocklist for next

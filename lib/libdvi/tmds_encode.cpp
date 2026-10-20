@@ -121,6 +121,29 @@ void __scratch_x("tmds_sio") tmds_encode_16bpp_sio_doubled(const uint32_t *pixbu
 		l0 += 2; l1 += 2; l2 += 2;
 	}
 }
+
+// PIZERO-134: a full-resolution line from one-byte palette indices (the
+// CoCo 3's 640-wide modes). Each pair of pixels is looked up in an RGB565
+// palette and written to WDATA; without PIX2_NOSHIFT a lane's PEEK_DOUBLE
+// gives the first pixel's symbol and then the second's. 23.7 us for 640
+// pixels in PIZERO-175's bench, against 63.5 us a line shown twice.
+void __scratch_x("tmds_sio") tmds_encode_pal8_sio(const uint8_t *pix, const uint16_t *pal, uint32_t *symbuf, size_t n_pix, size_t lane_words) {
+	sio_hw->tmds_ctrl = (TMDS_SIO_RGB565 & ~SIO_TMDS_CTRL_PIX2_NOSHIFT_BITS) | SIO_TMDS_CTRL_CLEAR_BALANCE_BITS;
+	uint32_t *l0 = symbuf, *l1 = symbuf + lane_words, *l2 = symbuf + 2 * lane_words;
+	const uint32_t *p4 = (const uint32_t *)pix;
+	for (size_t i = 0; i < n_pix / 4; ++i) {
+		uint32_t q = p4[i];
+		sio_hw->tmds_wdata = pal[q & 0xff] | (uint32_t)pal[(q >> 8) & 0xff] << 16;
+		l0[0] = sio_hw->tmds_peek_double_l0;
+		l1[0] = sio_hw->tmds_peek_double_l1;
+		l2[0] = sio_hw->tmds_peek_double_l2;
+		sio_hw->tmds_wdata = pal[(q >> 16) & 0xff] | (uint32_t)pal[q >> 24] << 16;
+		l0[1] = sio_hw->tmds_peek_double_l0;
+		l1[1] = sio_hw->tmds_peek_double_l1;
+		l2[1] = sio_hw->tmds_peek_double_l2;
+		l0 += 2; l1 += 2; l2 += 2;
+	}
+}
 #endif
 
 // As above, but 8 bits per pixel, multiple of 4 pixels, and still word-aligned.

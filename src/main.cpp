@@ -139,6 +139,9 @@ extern "C" {
 
 extern "C" {
 #include "coco_machine.h"
+#ifdef VIDEO_640
+#include "coco_palette.h"   // PIZERO-134: GIME colours for the scanout palette
+#endif
 }
 
 extern "C" void coco_machine_loadm_write(uint16_t addr, const uint8_t *src, uint16_t len);
@@ -224,7 +227,19 @@ static const struct dvi_timing dvi_timing_640x480p_57hz_240mhz = {
 #if defined(AV_DATA_ISLAND) && !defined(FB_SINGLE)
 #define FB_SINGLE
 #endif
-#ifdef FB_SINGLE
+#ifdef VIDEO_640
+// PIZERO-134: the CoCo 3 at full horizontal resolution. One byte a pixel, a
+// GIME colour (0-63) or a card colour (64 up), looked up in g_pal565 as core 1
+// encodes each line: 640x240, the same 153,600 bytes as the RGB565 buffer.
+#if !defined(COCO3) || !defined(FB_SINGLE) || !defined(TCC1014_PORT_FULL)
+#error "VIDEO_640 needs COCO3, a single framebuffer and TCC1014_PORT_FULL"
+#endif
+#define FB640_W 640
+#define PAL_CARD 64                    // g_pal565[64..]: the card's ink and paper
+static uint8_t g_fb[FB640_W * FRAME_HEIGHT] __attribute__((aligned(4)));
+static const uint8_t * volatile g_front = g_fb;
+static uint16_t g_pal565[256];
+#elif defined(FB_SINGLE)
 // PIZERO-30 (M1): Data-island audio builds SINGLE-buffer the framebuffer. The ~150 KB
 // freed is needed for the 43 per-vblank-line audio-island buffers (M2). Cost is
 // tearing (core 1 may scan g_fb mid-blit); acceptable per docs/audio-decision.md.
@@ -243,7 +258,11 @@ static void core1_main() {
     dvi_register_irqs_this_core(&dvi0, DMA_IRQ_0);
     dvi_start(&dvi0);
     // Never returns: continuously encodes the current front buffer.
+#ifdef VIDEO_640
+    dvi_static_framebuf_main_pal8(&dvi0, &g_front, g_pal565);
+#else
     dvi_static_framebuf_main_16bpp(&dvi0, &g_front);
+#endif
 }
 
 // ---- Keyboard (serial + autotype, same as the AMOLED port) ---------------
@@ -1313,7 +1332,9 @@ static void settings_apply(void) {
 // Put the finished card on screen. Shared by the boot pages and the F12
 // overlay (PIZERO-81), which both draw while the machine is not running.
 static void present_card(void) {
-#ifdef FB_SINGLE
+#ifdef VIDEO_640
+    coco_boot_card_present8(g_fb, g_pal565, PAL_CARD);
+#elif defined(FB_SINGLE)
     coco_boot_card_present(g_fb);
 #else
     coco_boot_card_present(g_fb[0]);
@@ -1647,6 +1668,9 @@ void setup() {
     // Bring up DVI first so we have a display even if SD/ROM fails.
     // Clear both buffers so the (static) black border is set in each.
     memset(g_fb, 0, sizeof(g_fb));
+#ifdef VIDEO_640
+    for (int i = 0; i < 64; i++) g_pal565[i] = coco_pal_gime_to_rgb565((uint8_t)i);
+#endif
 #if defined(AV_60HZ) || defined(AV_STD_TIMING) || defined(AV_60HZ_TEST)
     vreg_set_voltage(VREG_VOLTAGE_1_25);   // extra headroom for 252 MHz
 #else
@@ -2240,7 +2264,11 @@ void loop() {
         // so the emulator does not race to catch up.
         g_shot_request = false;
         g_audio_paused = true;
+#ifdef VIDEO_640
+        coco_boot_screenshot8(g_fb, g_pal565, FB640_W, FRAME_HEIGHT, nullptr, 0);
+#else
         coco_boot_screenshot((const uint16_t *)g_front, FRAME_WIDTH, FRAME_HEIGHT, nullptr, 0);
+#endif
         g_audio_paused = disk_overlay_is_open();
         next_us = micros();
     }

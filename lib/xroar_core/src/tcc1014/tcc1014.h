@@ -94,7 +94,13 @@ struct TCC1014 {
 	_Bool port_redraw;
 };
 
+// PIZERO-134: TCC1014_PORT_FULL draws the 640 pixels at full resolution
+// instead of halving them, for a 640-wide display (80 columns).
+#ifdef TCC1014_PORT_FULL
+#define TCC1014_PORT_W 640
+#else
 #define TCC1014_PORT_W 320
+#endif
 #define TCC1014_PORT_LINES 320
 
 void tcc1014_reset(struct TCC1014 *gimep);

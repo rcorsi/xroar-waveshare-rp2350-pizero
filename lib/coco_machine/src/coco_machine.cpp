@@ -1352,11 +1352,11 @@ static void coco3_set_active_area(void *sptr, int x, int y, int w, int h) {
     if (coco3_bus_set_active_area(&g_c3bus, x, y, w, h)) coco_machine_video_invalidate();
 }
 
-// Where the CoCo 3 draws: the 320x240 RGB565 framebuffer core 1 scans out.
-// The GIME writes each scanline as it finishes, so nothing is rendered or
-// blitted between frames.
-extern "C" void coco_machine_set_framebuffer(uint16_t *fb) {
-    g_c3bus.fb = fb;
+// Where the CoCo 3 draws: the framebuffer core 1 scans out (coco3_pix_t,
+// PIZERO-134). The GIME writes each scanline as it finishes, so nothing is
+// rendered or blitted between frames.
+extern "C" void coco_machine_set_framebuffer(void *fb) {
+    g_c3bus.fb = (coco3_pix_t *)fb;
     coco_machine_video_invalidate();
 }
 
@@ -1420,7 +1420,7 @@ static _Bool coco3_init(const uint8_t *rom) {
     g_gime3->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, coco3_render_line, NULL);
     g_gime3->set_active_area = DELEGATE_AS4(void, int, int, int, int, coco3_set_active_area, NULL);
     g_gime3->CPUD = &g_m.cpu->D;
-    g_gime3->port_render = true;                     // PIZERO-218: 320 pixels a line
+    g_gime3->port_render = true;                     // PIZERO-218: TCC1014_PORT_W pixels a line
     g_gime3->port_vram[0] = lo;
     g_gime3->port_vram[1] = hi;
     tcc1014_notify_mode(g_gime3);
@@ -1430,7 +1430,7 @@ static _Bool coco3_init(const uint8_t *rom) {
     return 1;
 }
 #else
-extern "C" void coco_machine_set_framebuffer(uint16_t *fb) { (void)fb; }
+extern "C" void coco_machine_set_framebuffer(void *fb) { (void)fb; }
 extern "C" void coco_machine_video_invalidate(void) {}
 extern "C" _Bool coco_machine_is_coco3(void) { return 0; }
 #endif

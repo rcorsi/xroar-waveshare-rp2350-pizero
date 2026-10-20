@@ -178,9 +178,10 @@ void coco_machine_render_frame(void);
 
 /* PIZERO-133: CoCo 3 mode, chosen by passing coco_machine_init a 32 KB
  * Super Extended Color BASIC ROM. The GIME then draws each scanline straight
- * into the 320x240 RGB565 framebuffer given here, so render_frame and the
- * VDG blit are not used. */
-void coco_machine_set_framebuffer(uint16_t *fb);
+ * into the framebuffer given here, so render_frame and the VDG blit are not
+ * used: 320x240 RGB565, or with VIDEO_640 640x240 bytes of GIME colour
+ * (PIZERO-134). */
+void coco_machine_set_framebuffer(void *fb);
 _Bool coco_machine_is_coco3(void);
 /* PIZERO-213: the CoCo 3 only rewrites rows whose pixels changed; call this
  * after drawing anything else into the framebuffer so every row is redrawn. */

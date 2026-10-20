@@ -1527,6 +1527,36 @@ static inline uint64_t port_quads(uint8_t a, uint8_t b) {
 // with a constant resolution, so each loop below gets its own.
 static inline __attribute__((always_inline)) uint8_t *port_emit(uint8_t *pixel, uint64_t cols,
                                                                  const unsigned res) {
+#ifdef TCC1014_PORT_FULL
+	// PIZERO-134: every pixel render_scanline would (0 shows each four
+	// times, 3 keeps every other).
+	switch (res) {
+	case 0: {
+		uint64_t a = port_quads((uint8_t)cols, (uint8_t)(cols >> 8));
+		uint64_t b = port_quads((uint8_t)(cols >> 16), (uint8_t)(cols >> 24));
+		uint64_t c = port_quads((uint8_t)(cols >> 32), (uint8_t)(cols >> 40));
+		uint64_t d = port_quads((uint8_t)(cols >> 48), (uint8_t)(cols >> 56));
+		memcpy(pixel, &a, 8);
+		memcpy(pixel + 8, &b, 8);
+		memcpy(pixel + 16, &c, 8);
+		memcpy(pixel + 24, &d, 8);
+		return pixel + 32;
+	}
+	case 1: {
+		uint64_t a = port_double((uint32_t)cols), b = port_double((uint32_t)(cols >> 32));
+		memcpy(pixel, &a, 8);
+		memcpy(pixel + 8, &b, 8);
+		return pixel + 16;
+	}
+	case 2:
+		memcpy(pixel, &cols, 8);
+		return pixel + 8;
+	default:
+		pixel[0] = cols; pixel[1] = cols >> 16;
+		pixel[2] = cols >> 32; pixel[3] = cols >> 48;
+		return pixel + 4;
+	}
+#endif
 	switch (res) {
 	case 0: {
 		uint64_t a = port_double((uint32_t)cols), b = port_double((uint32_t)(cols >> 32));
@@ -1702,7 +1732,7 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 	// port_mask (byte i is 0xFF when bit 7-i is set); the four- and
 	// sixteen-colour ones look up pairs and quads. Then the word is emitted
 	// by resolution.
-	unsigned side = (640 - tAA) / 4;
+	unsigned side = (640 - tAA) / (1280 / TCC1014_PORT_W);
 	uint8_t *pixel = gime->port_line;
 	memset(pixel, border, side);
 	pixel += side;
@@ -1797,6 +1827,9 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 			cols = port_sel(port_mask[g], pal[fgi] & cmask, pal[bgi] & cmask);
 		}
 
+#ifdef TCC1014_PORT_FULL
+		pixel = port_emit(pixel, cols, resolution);
+#else
 		switch (resolution) {
 		case 0: {
 			uint32_t lo = (uint32_t)cols, hi = (uint32_t)(cols >> 32);
@@ -1820,6 +1853,7 @@ static void port_render_scanline(struct TCC1014_private *gime, event_ticks t) {
 			pixel += 2;
 			break;
 		}
+#endif
 	}
 
 	memset(pixel, border, TCC1014_PORT_W - (pixel - gime->port_line));

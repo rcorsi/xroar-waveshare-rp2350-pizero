@@ -415,6 +415,7 @@ struct shot_ctx {
     uint16_t used;
     bool     failed;
     const uint16_t *fb;
+    const uint8_t  *fb8;               // PIZERO-134: palette indices, rows saved twice
     int      w;
     uint16_t pal[256];
     int      npal;
@@ -442,6 +443,7 @@ static void shot_sink(void *ctx, const uint8_t *p, size_t n) {
 
 static void shot_row(void *ctx, int y, uint8_t *out) {
     struct shot_ctx *c = (struct shot_ctx *)ctx;
+    if (c->fb8) { memcpy(out, c->fb8 + (size_t)(y / 2) * (size_t)c->w, (size_t)c->w); return; }
     const uint16_t *px = c->fb + (size_t)y * (size_t)c->w;
     for (int x = 0; x < c->w; x++) {
         int i = png_palette_index(c->pal, &c->npal, 256, px[x]);
@@ -449,7 +451,8 @@ static void shot_row(void *ctx, int y, uint8_t *out) {
     }
 }
 
-extern "C" bool coco_boot_screenshot(const uint16_t *fb, int w, int h, char *name, size_t name_sz) {
+static bool shot_save(const uint16_t *fb, const uint8_t *fb8, const uint16_t *pal565,
+                      int w, int h, char *name, size_t name_sz) {
     FRESULT fr = f_mkdir(SHOT_DIR);
     if (fr != FR_OK && fr != FR_EXIST) { Serial.printf("[shot] %s: cannot create (%d)\r\n", SHOT_DIR, fr); return false; }
     char path[64];
@@ -469,15 +472,21 @@ extern "C" bool coco_boot_screenshot(const uint16_t *fb, int w, int h, char *nam
     uint8_t *pal_rgb = row + w;
     // The palette first, so the PLTE chunk can go ahead of the pixels.
     c.npal = 0;
-    for (int i = 0; i < w * h; i++) png_palette_index(c.pal, &c.npal, 256, fb[i]);
-    for (int i = 0; i < c.npal; i++) png_rgb565_to_888(c.pal[i], &pal_rgb[i * 3]);
+    if (fb8) {
+        // The indices are the PNG's own palette, so rows go out as they are.
+        c.npal = 256;
+        for (int i = 0; i < 256; i++) png_rgb565_to_888(pal565[i], &pal_rgb[i * 3]);
+    } else {
+        for (int i = 0; i < w * h; i++) png_palette_index(c.pal, &c.npal, 256, fb[i]);
+        for (int i = 0; i < c.npal; i++) png_rgb565_to_888(c.pal[i], &pal_rgb[i * 3]);
+    }
     fr = f_open(&c.f, path, FA_WRITE | FA_CREATE_ALWAYS);
     if (fr != FR_OK) {
         Serial.printf("[shot] %s: open failed (%d)\r\n", path, fr);
         free(cp); free(row);
         return false;
     }
-    c.used = 0; c.failed = false; c.fb = fb; c.w = w;
+    c.used = 0; c.failed = false; c.fb = fb; c.fb8 = fb8; c.w = w;
     uint32_t t0 = millis();
     size_t n = png_write_indexed(shot_sink, &c, w, h, pal_rgb, c.npal ? c.npal : 1,
                                  shot_row, &c, row);
@@ -495,6 +504,15 @@ extern "C" bool coco_boot_screenshot(const uint16_t *fb, int w, int h, char *nam
                   npal, (unsigned long)(millis() - t0));
     if (name) snprintf(name, name_sz, "%s", path);
     return true;
+}
+
+extern "C" bool coco_boot_screenshot(const uint16_t *fb, int w, int h, char *name, size_t name_sz) {
+    return shot_save(fb, nullptr, nullptr, w, h, name, name_sz);
+}
+
+extern "C" bool coco_boot_screenshot8(const uint8_t *fb, const uint16_t *pal565, int w, int h,
+                                      char *name, size_t name_sz) {
+    return shot_save(nullptr, fb, pal565, w, 2 * h, name, name_sz);
 }
 
 // Finish a save a power cut interrupted: PATH gone, PATH.tmp present.
@@ -1249,6 +1267,29 @@ extern "C" void coco_boot_card_present(uint16_t *fb) {
                 uint16_t *px = &frow[c * 8];
                 for (int b = 0; b < 8; b++)
                     px[b] = (glyph & (0x80 >> b)) ? fg : bg;
+            }
+        }
+    }
+}
+
+extern "C" void coco_boot_card_present8(uint8_t *fb, uint16_t *pal565, int base) {
+    const uint16_t *pal = coco_machine_palette();
+    pal565[base] = pal[0];            // VDG green
+    pal565[base + 1] = pal[8];        // black
+    const uint8_t ink = (uint8_t)base, paper = (uint8_t)(base + 1);
+    for (int r = 0; r < CARD_ROWS; r++) {
+        for (int sub = 0; sub < 12; sub++) {
+            int y = r * 12 + sub;
+            if (y >= COCO_VDG_H) break;
+            uint8_t *frow = &fb[(PIZERO_Y0 + y) * (2 * PIZERO_FB_W) + 2 * PIZERO_X0];
+            for (int c = 0; c < CARD_COLS; c++) {
+                uint8_t cell = g_card[r][c];
+                uint8_t glyph = font_6847t2[(cell & 0x7F) * 12 + sub];
+                uint8_t fg = (cell & CARD_INVERSE) ? paper : ink;
+                uint8_t bg = (cell & CARD_INVERSE) ? ink : paper;
+                uint8_t *px = &frow[c * 16];
+                for (int b = 0; b < 8; b++)
+                    px[2 * b] = px[2 * b + 1] = (glyph & (0x80 >> b)) ? fg : bg;
             }
         }
     }

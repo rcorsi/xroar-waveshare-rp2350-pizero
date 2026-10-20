@@ -84,6 +84,9 @@ void coco_boot_recover_text(const char *path);
 // PIZERO-165: save the w x h RGB565 screen `fb` as the next
 // /coco/screendumps/SCRnnnn.PNG; its path goes to `name` if given.
 bool coco_boot_screenshot(const uint16_t *fb, int w, int h, char *name, size_t name_sz);
+// PIZERO-134: a framebuffer of palette indices; each row is saved twice, so
+// a 640x240 picture keeps its shape as 640x480.
+bool coco_boot_screenshot8(const uint8_t *fb, const uint16_t *pal565, int w, int h, char *name, size_t name_sz);
 
 // Disk attach. `path` is the full resolved FatFs path (use
 // coco_boot_resolve("dsk", name, ...) to build it).
@@ -153,6 +156,9 @@ void coco_boot_card_clear(void);
 void coco_boot_card_text(int col, int row, const char *s);
 void coco_boot_card_center(int row, const char *s);
 void coco_boot_card_present(uint16_t *fb);
+// PIZERO-134: the same into a 640-wide framebuffer of palette indices, each
+// card pixel two wide; sets pal565[base] and [base + 1] to its ink and paper.
+void coco_boot_card_present8(uint8_t *fb, uint16_t *pal565, int base);
 void coco_boot_card_invert_row(int row);   // PIZERO-81b: selection bar
 void coco_boot_card_invert_cell(int col, int row);   // PIZERO-146: editor cursor
 int  coco_boot_card_wrap(int col, int row, int width, int max_rows, const char *s);

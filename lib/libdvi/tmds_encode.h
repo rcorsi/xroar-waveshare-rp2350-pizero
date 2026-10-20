@@ -17,6 +17,9 @@ void tmds_encode_palette_data(const uint32_t *pixbuf, const uint32_t *tmds_palet
 // all three lanes in one pass, on the RP2350's SIO hardware TMDS encoder.
 // n_pix source pixels; lane i's symbols start at symbuf + i * lane_words.
 void tmds_encode_16bpp_sio_doubled(const uint32_t *pixbuf, uint32_t *symbuf, size_t n_pix, size_t lane_words);
+// PIZERO-134: n_pix (a multiple of 4) one-byte palette indices, word-aligned,
+// at full resolution: each index looked up in an RGB565 palette.
+void tmds_encode_pal8_sio(const uint8_t *pix, const uint16_t *pal, uint32_t *symbuf, size_t n_pix, size_t lane_words);
 #endif
 
 // Functions from tmds_encode.S. Assembly symbols are unmangled, so they need C

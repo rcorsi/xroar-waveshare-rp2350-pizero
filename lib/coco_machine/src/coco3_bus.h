@@ -43,8 +43,18 @@
 #include "coco_palette.h"       // coco_pal_gime_to_rgb565
 
 #define COCO3_ROM_SIZE   32768u
-#define COCO3_FB_W       320
 #define COCO3_FB_H       240
+
+// PIZERO-134: VIDEO_640 keeps all 640 GIME pixels a line, one byte each (the
+// 6-bit colour, which the scanout looks up in a palette): the same 153,600
+// bytes as the 320-wide RGB565 framebuffer it replaces.
+#ifdef VIDEO_640
+#define COCO3_FB_W       640
+typedef uint8_t coco3_pix_t;
+#else
+#define COCO3_FB_W       320
+typedef uint16_t coco3_pix_t;
+#endif
 
 // What the caller still has to do for this cycle.
 enum { C3_BUS_DONE = 0, C3_BUS_PIA0, C3_BUS_PIA1, C3_BUS_CARTIO };
@@ -57,7 +67,7 @@ struct coco3_bus {
     uint16_t cart_mask;           // its size - 1
 
     // Video
-    uint16_t *fb;                 // COCO3_FB_W x COCO3_FB_H, NULL for none
+    coco3_pix_t *fb;              // COCO3_FB_W x COCO3_FB_H, NULL for none
     uint16_t rgb[64];             // GIME colour to RGB565
     int line;                     // scanlines since the frame-sync pulse rose
     int act_x, act_y, act_w, act_h;   // the GIME's last set_active_area
@@ -70,7 +80,7 @@ static inline void coco3_bus_invalidate(struct coco3_bus *b) {
 }
 
 static inline void coco3_bus_init(struct coco3_bus *b, uint8_t *lo, uint8_t *hi,
-                                  const uint8_t *rom, uint16_t *fb) {
+                                  const uint8_t *rom, coco3_pix_t *fb) {
     b->ram_lo = lo;
     b->ram_hi = hi;
     b->rom = rom;
@@ -172,7 +182,7 @@ static inline int coco3_bus_row(const struct coco3_bus *b, int line) {
 
 // The first of the 640 GIME pixels shown: centred on the active area.
 static inline int coco3_bus_first_pixel(const struct coco3_bus *b) {
-    return b->act_x + b->act_w / 2 - COCO3_FB_W;
+    return b->act_x + b->act_w / 2 - 320;
 }
 
 // A hash of n bytes of GIME pixels (n a multiple of 4), never 0. Read a
@@ -195,19 +205,29 @@ static inline void coco3_bus_render_line(struct coco3_bus *b, const uint8_t *dat
                                          unsigned npixels) {
     int row = coco3_bus_row(b, b->line++);
     if (row < 0 || !b->fb || !data) return;
-    uint16_t *dst = b->fb + row * COCO3_FB_W;
-    if (npixels == COCO3_FB_W) {
-        uint32_t sum = coco3_bus_line_sum(data, COCO3_FB_W);
+    coco3_pix_t *dst = b->fb + row * COCO3_FB_W;
+    const uint8_t *src = data;
+    if (npixels != COCO3_FB_W) {
+        src = data + coco3_bus_first_pixel(b);
+        uint32_t sum = coco3_bus_line_sum(src, 640);
         if (b->row_sum[row] == sum) return;
         b->row_sum[row] = sum;
-        for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[data[x] & 63];
+#ifdef VIDEO_640
+        for (int x = 0; x < 640; x++) dst[x] = src[x] & 63;
+#else
+        for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[src[2 * x] & 63];
+#endif
         return;
     }
-    const uint8_t *src = data + coco3_bus_first_pixel(b);
-    uint32_t sum = coco3_bus_line_sum(src, 2 * COCO3_FB_W);
+    uint32_t sum = coco3_bus_line_sum(src, COCO3_FB_W);
     if (b->row_sum[row] == sum) return;
     b->row_sum[row] = sum;
-    for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[src[2 * x] & 63];
+#ifdef VIDEO_640
+    // The palette lookup happens at scanout; the GIME's colours are 6-bit.
+    memcpy(dst, src, COCO3_FB_W);
+#else
+    for (int x = 0; x < COCO3_FB_W; x++) dst[x] = b->rgb[src[x] & 63];
+#endif
 }
 
 #endif
