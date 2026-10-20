@@ -110,7 +110,7 @@ delete the rest.
 | `soak_log` | `on` / `off` | `off` | Writes the board's once-a-second telemetry to `/coco/log/soak-NNN.txt` once a minute, timestamped, so a soak test runs from a power supply with no computer attached. One file per power-on. Read it with `scripts/soak.py analyse`. See docs/BUILD.md. |
 | `key_repeat_delay` | `100`-`2000` | `500` | Milliseconds a key is held before it starts repeating. |
 | `key_repeat_rate` | `1`-`30` | `10` | Repeats a second. Above 12 it is held to 12, so BASIC sees every press. |
-| `video_encoder` | `hardware` / `software` | `hardware` | How the picture is encoded for the display. `hardware` uses the encoder built into the RP2350 chip, which takes half the time. `software` is the older method, kept in case a display shows a problem with `hardware`. The picture should look the same either way. F1 INFO shows which one is in use. |
+| `video_encoder` | `hardware` / `software` | `hardware` | How the picture is encoded for the display. `hardware` uses the encoder built into the RP2350 chip, which takes half the time. `software` is the older method, kept in case a display shows a problem with `hardware`. The picture should look the same either way. The INFO page (F12, then Left) shows which one is in use. |
 | `dpad`, `pad_...` | see below | | What the gamepad's D-pad and each button do. See [Gamepad buttons](#gamepad-buttons). |
 | `color_NAME` | `#RRGGBB` | the 6847's | Overrides one palette color. See below. |
 

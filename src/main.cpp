@@ -556,7 +556,7 @@ static struct kt_state g_kt;
 
 // Make the USB keyboard's layer of the key matrix match what is held now.
 static void hid_keys_present(uint8_t mods) {
-    uint8_t keys[KT_HELD_MAX + 1];
+    uint8_t keys[KT_KEYS_MAX];
     int n = kt_keys(&g_kt, mods, keys);
     coco_machine_release_all_keys_src(COCO_KEYS_USB);
     for (int i = 0; i < n; i++) coco_machine_press_key_src(COCO_KEYS_USB, keys[i]);
@@ -2106,6 +2106,7 @@ void setup() {
     disk_overlay_init(present_card, overlay_launch_request);   // PIZERO-81: F12 overlay
     disk_overlay_set_info(info_lines);                         // PIZERO-156: F1 INFO
     text_editor_init(present_card, on_file_saved);             // PIZERO-146
+    g_kt.coco3 = coco_machine_is_coco3();       // PIZERO-215: CTRL, ALT, F1, F2
     g_machine_running = true;
     Serial.print("[main] coco_machine running\r\n");
     Serial.printf("[mem] free heap %d bytes (bank-switched carts need their size + %d)\r\n",

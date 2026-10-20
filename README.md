@@ -90,7 +90,7 @@ explained in [`SETTINGS.md`](SETTINGS.md).
 
 | To | Keyboard | Gamepad |
 |---|---|---|
-| Open the lists | **F12** disks, **F9** programs, **F10** cartridges, **F11** files, **F1** info | **Home** |
+| Open the lists | **F12** disks, **F9** programs, **F10** cartridges, **F11** files; the INFO page is one more, Left of disks | **Home** |
 | Move, switch list | arrows, PgUp/PgDn, Home/End | D-pad, L1/R1 |
 | Start the highlighted game | **ENTER** | **A** |
 | Go back, close | **ESC** (or the list's own F key) | **B** (or Home) |
@@ -105,6 +105,7 @@ explained in [`SETTINGS.md`](SETTINGS.md).
 **In BASIC:** Caps Lock switches upper and lower case, Home is CLEAR, Esc is BREAK, and Backspace
 deletes. The CoCo's keyboard has no way to type `{ } | ~` or a backtick, so those keys do
 nothing. The screen can still show them: `PRINT CHR$(123)` prints `{` with the default 6847t2 font.
+On the CoCo 3, Ctrl, Alt, F1 and F2 are its own CTRL, ALT, F1 and F2 keys.
 
 **In a game, on the gamepad:** the left stick (or D-pad) is the right joystick, the one nearly all
 software reads, and the right stick is the left joystick. A, B and R1 fire the right joystick; X

@@ -223,6 +223,55 @@ static void test_repeat_settings_to_frames(void) {
     TEST_ASSERT_EQUAL_UINT32(60, kt_repeat_period_frames(0));
 }
 
+// PIZERO-215: the CoCo 3's CTRL, ALT, F1 and F2, and nothing for them on a
+// CoCo 2.
+static int keys3(bool coco3, uint8_t mods, uint8_t hid, uint8_t *out) {
+    struct kt_state st; kt_init(&st);
+    st.coco3 = coco3;
+    uint8_t codes[6] = { hid, 0, 0, 0, 0, 0 };
+    kt_update(&st, mods, codes);
+    return kt_keys(&st, mods, out);
+}
+
+static void test_coco3_ctrl_alt_f1_f2(void) {
+    uint8_t k[KT_KEYS_MAX];
+    int n = keys3(true, 0x01, H_A, k);                    // left Ctrl + A
+    TEST_ASSERT_EQUAL_INT(2, n);
+    TEST_ASSERT_TRUE(has(k, n, K_A));
+    TEST_ASSERT_TRUE(has(k, n, K_CTRL));
+    n = keys3(true, 0x40, 0, k);                          // right Alt alone
+    TEST_ASSERT_EQUAL_INT(1, n);
+    TEST_ASSERT_EQUAL_UINT8(K_ALT, k[0]);
+    n = keys3(true, 0x11 | 0x44 | SHIFT_L, 0, k);         // both Ctrls, both Alts, Shift
+    TEST_ASSERT_EQUAL_INT(3, n);
+    n = keys3(true, 0, 0x3A, k);
+    TEST_ASSERT_EQUAL_INT(1, n);
+    TEST_ASSERT_EQUAL_UINT8(K_F1, k[0]);
+    n = keys3(true, 0, 0x3B, k);
+    TEST_ASSERT_EQUAL_INT(1, n);
+    TEST_ASSERT_EQUAL_UINT8(K_F2, k[0]);
+}
+
+static void test_coco2_has_no_ctrl_alt_f1_f2(void) {
+    uint8_t k[KT_KEYS_MAX];
+    TEST_ASSERT_EQUAL_INT(1, keys3(false, 0x01, H_A, k)); // just A
+    TEST_ASSERT_EQUAL_UINT8(K_A, k[0]);
+    TEST_ASSERT_EQUAL_INT(0, keys3(false, 0x44, 0, k));
+    TEST_ASSERT_EQUAL_INT(0, keys3(false, 0, 0x3A, k));
+    TEST_ASSERT_EQUAL_INT(0, keys3(false, 0, 0x3B, k));
+}
+
+static void test_f1_f2_never_repeat(void) {
+    struct kt_state st; kt_init(&st);
+    st.coco3 = true;
+    uint8_t codes[6] = { 0x3A, 0, 0, 0, 0, 0 };
+    kt_update(&st, 0, codes);
+    for (uint32_t f = 0; f < 600; f++) {
+        kt_repeat(&st, f, true, 30, 6);
+        TEST_ASSERT_FALSE(st.rep_gap);
+    }
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_the_keys_the_user_found_unmapped);
@@ -242,5 +291,8 @@ int main(void) {
     RUN_TEST(test_break_never_repeats);
     RUN_TEST(test_a_new_press_restarts_the_delay);
     RUN_TEST(test_repeat_settings_to_frames);
+    RUN_TEST(test_coco3_ctrl_alt_f1_f2);
+    RUN_TEST(test_coco2_has_no_ctrl_alt_f1_f2);
+    RUN_TEST(test_f1_f2_never_repeat);
     return UNITY_END();
 }

@@ -61,7 +61,7 @@ a build of its own (`pizero_coco3`).
   (`PIZERO-190`, `191`, `194`). `scripts/mkos9disk.py` builds a working disk
   (`PIZERO-199`, booted on the board 2026-10-12).
 - **Overlay**: F9 to F12 open programs, cartridges, files and disks
-  (`PIZERO-81`, `114`, `153`); F1 INFO page (`PIZERO-156`); per-game `NAME.TXT`
+  (`PIZERO-81`, `114`, `153`); INFO page (`PIZERO-156`; on F1 until PIZERO-215 gave F1 to the CoCo 3); per-game `NAME.TXT`
   (`PIZERO-154`); `settings.txt` and `autorun.txt` edited on screen
   (`PIZERO-145`, `146`, `147`); the pad drives the overlay (`PIZERO-169`).
 - **Cartridges** of 2 to 16 KB (`PIZERO-139`); bank-switched carts over 16 KB

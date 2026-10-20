@@ -19,6 +19,9 @@
 // New: Home is CLEAR; Caps Lock is the case toggle (SHIFT+0), which frees
 // Shift+0 to type ')'; the numeric keypad types its characters (PIZERO-49).
 // The CoCo has no { } | ~ or backtick, so those keys press nothing.
+// PIZERO-215: on a CoCo 3 (kt_state.coco3) Ctrl and Alt are its CTRL and ALT,
+// and F1 and F2 its F1 and F2: keys a CoCo 2 does not have, whose matrix
+// positions are nothing there, so they press nothing on a CoCo 2.
 
 #ifndef KEY_TRANSLATE_H
 #define KEY_TRANSLATE_H
@@ -38,6 +41,7 @@ enum {
     K_P = 0x20, K_Q, K_R, K_S, K_T, K_U, K_V, K_W,
     K_X = 0x28, K_Y, K_Z, K_UP, K_DOWN, K_LEFT, K_RIGHT, K_SPACE,
     K_ENTER = 0x30, K_CLEAR, K_BREAK,
+    K_ALT = 0x33, K_CTRL, K_F1, K_F2,   // PIZERO-215: the CoCo 3's, row 6
     K_SHIFT = 0x37,
     K_INVALID = 0x3F,
 };
@@ -123,6 +127,7 @@ static inline bool kt_translate(uint8_t hid, bool shift, uint8_t *dscan, uint8_t
 // The keys held on the USB keyboard, each with the CoCo key it chose when it
 // went down (so its release lifts the same key even if Shift changed since).
 #define KT_HELD_MAX 6
+#define KT_KEYS_MAX (KT_HELD_MAX + 3)   // kt_keys: the held keys, SHIFT, CTRL, ALT
 struct kt_held { uint8_t hid, dscan, shift; uint16_t seq; };
 struct kt_state {
     struct kt_held h[KT_HELD_MAX];
@@ -132,6 +137,7 @@ struct kt_state {
     uint16_t rep_seq;                   // the press being repeated
     uint32_t rep_t0;                    // the frame it went down
     bool     rep_gap;                   // released for now, to be pressed again
+    bool     coco3;                     // PIZERO-215: CTRL, ALT, F1 and F2 exist
 };
 
 static inline void kt_init(struct kt_state *st) { memset(st, 0, sizeof *st); }
@@ -155,7 +161,8 @@ static inline void kt_update(struct kt_state *st, uint8_t mods, const uint8_t co
         for (uint8_t j = 0; j < st->n; j++) if (st->h[j].hid == hid) known = true;
         if (known) continue;
         struct kt_held e = { hid, K_INVALID, KT_SHIFT_KEEP, ++st->seq };
-        if (!kt_translate(hid, shift, &e.dscan, &e.shift)) e.dscan = K_INVALID;
+        if (st->coco3 && (hid == 0x3A || hid == 0x3B)) e.dscan = hid == 0x3A ? K_F1 : K_F2;
+        else if (!kt_translate(hid, shift, &e.dscan, &e.shift)) e.dscan = K_INVALID;
         st->h[st->n++] = e;
     }
 }
@@ -174,7 +181,8 @@ static inline void kt_resync(struct kt_state *st, const uint8_t codes[6]) {
 
 // The CoCo keys that should be down right now: every held key's CoCo key,
 // plus SHIFT as the newest key that forces it says, else as the physical
-// Shift. Returns how many were written to out (at most KT_HELD_MAX + 1).
+// Shift, and on a CoCo 3 CTRL and ALT as either Ctrl and Alt. Returns how
+// many were written to out (at most KT_KEYS_MAX).
 static inline int kt_keys(const struct kt_state *st, uint8_t mods, uint8_t *out) {
     int n = 0;
     uint8_t force = KT_SHIFT_KEEP;
@@ -186,6 +194,8 @@ static inline int kt_keys(const struct kt_state *st, uint8_t mods, uint8_t *out)
     }
     bool shift = force == KT_SHIFT_KEEP ? (mods & 0x22) != 0 : force == KT_SHIFT_ON;
     if (shift) out[n++] = K_SHIFT;
+    if (st->coco3 && (mods & 0x11)) out[n++] = K_CTRL;
+    if (st->coco3 && (mods & 0x44)) out[n++] = K_ALT;
     return n;
 }
 
@@ -246,7 +256,8 @@ static inline bool kt_repeat(struct kt_state *st, uint32_t frame, bool on,
                              uint32_t delay, uint32_t period) {
     bool was = st->rep_gap;
     const struct kt_held *k = st->n ? &st->h[st->n - 1] : 0;
-    if (!on || !k || k->dscan == K_INVALID || k->dscan == K_BREAK) {
+    if (!on || !k || k->dscan == K_INVALID || k->dscan == K_BREAK ||
+        k->dscan == K_F1 || k->dscan == K_F2) {
         st->rep_gap = false;
         st->rep_seq = k ? k->seq : 0;
         st->rep_t0 = frame;

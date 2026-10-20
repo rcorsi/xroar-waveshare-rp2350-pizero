@@ -248,12 +248,12 @@ static void test_enter_on_an_empty_list_does_nothing(void) {
 }
 
 static void test_f_keys_go_straight_to_a_list(void) {
-    // PIZERO-153: F9 programs, F10 cartridges, F11 files, F12 disks;
-    // PIZERO-156: F1 the INFO page.
-    const uint8_t key[5]  = { HK_F9, HK_F10, HK_F11, HK_F12, HK_F1 };
-    const int     list[5] = { OVK_LIST_BIN, OVK_LIST_CART, OVK_LIST_FILES, OVK_LIST_DSK,
-                              OVK_LIST_INFO };
-    for (int i = 0; i < 5; i++) {
+    // PIZERO-153: F9 programs, F10 cartridges, F11 files, F12 disks.
+    // PIZERO-215: F1 no longer opens INFO (it is the CoCo 3's F1); INFO is
+    // reached with Left/Right.
+    const uint8_t key[4]  = { HK_F9, HK_F10, HK_F11, HK_F12 };
+    const int     list[4] = { OVK_LIST_BIN, OVK_LIST_CART, OVK_LIST_FILES, OVK_LIST_DSK };
+    for (int i = 0; i < 4; i++) {
         ovk_init(&s); frame = 1000;
         struct ovk_result r = press(key[i]);             // closed: opens on its list
         TEST_ASSERT_EQUAL_UINT8(OVK_OPEN, r.action);
