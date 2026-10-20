@@ -14,7 +14,7 @@ the card, launched from the **F12** list.
 | Golaxian | `GOLAXIAN.DSK` | autostarts | Needs 512K. Checks the memory and says so ("512K REQUIRED", "128K DETECTED"). |
 | Montezuma's Revenge | `montrev.dsk` | `RUN"MONTREV"` | Needs 512K (this copy). Title screen shows; ENTER gives `?IE ERROR` with a nonsense line number. |
 | Sinistar preview v0.02 | `sinistar.dsk` | `RUN"SINI"` | Needs 512K (its readme says so). Hangs loading `M4TAIL.BNK`. Its first screen is 80 columns: unreadable on the first run, readable since PIZERO-134. |
-| NitrOS-9 Level 2 | `nos9l2.dsk` | `DOS` | Boot fails. The image is for CoCo SDC hardware, not a floppy (PIZERO-236). |
+| NitrOS-9 Level 2 | `nos9l2.dsk` | `DOS` | Boot fails. The image is for CoCo SDC hardware, not a floppy. A floppy built by `scripts/mkos9disk.py --level 2` boots to the shell, and `dir` works (PIZERO-236). |
 
 ## What it shows
 
@@ -42,7 +42,6 @@ Both were read off the disks, not guessed:
 
 ## Still to try
 
-- NitrOS-9 Level 2 from a floppy built for the board (PIZERO-236).
 - Something whose music runs off the GIME timer (feeds PIZERO-170).
 - A 40-column program.
 - Games that need ALT, CTRL, F1 or F2 (PIZERO-215).

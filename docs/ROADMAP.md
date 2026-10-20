@@ -111,8 +111,9 @@ measured outcome in `docs/coco3-feasibility.md`. Done so far:
 - **`PIZERO-214`**: WIDTH 40, palette, the GIME timer and HSCREEN 1 and 2
   checked on the board, and sound at both speeds, done 2026-10-19.
 - **`PIZERO-228`**: seven real titles on the board, done 2026-10-19: 128K
-  games work, 512K games cannot (`docs/coco3-titles.md`). NitrOS-9 Level 2
-  needs a floppy built for the board, **`PIZERO-236`**.
+  games work, 512K games cannot (`docs/coco3-titles.md`).
+- **`PIZERO-236`**: NitrOS-9 Level 2 boots from a floppy that
+  `scripts/mkos9disk.py --level 2` builds, done 2026-10-20.
 
 Next, in order:
 

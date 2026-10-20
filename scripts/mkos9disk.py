@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build a NitrOS-9 Level 1 boot floppy for the CoCo Zero (PIZERO-199).
+"""Build a NitrOS-9 Level 1 or Level 2 boot floppy for the CoCo Zero
+(PIZERO-199, Level 2 PIZERO-236).
 
 The board's disk controller does 35-track, single-sided, 18-sector floppies
 (161,280-byte .DSK files), which no NitrOS-9 release image is. This builds
@@ -15,8 +16,14 @@ SCRIPTS/mb.floppy does:
   * sysgo, Startup, SYS/errmsg, and CMDS less what does not fit or has no
     hardware here (see EXCLUDE).
 
+Level 2 (--level 2, for the CoCo 3 firmware) is built the same way from a
+NitrOS-9 6809 Level 2 image, such as the 3.3.0 `nos9l2.dsk`, following its
+SCRIPTS/mb.floppy: track 34 is rel_80 + boot_1773_6ms + krn; OS9Boot is its
+BOOTLISTS/standard.bl with the 35-track descriptors and windows /w to /w7;
+CMDS keeps grfdrv and shell, which Level 2 loads from there.
+
 Usage:
-    scripts/mkos9disk.py SOURCE.dsk OUT.DSK [--startup FILE] [--name NAME]
+    scripts/mkos9disk.py SOURCE.dsk OUT.DSK [--level 2] [--startup FILE] [--name NAME]
     scripts/mkos9disk.py --list OUT.DSK          # print its tree
 
 Only the host's Python is needed. The source image is opened read-only.
@@ -31,7 +38,6 @@ SECTOR = 256
 TRACKS, SPT = 35, 18
 TOTAL = TRACKS * SPT                     # 630 sectors, 161,280 bytes
 BOOT_TRACK_LSN = 34 * SPT                # track 34, sectors 1-18
-MOD = "NITROS9/6809L1/MODULES"
 
 # Commands left off: too big for a 157 KB disk with room to spare, or for
 # hardware the board does not have (CoCo SDC, DriveWire). They stay on the
@@ -39,12 +45,44 @@ MOD = "NITROS9/6809L1/MODULES"
 EXCLUDE = {"basic09", "runb", "asm", "disasm", "dcheck", "ded", "minted", "sdc", "sdcdriver",
            "boot_sdc", "dw", "tuneport", "megaread", "grfdrv"}
 
-BOOT_TRACK = ["BOOTTRACK/rel", "KERNEL/krn", "KERNEL/krnp2", "SYSMODS/init", "BOOTTRACK/boot_1773_6ms"]
-# BOOTLISTS/standard.bl, 35-track single-sided descriptors.
-BOOT_FILE = ["SYSMODS/ioman", "RBF/rbf.mn", "RBF/rb1773.dr", "RBF/ddd0_35s.dd", "RBF/d0_35s.dd",
-             "RBF/d1_35s.dd", "RBF/d2_35s.dd", "SCF/scf.mn", "SCF/vtio.dr", "SCF/covdg.io",
-             "SCF/term_vdg.dt", "PIPE/pipeman.mn", "PIPE/piper.dr", "PIPE/pipe.dd",
-             "CLOCKS/clock_60hz", "CLOCKS/clock2_soft", "SYSMODS/sysgo_dd"]
+L2_STARTUP = (b"echo * NitrOS-9 Level 2 on the CoCo Zero *\r"
+              b"link shell\r"
+              b"load utilpak1\r")
+
+LEVELS = {
+    1: {
+        "mod": "NITROS9/6809L1/MODULES",
+        "boot_track": ["BOOTTRACK/rel", "KERNEL/krn", "KERNEL/krnp2", "SYSMODS/init",
+                       "BOOTTRACK/boot_1773_6ms"],
+        # BOOTLISTS/standard.bl, 35-track single-sided descriptors.
+        "boot_file": ["SYSMODS/ioman", "RBF/rbf.mn", "RBF/rb1773.dr", "RBF/ddd0_35s.dd",
+                      "RBF/d0_35s.dd", "RBF/d1_35s.dd", "RBF/d2_35s.dd", "SCF/scf.mn",
+                      "SCF/vtio.dr", "SCF/covdg.io", "SCF/term_vdg.dt", "PIPE/pipeman.mn",
+                      "PIPE/piper.dr", "PIPE/pipe.dd", "CLOCKS/clock_60hz", "CLOCKS/clock2_soft",
+                      "SYSMODS/sysgo_dd"],
+        "exclude": EXCLUDE,
+        "name": "NitrOS-9 Level 1 Boot Disk",
+    },
+    2: {
+        "mod": "NITROS9/6809L2/MODULES",
+        # SCRIPTS/mb.floppy: krnp2 and init go in OS9Boot on Level 2.
+        "boot_track": ["BOOTTRACK/rel_80", "BOOTTRACK/boot_1773_6ms", "BOOTTRACK/krn"],
+        # BOOTLISTS/standard.bl, 35-track single-sided descriptors, /w to /w7.
+        "boot_file": ["KERNEL/krnp2", "SYSMODS/ioman", "SYSMODS/init", "RBF/rbf.mn",
+                      "RBF/rb1773.dr", "RBF/ddd0_35s.dd", "RBF/d0_35s.dd", "RBF/d1_35s.dd",
+                      "RBF/d2_35s.dd", "SCF/scf.mn", "SCF/vtio.dr", "SCF/keydrv_cc3.sb",
+                      "SCF/snddrv_cc3.sb", "SCF/joydrv_joy.sb", "SCF/cowin.io",
+                      "SCF/term_win80.dt", "SCF/w.dw", "SCF/w1.dw", "SCF/w2.dw", "SCF/w3.dw",
+                      "SCF/w4.dw", "SCF/w5.dw", "SCF/w6.dw", "SCF/w7.dw", "SCF/vrn.dr",
+                      "SCF/vi.dd", "SCF/ftdd.dd", "PIPE/pipeman.mn", "PIPE/piper.dr",
+                      "PIPE/pipe.dd", "CLOCKS/clock_60hz", "CLOCKS/clock2_soft",
+                      "SYSMODS/sysgo_dd"],
+        # grfdrv stays: Level 2's windows load it from CMDS. b09utils and edit
+        # go too, so the rest fits a 157 KB disk.
+        "exclude": (EXCLUDE - {"grfdrv"}) | {"b09utils", "edit"},
+        "name": "NitrOS-9 Level 2 Boot Disk",
+    },
+}
 
 
 def be(b):
@@ -229,14 +267,16 @@ class FloppyWriter:
         return bytes(self.img)
 
 
-def build(src_path, out_path, startup=None, name="NitrOS-9 Level 1 Boot Disk"):
+def build(src_path, out_path, startup=None, name=None, level=1):
     src = RbfReader(src_path)
+    lv = LEVELS[level]
+    name = name or lv["name"]
 
     def module(rel):
-        return src.file(f"{MOD}/{rel}")[1]
+        return src.file(f"{lv['mod']}/{rel}")[1]
 
-    boot_track = b"".join(module(m) for m in BOOT_TRACK)
-    boot = Node("OS9Boot", b"".join(module(m) for m in BOOT_FILE), att=0x03)
+    boot_track = b"".join(module(m) for m in lv["boot_track"])
+    boot = Node("OS9Boot", b"".join(module(m) for m in lv["boot_file"]), att=0x03)
     root = Node("")
     root.att = 0xBF
     root.children.append(boot)
@@ -245,7 +285,7 @@ def build(src_path, out_path, startup=None, name="NitrOS-9 Level 1 Boot Disk"):
     cmds.att = 0xBF
     cmd_lsn = src.lookup("CMDS")
     for nm in sorted(src.entries(cmd_lsn), key=str.lower):
-        if nm.lower() in EXCLUDE:
+        if nm.lower() in lv["exclude"]:
             continue
         info, data = src.read(src.entries(cmd_lsn)[nm])
         if info["att"] & 0x80:
@@ -260,6 +300,10 @@ def build(src_path, out_path, startup=None, name="NitrOS-9 Level 1 Boot Disk"):
     root.children.append(sys_dir)
 
     info, data = src.file("Startup")
+    if level == 2:
+        # The distribution's startup merges SYS fonts and opens windows this
+        # disk has no room for; a plain one brings up the shell on /term.
+        data = L2_STARTUP
     if startup is not None:
         data = open(startup, "rb").read().replace(b"\r\n", b"\r").replace(b"\n", b"\r")
     root.children.append(Node("startup", data, att=0x1B))
@@ -297,7 +341,8 @@ def main():
     ap.add_argument("source", nargs="?", help="NitrOS-9 6809 Level 1 distribution image")
     ap.add_argument("out", nargs="?", help="the .DSK to write")
     ap.add_argument("--startup", help="a file to use as the disk's startup script")
-    ap.add_argument("--name", default="NitrOS-9 Level 1 Boot Disk")
+    ap.add_argument("--name", help="the disk's name (default: NitrOS-9 Level N Boot Disk)")
+    ap.add_argument("--level", type=int, choices=(1, 2), default=1, help="NitrOS-9 level (2 for the CoCo 3)")
     ap.add_argument("--list", metavar="DSK", help="print a disk's tree and stop")
     a = ap.parse_args()
     if a.list:
@@ -305,7 +350,7 @@ def main():
         return 0
     if not (a.source and a.out):
         ap.error("SOURCE and OUT are needed")
-    build(a.source, a.out, a.startup, a.name)
+    build(a.source, a.out, a.startup, a.name, a.level)
     return 0
 
 

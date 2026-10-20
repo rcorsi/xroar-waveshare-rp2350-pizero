@@ -141,7 +141,6 @@ card at `/coco/roms/coco3.rom` (32 KB).
   per title are in [`docs/coco3-titles.md`](docs/coco3-titles.md).
 - **Not yet:**
   - The ALT, CTRL, F1 and F2 keys aren't mapped (PIZERO-215).
-  - NitrOS-9 Level 2 needs a boot floppy built for the board (PIZERO-236).
 - **Choosing the machine:** how you pick CoCo 3 mode, one firmware or two, is not decided yet
   (PIZERO-135).
 - **Larger USB-C hubs** with several hub chips inside don't work yet. A simple hub does
@@ -165,6 +164,12 @@ files can be written (PIZERO-66). Things that look like firmware faults but are 
   `NITROS9/nos9l1.dsk` on the CoCo SDC image: `/d0`, `/d1`, `/d2` and `/dd`, pipes, and 66 of the
   distribution's commands, with about 52 KB free. Boot it with `DOS`; its startup asks for the date
   and time. Put a game disk in drive 1 and it is `/d1` (PIZERO-199).
+- **Level 2, for the CoCo 3:** `scripts/mkos9disk.py --level 2` builds a NitrOS-9 Level 2 boot
+  floppy the same way from a Level 2 image, such as `NITROS9/nos9l2.dsk` on the CoCo SDC image.
+  It boots in the CoCo 3 firmware to an 80-column shell, with 77 commands and about 11 KB free
+  (PIZERO-236). Give it a name that isn't already on the card: the card ignores case, so
+  `NOS9L2.DSK` would replace `nos9l2.dsk`. The distribution images themselves don't boot on the
+  board: they're made for CoCo SDC hardware.
 - **`dir` into a file or pipe** drops most names, because it lays out columns for a screen it
   cannot measure. `dir -e` lists one file a line and redirects cleanly.
 
