@@ -11,6 +11,10 @@ lines, it types those instead.
 It happens on every boot: switching on, pressing the reset button (marked
 RUN), and pressing ENTER on a disk in the F12 list.
 
+It works on both machines. If the game autorun starts has its own settings
+file saying `machine = coco3` (see SETTINGS.md), the board first restarts as a
+CoCo 3, then autoruns as usual.
+
 ## Turning it off, or skipping it once
 
 - **Tap Space or BREAK (Esc)** while the machine starts, before the typing
@@ -67,12 +71,15 @@ without it. Names are not case-sensitive.
 
 ```
 /coco/
-  roms/          bas12.rom (required), extbas11.rom, disk11.rom
+  roms/          CoCo 2: bas12.rom (required), extbas11.rom
+                 CoCo 3: coco3.rom (required)
+                 both: disk11.rom, for disks
   dsk/           disk images (.dsk)
   bin/           programs (.bin)
   cart/          cartridges (.ccc)
   autorun.txt    optional
-  settings.txt   optional, see SETTINGS.md
+  settings.txt   optional, see SETTINGS.md (machine = coco2 | coco3)
+  log/           written by the board (soak logs, a pending machine switch)
 ```
 
 The ROMs are not included. Supply your own. Files can also go straight in

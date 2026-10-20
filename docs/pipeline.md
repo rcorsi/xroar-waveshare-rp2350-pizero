@@ -56,30 +56,37 @@ Each frame the main loop in `src/main.cpp` calls
 `coco_machine_run_cycles(CYCLES_PER_FRAME)` then `coco_machine_render_frame()` to
 regenerate it.
 
-### 2. Blit to RGB565 (core 0)
+### 2. Blit to the framebuffer (core 0, as a CoCo 2)
 
-`coco_boot_blit_vdg_pizero_src()` (`src/coco_boot.cpp`) converts palette indices to
-a **320×240 RGB565** framebuffer via a 16-entry palette, `coco_machine_palette()`.
-That palette is the writable register file in `coco_machine.cpp` that also sees the
-guest's GIME palette writes to `$FFB0-$FFBF` and holds the `color_*` settings
-(PIZERO-55/85). Key properties:
+Since PIZERO-135 the product is either machine, and both draw into one framebuffer:
+**640×240, one byte a pixel**, a colour number that core 1 looks up in `g_pal565[256]`
+as it encodes the line (step 4). As a CoCo 2, `coco_boot_blit_vdg_pizero8()`
+(`src/coco_boot.cpp`) writes each VDG pixel twice, as index 80 + its palette entry,
+and first copies the 16-entry palette, `coco_machine_palette()`, into
+`g_pal565[80..95]`. That palette is the writable register file in `coco_machine.cpp`
+that also sees the guest's GIME-style palette writes to `$FFB0-$FFBF` and holds the
+`color_*` settings (PIZERO-55/85). Key properties:
 
-- **Native byte order**: `libdvi` consumes it directly, no wire byte-swap (unlike the
-  AMOLED port).
-- The 256×192 image is **centered at (32, 24)**, leaving a static black border. The
-  border is painted once at init and never re-cleared, so only the active region is
-  written each frame.
-- After `libdvi`'s 2× scale-out this appears as **512×384 inside 640×480**.
+- **Four bytes a store:** two packed source pixels become four output bytes through
+  a 256-entry table rebuilt each frame; about 0.9 ms a frame.
+- The 256×192 image is **centered at (64, 24) in bytes**, leaving a static black
+  border. The border is painted once at init and never re-cleared, so only the
+  active region is written each frame.
+- With each line shown twice this appears as **512×384 inside 640×480**.
+
+(Builds without `VIDEO_640` keep the older path: `coco_boot_blit_vdg_pizero_src()`
+into a 320×240 RGB565 framebuffer that `libdvi` pixel-doubles.)
 
 ### 2a. As a CoCo 3 instead (core 0, `machine = coco3`)
 
-The CoCo 3 build (`-DCOCO3`, PIZERO-133) has no VDG buffer, no
+As a CoCo 3 (PIZERO-133) there is no VDG buffer, no
 `coco_machine_render_frame` and no blit: the main loop sets `render` and `blit`
 to zero. The vendored GIME (`lib/xroar_core/src/tcc1014/tcc1014.c`) is the bus
 and draws while the 6809 runs:
 
 - **Drawing:** at each scanline's horizontal sync (`do_hs_fall`), the port
-  renderer (`port_render_scanline`, PIZERO-218) hands over 320 palette indices:
+  renderer (`port_render_scanline`, PIZERO-218) hands over 640 GIME colours
+  (`TCC1014_PORT_FULL`, PIZERO-134):
   - **Active lines:** decoded from VRAM read directly (`port_vram`).
   - **Other lines:** border, or black in vertical sync.
 - **Skipping:** a line whose inputs (VRAM bytes, mode, palette, border) hash
@@ -87,19 +94,19 @@ and draws while the 6809 runs:
   screens cheap.
 - **Decode:** each bitplane graphics mode and resolution has its own loop
   (`PORT_LOOP`, PIZERO-220).
-- **Sink:** `coco3_bus_render_line` (`lib/coco_machine/src/coco3_bus.h`) maps
-  the indices to RGB565 through the GIME's 64-entry palette table. It writes
-  the row into `g_fb`, centring 192 lines at row 24 and 225 at row 7. It has
-  its own per-row hash as well.
+- **Sink:** `coco3_bus_render_line` (`lib/coco_machine/src/coco3_bus.h`)
+  copies the row into `g_fb` as it is (GIME colours are `g_pal565[0..63]`),
+  centring 192 lines at row 24 and 225 at row 7. It has its own per-row hash
+  as well.
 - **Redraw:** anything else that draws into `g_fb` (the overlay) calls
   `coco_machine_video_invalidate`, which forces a full redraw.
 
 The picture is drawn while the beam moves, so it can tear: the HCLS colour
 bands moving down the screen are what a real CoCo 3 shows too (PIZERO-217).
-640-wide modes show whole (PIZERO-134): the CoCo 3 build's framebuffer is
-640x240 one-byte GIME colours, and core 1 looks each up in a 256-entry RGB565
-palette as it encodes the line on the RP2350's SIO hardware TMDS encoder
-(`dvi_static_framebuf_main_pal8`, `tmds_encode_pal8_sio` in `lib/libdvi`).
+640-wide modes show whole (PIZERO-134): core 1 looks each byte up in the
+256-entry RGB565 palette as it encodes the line on the RP2350's SIO hardware
+TMDS encoder (`dvi_static_framebuf_main_pal8`, `tmds_encode_pal8_sio` in
+`lib/libdvi`).
 
 ### 3. Framebuffer hand-off (core 0 → core 1)
 
@@ -117,16 +124,21 @@ env does since PIZERO-131 made `pizero_wavmeas` single-buffered. There core 0 bl
 
 ### 4. TMDS encode + scanout (core 1)
 
-`dvi_static_framebuf_main_16bpp()` (`lib/libdvi/dvi.cpp`) reads the 320×240 buffer
-with `stride = h_active/DVI_SYMBOLS_PER_WORD = 320`. Each line is TMDS-encoded into the
-three data channels by `_dvi_prepare_scanline_16bpp()` (`lib/libdvi/dvi.cpp`). By
-default that is `tmds_encode_16bpp_sio_doubled` (`lib/libdvi/tmds_encode.cpp`), which
-uses the RP2350's hardware TMDS encoder in the SIO block: one pass for all three
-lanes, about 12.6 µs a line. `video_encoder = software` in `settings.txt` switches back
-to libdvi's table encoder, `tmds_encode_data_channel_16bpp` ×3 (B/G/R), about 25.2 µs
-(PIZERO-175). With `DVI_VERTICAL_REPEAT = 2`, each of the
-240 logical lines is output twice → 480 physical lines; combined with pixel doubling
-this scales **320×240 → 640×480**.
+`dvi_static_framebuf_main_pal8()` (`lib/libdvi/dvi.cpp`, PIZERO-134) reads the
+640×240 buffer of one-byte colours a line at a time. `tmds_encode_pal8_sio()`
+(`lib/libdvi/tmds_encode.cpp`) looks each pair of pixels up in the 256-entry RGB565
+palette `g_pal565` (0-63 the GIME's colours, 64-65 the overlay's ink and paper, 80-95
+the CoCo 2's palette) and feeds them to the RP2350's hardware TMDS encoder in the SIO
+block, one pass for all three lanes: 23.7 µs for 640 pixels in PIZERO-175's bench,
+against 63.5 µs a line shown twice. With `DVI_VERTICAL_REPEAT = 2`, each of the 240
+logical lines is output twice → 480 physical lines, so the picture is **640×480**
+with every horizontal pixel its own.
+
+`video_encoder` in `settings.txt` has no effect on this path, which always uses the
+hardware encoder (PIZERO-240). Builds without `VIDEO_640` keep the older worker,
+`dvi_static_framebuf_main_16bpp()`, which pixel-doubles a 320×240 RGB565 buffer with
+`tmds_encode_16bpp_sio_doubled` (about 12.6 µs a line) or, with
+`video_encoder = software`, libdvi's table encoder (about 25.2 µs).
 
 ### 5. Pins / PIO / DMA (core 1)
 
@@ -260,8 +272,8 @@ Symbols rather than line numbers, since the files move.
 | RGB565 blit                   | `src/coco_boot.cpp` : `coco_boot_blit_vdg_pizero_src`                |
 | Palette                       | `lib/coco_machine/src/coco_machine.cpp` : `coco_machine_palette`     |
 | Framebuffer / publish         | `src/main.cpp` : `g_fb` / `g_front` (`g_back` only without `AV_DATA_ISLAND`) |
-| TMDS scanline encode          | `lib/libdvi/dvi.cpp` : `_dvi_prepare_scanline_16bpp`                 |
-| Static-framebuffer worker     | `lib/libdvi/dvi.cpp` : `dvi_static_framebuf_main_16bpp`              |
+| TMDS scanline encode          | `lib/libdvi/tmds_encode.cpp` : `tmds_encode_pal8_sio` (`VIDEO_640`)   |
+| Static-framebuffer worker     | `lib/libdvi/dvi.cpp` : `dvi_static_framebuf_main_pal8` (`VIDEO_640`) |
 | DVI timing struct             | `src/main.cpp` : `dvi_timing_640x480p_57hz_240mhz` (aliased as `DVI_TIMING`). Despite the name it carries every build's timing through `#if` branches, the 60 Hz product included. libdvi's stock `dvi_timing_640x480p_60hz` (`lib/libdvi/dvi_timing.cpp`) is not used. |
 | Pin config / PIO base         | `lib/libdvi/common_dvi_pin_configs.h` : `pico_sock_cfg` / `src/main.cpp` : `pio_set_gpio_base` |
 | Core 1 launch                 | `src/main.cpp` : `core1_main` / `multicore_launch_core1`             |

@@ -32,7 +32,7 @@ than just handing someone a board.
 | microSD card | A name-brand SDHC card, 4 to 32 GB, formatted FAT32. Not every card works: see §2 |
 | USB-C power | Any phone charger or battery bank |
 | Display | Any TV or computer monitor with a digital video input |
-| **CoCo ROMs** | `bas12.rom` is **required**. We ship none; see §6 |
+| **CoCo ROMs** | `bas12.rom` (CoCo 2) or `coco3.rom` (CoCo 3) is **required**. We ship none; see §6 |
 | Games, disk images, programs | Their own |
 
 > **The two USB-C ports look identical and are not interchangeable.** One is for
@@ -102,7 +102,8 @@ estimates rather than quotes. Fill in real numbers when ordering.
    ```
    /coco/
      roms/          <- empty; recipient adds bas12.rom (required),
-                       extbas11.rom, disk11.rom
+                       extbas11.rom, disk11.rom, and coco3.rom
+                       for the CoCo 3
      dsk/           <- empty
      autorun.txt    <- copy from sample-sd/coco/autorun.txt
    firmware.uf2     <- so they can re-flash without a toolchain
@@ -147,7 +148,9 @@ These points account for essentially every question you will be asked.
 > read). That does *not* mean the unit is broken. Use a name-brand microSD
 > card (cheap no-name cards often do not work), format it FAT32, and put `bas12.rom` in
 > `/coco/roms/`; that one is required. `extbas11.rom` and `disk11.rom` are
-> strongly recommended. We do not distribute them; they are still under
+> strongly recommended. The unit is a CoCo 3 too: add `coco3.rom` and set
+> `machine = coco3` in `settings.txt`, or in a CoCo 3 game's own settings file
+> to switch when you launch it. We do not distribute ROMs; they are still under
 > copyright, so dump or source your own.
 >
 > **5. F12 disks, F9 programs, F10 cartridges, F11 files** (`settings.txt`,
@@ -234,7 +237,8 @@ recipients are entitled to the corresponding source. The public repository
 satisfies this; the card in §4 points at it. If the repo is private at the time
 of a handout, put a source tarball on the SD card instead.
 
-**ROMs.** Color BASIC and Disk BASIC are still under copyright. **Ship none.**
+**ROMs.** Color BASIC, Disk BASIC and the CoCo 3's Super Extended Color BASIC are still under
+copyright. **Ship none.**
 Recipients supply their own, exactly as with any emulator.
 
 > **A unit with no ROMs does not start the machine.** It shows a **NO ROM FOUND**

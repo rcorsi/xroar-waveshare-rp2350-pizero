@@ -1,8 +1,8 @@
 # CoCo Zero
 
-**A Tandy Color Computer 2 on a 65 x 30 mm board.** Plug in a TV, a USB-C keyboard
-or gamepad, and a microSD card, and it starts Color BASIC. The picture and the sound both go
-over one video cable, at 60 frames per second.
+**A Tandy Color Computer 2 and Color Computer 3 on a 65 x 30 mm board.** Plug in a TV, a USB-C
+keyboard or gamepad, and a microSD card, and it starts Color BASIC, or Super Extended Color BASIC
+as a CoCo 3. The picture and the sound both go over one video cable, at 60 frames per second.
 
 It is [XRoar](https://www.6809.org.uk/xroar/), the CoCo emulator, running on a
 [Waveshare RP2350-PiZero](https://www.waveshare.com/rp2350-pizero.htm), a microcontroller board the
@@ -15,21 +15,35 @@ size of a Raspberry Pi Zero.
 
 ## What it does
 
-- Runs a CoCo 2 at full speed: Color, Extended and Disk BASIC, games and demos.
-- Honours the CoCo's high-speed POKEs: `POKE 65495,0` and `POKE 65497,0` make programs run up to
-  twice as fast, and unlike a real CoCo 2 the screen stays clean at full speed.
+**Two machines in one firmware.** The board is a CoCo 2 or a 128 KB CoCo 3. A game's own settings
+file can say which it needs, and launching it switches the board to that machine by itself.
+
+**As a CoCo 3:**
+- Super Extended Color BASIC at full speed, at 0.89 MHz and at 1.79 MHz (`POKE 65497,0`), with a
+  steady picture at both.
+- The GIME's modes at full width: 32, 40 and 80-column text and the HSCREEN graphics, with their
+  palettes. (HSCREEN 3 and 4, the 640-wide graphics modes, are drawn the same way but not yet
+  tried on the board.)
+- The CoCo 3's own keys from a USB keyboard: CTRL, ALT, F1 and F2.
+- Both buttons of each joystick on a gamepad.
+- NitrOS-9 Level 2, from a boot disk the included script builds.
+
+**As a CoCo 2:**
+- Color, Extended and Disk BASIC, games and demos, at full speed.
+- The high-speed POKEs: `POKE 65495,0` and `POKE 65497,0` run programs up to twice as fast, and
+  unlike a real CoCo 2 the screen stays clean.
+- A choice of fonts, including true lower case, and the NTSC artifact colours.
+
+**On both:**
 - Picture and sound over one video cable, at 60 frames per second.
-- Adds the three-voice sound chip from the Games Master Cartridge.
-- Lets you pick disks, programs and cartridges from on-screen lists.
-- USB-C keyboard: each key types what is printed on it.
-- USB-C gamepad: works as both joysticks, and can pick and start games.
-- Settings live in text files, for all games or just one.
-- Choice of fonts, including true lower case.
+- The three-voice sound chip from the Games Master Cartridge, built in.
+- On-screen lists to pick disks, programs and cartridges.
+- A USB-C keyboard where each key types what is printed on it, and a USB-C gamepad that works as
+  both joysticks and can pick and start games.
+- Settings in text files, for all games or just one.
 - Print Screen saves a screenshot to the card.
-- Can start a game automatically at power-on.
-- Fits a printable case shaped like a CoCo 2.
-- Also a 128 KB **CoCo 3**, in the same firmware: a setting, or a CoCo 3 game's own settings
-  file, switches machine (experimental; see Status).
+- A game can start by itself at power-on.
+- A printable case shaped like a CoCo 2.
 
 ## What you need
 
@@ -47,13 +61,14 @@ size of a Raspberry Pi Zero.
   - The keyboard and gamepad port runs at USB 1.1 speed (full speed). Ordinary keyboards, wireless
     receivers and most gamepads work. A device that only works at high speed does not.
 - A **microSD card**, formatted FAT32, with the CoCo ROM files on it. You supply the ROMs (see
-  below). Only `bas12.rom` is required.
+  below). The CoCo 2 needs `bas12.rom`; the CoCo 3 needs `coco3.rom`. Disks need `disk11.rom` on
+  either machine.
 - A computer with [PlatformIO](https://platformio.org/install) and a **USB-C cable**, to install the
   firmware.
 - *Optional:* the printable [case](hardware/case/README.md).
 
-> **ROMs are not included.** Color, Extended and Disk BASIC are © Microsoft and Tandy and may not be
-> redistributed. Use dumps from hardware you own.
+> **ROMs are not included.** Color, Extended, Disk and Super Extended Color BASIC are © Microsoft,
+> Tandy and Microware and may not be redistributed. Use dumps from hardware you own.
 
 <p align="center">
   <img src="docs/images/connections.jpg" width="420"
@@ -68,8 +83,9 @@ size of a Raspberry Pi Zero.
    `pio run -t upload`. If the upload can't reset the board, hold the **BOOT** button while you
    plug in the USB-C cable.
 2. **Fill the microSD card.**
-   - Put the ROMs in the folder `/coco/roms/`: `bas12.rom`, and if you have them, `extbas11.rom` and
-     `disk11.rom`.
+   - Put the ROMs in the folder `/coco/roms/`. For the CoCo 2: `bas12.rom`, and if you have them,
+     `extbas11.rom` and `disk11.rom`. For the CoCo 3: `coco3.rom` (32 KB), and `disk11.rom` for
+     disks.
    - Put disks (`.dsk` files) in `/coco/dsk`, programs (`.bin` files) in `/coco/bin`, and cartridges
      (`.ccc` files) in `/coco/cart`.
 3. **Connect everything and switch on.**
@@ -78,13 +94,37 @@ size of a Raspberry Pi Zero.
    - Push the microSD card into its slot.
    - Last, plug USB-C power into the power port.
 
-   The `OK` prompt appears after a few seconds. If the card or a ROM is missing, the screen tells you
-   what to copy, and where.
+   The CoCo 2's `OK` prompt appears after a few seconds. If the card or a ROM is missing, the
+   screen tells you what to copy, and where.
 4. **Play a game.** Press **F12** for disks, **F9** for programs, or **F10** for cartridges. On a
    gamepad, press **Home**. Highlight a game, then press **ENTER** (or **A** on the gamepad).
 
 To start a game automatically when the board boots, see [`AUTORUN.md`](AUTORUN.md). Every setting is
 explained in [`SETTINGS.md`](SETTINGS.md).
+
+## CoCo 2 or CoCo 3
+
+The board starts as the machine `settings.txt` names: `machine = coco2`, the default, or
+`machine = coco3`. Change it on the board with **F11**, `SETTINGS.TXT`, and Ctrl-S: the board
+restarts as the other machine.
+
+The easier way is to mark the CoCo 3 games. In the list, highlight a CoCo 3 game, press **TAB** to
+make its own settings file, add the line `machine = coco3` and save. That file sits next to the
+game, `STARCAST.TXT` beside `STARCAST.DSK`:
+
+```
+# /coco/dsk/STARCAST.TXT
+machine = coco3
+```
+
+From then on, launching that game restarts the board as a CoCo 3, which takes about two seconds,
+and starts it. Launching a game without that line goes back to the machine `settings.txt` names,
+the same way. RUN and power-on always start that machine. Without `coco3.rom` on the card, a page
+says so and the board stays a CoCo 2.
+
+The CoCo 3 is the 128 KB model. Software that needs 512 KB does not run: a program that checks says
+so, and one that does not crashes or hangs, as it would on a real 128 KB CoCo 3. The board has no
+room for more memory. What has been tried, title by title: [`docs/coco3-titles.md`](docs/coco3-titles.md).
 
 ## Controls
 
@@ -100,12 +140,13 @@ explained in [`SETTINGS.md`](SETTINGS.md).
 | Make a new blank, formatted disk: type its name, then Enter | **N** | |
 | Rename the highlighted disk | **R** | |
 | Save a screenshot | **Print Screen** | **M** (GameSir pads) |
-| Change the artifact colors (on, swapped, off), saved for the running game | **F8** | |
+| Change the artifact colors (on, swapped, off), saved for the running game (CoCo 2) | **F8** | |
 
 **In BASIC:** Caps Lock switches upper and lower case, Home is CLEAR, Esc is BREAK, and Backspace
 deletes. The CoCo's keyboard has no way to type `{ } | ~` or a backtick, so those keys do
 nothing. The screen can still show them: `PRINT CHR$(123)` prints `{` with the default 6847t2 font.
-On the CoCo 3, Ctrl, Alt, F1 and F2 are its own CTRL, ALT, F1 and F2 keys.
+On the CoCo 3, Ctrl, Alt, F1 and F2 are its own CTRL, ALT, F1 and F2 keys. On the CoCo 2 they
+do nothing, since it has no such keys.
 
 **In a game, on the gamepad:** the left stick (or D-pad) is the right joystick, the one nearly all
 software reads, and the right stick is the left joystick. A, B and R1 fire the right joystick; X
@@ -120,39 +161,38 @@ memory and USB devices.
 
 ## Status
 
-Everything above works on hardware. Known gaps:
+Everything above works on hardware.
+
+**The CoCo 3**, checked on the board: Super Extended Color BASIC at 60 fps at 0.89 and 1.79 MHz,
+with sound; WIDTH 40 and WIDTH 80 text; the palette, the GIME timer and the HSCREEN modes
+(PIZERO-214, 134); CTRL, ALT, F1, F2 and the second fire buttons (PIZERO-215); Space Raid,
+Starcast and Galactus play (PIZERO-228); NitrOS-9 Level 2 boots to its shell (PIZERO-236).
+Its limits:
+
+- **128 KB only.** 512 KB software does not run, and cannot on this board (see above).
+- **Less free memory.** A CoCo 3 leaves about 17 KB free, so a bank-switched cartridge (32 KB and
+  up) does not fit while the board is a CoCo 3.
+- **Slower screenshots.** A screenshot is 640x480 and pauses the machine for about a second
+  (PIZERO-237).
+
+**Known gaps on both machines:**
 
 - **Plugging in while it is on:** a keyboard or gamepad plugged straight into the board must be
   there when you switch on. Through a USB-C hub, one plugged in later can work (PIZERO-51).
-- **Disk writes are new** (PIZERO-66): `SAVE`, `SAVEM`, `KILL` and the rest write straight into the
-  `.DSK` on the card. Press **W** in the disk list to lock a drive read-only. A `.DSK` whose file is
-  read-only on the card is always locked.
-- **High-speed POKEs are new** (PIZERO-132): the CoCo 2 now runs faster when a program asks.
-  `POKE 65495,0` (address-dependent) and `POKE 65497,0` (full, 2×) work, `POKE 65494,0` and
-  `POKE 65496,0` go back to normal, and a reset always does. Details and measurements in
-  [`docs/cpu-speed.md`](docs/cpu-speed.md).
-
-**CoCo 3 (experimental).** The same firmware can be a 128 KB CoCo 3. It needs the CoCo 3 ROM on
-the card at `/coco/roms/coco3.rom` (32 KB).
-- **Choosing the machine:** `machine = coco3` in `settings.txt` starts the board as a CoCo 3.
-  Better, put `machine = coco3` in a CoCo 3 game's own settings file (`STARCAST.TXT` next to
-  `STARCAST.DSK`): launching it from the lists restarts the board as a CoCo 3, about two seconds,
-  and starts the game. Launching a CoCo 2 game switches back the same way. RUN and power-on start
-  the machine `settings.txt` names. Without `coco3.rom` a page says so and the board stays a
-  CoCo 2.
-- **What runs:** Super Extended Color BASIC boots to OK and runs at 60 fps at both 0.89 and
-  1.79 MHz, with sound. WIDTH 40 and WIDTH 80 text, the palette, the GIME timer and HSCREEN
-  graphics all checked on the board.
-- **Games:** 128K games run: Space Raid, Starcast and Galactus all work. 512K games don't, and
-  can't on this board; a game that checks says so, one that doesn't crashes or hangs. Results
-  per title are in [`docs/coco3-titles.md`](docs/coco3-titles.md).
 - **Larger USB-C hubs** with several hub chips inside don't work yet. A simple hub does
   (PIZERO-159).
 - **Gamepads:** tested with a GameSir Tegenaria Lite in its Android and automatic modes. Its
   Switch mode sends nothing (PIZERO-157).
+- **Disk writes are new** (PIZERO-66): `SAVE`, `SAVEM`, `KILL` and the rest write straight into the
+  `.DSK` on the card. Press **W** in the disk list to lock a drive read-only. A `.DSK` whose file is
+  read-only on the card is always locked.
+- **The CoCo 2's high-speed POKEs** (PIZERO-132): `POKE 65495,0` (address-dependent) and
+  `POKE 65497,0` (full, 2×) work, `POKE 65494,0` and `POKE 65496,0` go back to normal, and a reset
+  always does. Details and measurements in [`docs/cpu-speed.md`](docs/cpu-speed.md).
 
-**NitrOS-9 (OS-9 Level 1) notes.** A NitrOS-9 boot disk boots with `DOS` (PIZERO-191) and its
-files can be written (PIZERO-66). Things that look like firmware faults but are not:
+**NitrOS-9 notes.** Level 1 runs on the CoCo 2, Level 2 on the CoCo 3. A NitrOS-9 boot disk boots
+with `DOS` (PIZERO-191) and its files can be written (PIZERO-66). Things that look like firmware
+faults but are not:
 
 - **Case:** OS-9's console driver starts in upper case and toggles case on CTRL-0, where CTRL is the
   CoCo's CLEAR key, so press **Home+0** on the USB keyboard. Shift+letter gives the other case
@@ -169,8 +209,9 @@ files can be written (PIZERO-66). Things that look like firmware faults but are 
   and time. Put a game disk in drive 1 and it is `/d1` (PIZERO-199).
 - **Level 2, for the CoCo 3:** `scripts/mkos9disk.py --level 2` builds a NitrOS-9 Level 2 boot
   floppy the same way from a Level 2 image, such as `NITROS9/nos9l2.dsk` on the CoCo SDC image.
-  It boots in the CoCo 3 firmware to an 80-column shell, with 77 commands and about 11 KB free
-  (PIZERO-236). Give it a name that isn't already on the card: the card ignores case, so
+  It boots on the CoCo 3 to an 80-column shell, with 77 commands and about 11 KB free
+  (PIZERO-236). Give its disk a settings file with `machine = coco3` and it switches the board by
+  itself. Give it a name that isn't already on the card: the card ignores case, so
   `NOS9L2.DSK` would replace `nos9l2.dsk`. The distribution images themselves don't boot on the
   board: they're made for CoCo SDC hardware.
 - **`dir` into a file or pipe** drops most names, because it lays out columns for a screen it
@@ -209,6 +250,7 @@ Open work is in `issues.jsonl` (use `/issues`), sequenced in [`docs/ROADMAP.md`]
 | 6 | Sound over the video cable (CoCo 6-bit DAC + 1-bit sound, and the SN76489) | PIZERO-18, 26–35, 38/39, 143 | ✅ done: streaming per-active-line delivery (warble fixed) |
 | 7 | Clean audio + stability | PIZERO-33 (watchdog), PIZERO-35/38 (delivery re-arch) | ✅ done |
 | 8 | True in-spec 640×480p60 + audio + USB at 252 MHz | PIZERO-44/45 | ✅ done: now the default build |
+| 9 | A 128 KB CoCo 3 at full speed, 640 wide, in the same firmware | PIZERO-129..135, 213..236 | ✅ done |
 
 </details>
 
@@ -268,13 +310,16 @@ including how audio rides inside the TMDS stream as data islands), see
 
 ### Display geometry
 
-A literal 640×480 RGB565 framebuffer would be ~614 KB and does not fit in 520 KB SRAM alongside the
-64 KB of CoCo RAM and ROM images. Instead the framebuffer is **320×240 RGB565 (~154 KB)** and `libdvi`
-scans it out **pixel- and line-doubled to 640×480p 60 Hz** in hardware (`DVI_VERTICAL_REPEAT = 2`).
+A literal 640×480 RGB565 framebuffer would be ~614 KB and does not fit in 520 KB SRAM beside the
+CoCo's RAM. Instead the framebuffer is **640×240 at one byte a pixel (153,600 bytes)**: each byte
+is a colour number, which core 1 looks up in a 256-entry palette as it encodes each line on the
+RP2350's hardware TMDS encoder, and `libdvi` shows each line twice, for **640×480p 60 Hz**
+(`DVI_VERTICAL_REPEAT = 2`; PIZERO-134).
 
-The CoCo's native 256×192 is centered inside the 320×240 buffer (32 px left/right, 24 px top/bottom
-border). After the 2× hardware scale-out it appears on the monitor as **512×384 with blank borders**,
-which is the "2× resolution" target. The blitter writes 320×240 in landscape with no rotation.
+- **As a CoCo 3**, the GIME's 640 pixels a line land one for one, so the 640-wide modes and
+  80-column text show whole, and a 320-wide mode is each pixel twice.
+- **As a CoCo 2**, the VDG's 256×192 is drawn each pixel twice, centred with a border, and appears
+  on the monitor as **512×384**.
 
 ## System-clock reconciliation (video + USB host): resolved
 
@@ -293,8 +338,8 @@ timing is kept only as a fallback env, without the CoCo 3-style palette and time
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  core 0  emulation + VDG render + blit + USB + SD         │
-│  core 1  DVI scanout (libdvi) + audio encode              │
+│  core 0  emulation + VDG or GIME render + USB + SD        │
+│  core 1  DVI scanout (libdvi, palette) + audio encode     │
 ├──────────────────────────────────────────────────────────┤
 │  lib/coco_machine   CoCo bus glue + minimal FDC  (reused) │
 │  lib/xroar_core     vendored XRoar core          (reused) │
@@ -327,13 +372,14 @@ audio, USB host). The off-spec 52 Hz `pizero_stream` is kept as the fallback for
 displays that reject 60 Hz. Don't enable flags via the `PLATFORMIO_BUILD_FLAGS` env var: it links
 stale objects (see BUILD.md §4b).
 
-A microSD card is required, with the CoCo ROMs at **`/coco/roms/bas12.rom`** (and optionally
-`extbas11.rom` and the `disk11.rom` cartridge beside it), plus optional disks, programs,
-cartridges, `settings.txt` and `autorun.txt` (see [`AUTORUN.md`](AUTORUN.md)).
+A microSD card is required, with the CoCo ROMs in **`/coco/roms/`**: `bas12.rom` for the CoCo 2
+(and optionally `extbas11.rom`), `coco3.rom` for the CoCo 3, and the `disk11.rom` cartridge for
+disks on either, plus optional disks, programs, cartridges, `settings.txt` and `autorun.txt` (see
+[`AUTORUN.md`](AUTORUN.md)).
 
 ## Performance
 
-The headline result: **Color BASIC runs at a locked 60 fps**, full real-time, on a 252 MHz system
+The headline result: **both machines run at a locked 60 fps**, full real-time, on a 252 MHz system
 clock driving standard 640×480p60, with about a fifth of the core-0 frame budget still free even
 with USB-host servicing (keyboard and gamepad) running on core 0.
 
@@ -344,7 +390,7 @@ telemetry of the default build at the BASIC prompt, 2026-10-13):
 |---|---|---|
 | CoCo emulation | ~6.2 ms | ~14,900 6809 cycles/frame at the emulated ~0.895 MHz; was ~11 ms before the faster core (PIZERO-131) |
 | `render_frame` (alpha/text) | ~0.5 ms | precomputed glyph-row → packed-word LUT |
-| Blit and the rest of the loop | ~2.4 ms | 320×240 RGB565 blit, USB host, audio |
+| Blit and the rest of the loop | ~2.4 ms | the blit into the 640-wide framebuffer (~0.9 ms), USB host, audio |
 | **Total** | **~9 ms** | at least 7.6 ms (about 45%) to spare in the tightest frame |
 
 As a CoCo 3 (`machine = coco3`) it runs about twice the cycles at 1.79 MHz and draws each scanline
@@ -362,10 +408,10 @@ How we got from the first boot (54 fps) to a locked 60 fps:
   (507,340 / 524,288 bytes) in the double-buffered envs `pizero` and `pizero_60hz`, since retired
   (PIZERO-150). The default
   `pizero_stream_60` **single**-buffers instead (the audio data islands need the framebuffer's
-  ~150 KB) and sits at **80.6%** of RAM (422,320 bytes), leaving ~102 KB free. Measured 2026-10-15;
-  about 13 KB of the growth since September is the faster core's RAM-resident run loop (PIZERO-131, PIZERO-211),
-  2 KB is honouring the high-speed POKEs (PIZERO-132), and about 1 KB is the HDMI audio
-  channel status table and the DC blocker (PIZERO-223).
+  ~150 KB) and sits at **81.2%** of RAM, both machines included (PIZERO-135, 2026-10-20). The
+  CoCo 2's 24 KB render buffer and the CoCo 3's second 64 KB come from the heap, so only the
+  machine running takes its share: free heap with the machine running is about 59 KB as a CoCo 2
+  and 17 KB as a CoCo 3.
 
 Performance instrumentation, clock, and vreg tuning landed in `PIZERO-15`; the serial monitor prints
 per-second `[run]` fps/cpu/blit stats. For comparison, the AMOLED port manages ~15 fps (~36%

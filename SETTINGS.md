@@ -94,28 +94,31 @@ delete the rest.
 
 ## Settings
 
+Most settings work the same on both machines. Those marked **CoCo 2** only change the CoCo 2:
+the CoCo 3 has its own GIME colours, font and palette, set by its programs.
+
 | Setting | Values | Default | What it does |
 |---|---|---|---|
 | `sn76489` | `on` / `off` | `on` | The SN76489 sound chip at `$FF41`, without a Games Master Cartridge. `off` gives `$FF41` back to the disk controller. With a GMC plugged in, the chip is there either way. |
 | `volume` | `0`-`15` | `10` | Overall sound level. `0` is silent; `15` is half as loud again as the default. Each number is louder than it used to be: three times on 2026-10-14 (PIZERO-223) and twice again on 2026-10-16 (PIZERO-230), six times in all, so a `settings.txt` written before then plays louder at the same number. Above `10`, music that drives the CoCo's sound hard may clip (PIZERO-231). |
 | `audio_lowpass` | `1000`-`20000` / `on` / `off` | `8000` | Softens the sound: a filter that takes off what is above this many hertz, the way the TV did on the real machine. It mostly removes the harsh buzz of the CoCo's sound steps. Lower is mellower, higher is brighter; `off` gives the raw sound, and `on` means `8000`. Try a game's own settings file for one that sounds muffled. |
-| `artifact_colors` | `on` / `off` / `swapped` | `on` | Color in PMODE 4 graphics, from the NTSC artifact effect. `off` shows plain black and white; `swapped` exchanges the blue and orange, for games drawn with the other phase. **F8** steps through on, swapped and off while a program runs, and saves the choice in that game's own settings file (or in `settings.txt` when nothing was launched). |
-| `gime_palette` | `on` / `off` | `on` | The CoCo 3-style palette registers at `$FFB0`-`$FFBF`. `off` removes them and restores the default palette. Only in the default 60 Hz build (`pizero_stream_60`); the `pizero_stream` fallback has no palette registers, so the setting does nothing there. |
-| `gime_timer` | `on` / `off` | `on` | The CoCo 3-style timer and interrupts at `$FF90`-`$FF95`. `off` removes them and stops the timer. Like `gime_palette`, only in the default 60 Hz build. |
+| `artifact_colors` | `on` / `off` / `swapped` | `on` | **CoCo 2.** Color in PMODE 4 graphics, from the NTSC artifact effect. `off` shows plain black and white; `swapped` exchanges the blue and orange, for games drawn with the other phase. **F8** steps through on, swapped and off while a program runs, and saves the choice in that game's own settings file (or in `settings.txt` when nothing was launched). |
+| `gime_palette` | `on` / `off` | `on` | **CoCo 2.** The CoCo 3-style palette registers at `$FFB0`-`$FFBF`. `off` removes them and restores the default palette. Only in the default 60 Hz build (`pizero_stream_60`); the `pizero_stream` fallback has no palette registers, so the setting does nothing there. |
+| `gime_timer` | `on` / `off` | `on` | **CoCo 2.** The CoCo 3-style timer and interrupts at `$FF90`-`$FF95`. `off` removes them and stops the timer. Like `gime_palette`, only in the default 60 Hz build. |
 | `autorun` | `on` / `off` | `on` | Run drive 0's first program (or `autorun.txt`) when the machine boots. Tap Space to skip it once. `off` always stops at the BASIC prompt. See AUTORUN.md. |
 | `reset_button` | `basic` / `autorun` | `basic` | What the reset button (marked RUN on the board) does. `basic` restarts to the BASIC prompt, skipping autorun. `autorun` restarts and autoruns, even with `autorun = off`. |
 | `serial_keyboard` | `on` / `off` | `on` | Whether characters a computer sends over the serial link (the USB-C power port) are typed into the CoCo. |
 | `joystick_swap` | `on` / `off` | `off` | Which USB-C gamepad stick is which CoCo joystick. `off`: the pad's left stick (and D-pad) is the right joystick, `JOYSTK(0)` and `JOYSTK(1)`, the one most games read, and the right stick is the left joystick. `on` swaps them, fire buttons included: the right stick steers `JOYSTK(0)`/`(1)` and the left-hand buttons (L1, square) fire it. Handy in a game's own settings file. |
-| `font` | `classic` / `6847t1` / `6847t2` | `6847t2` | The text font. `classic` is the original CoCo 1 and 2 chip: lower case shows as inverse capitals, `^` as an up arrow and `_` as a left arrow. `6847t1` is the later CoCo 2B chip: the same, until a program turns on true lower case with `POKE 65314,16`, which also shows `{ \| } ~` (BASIC switches it off again at the prompt and on `PRINT`; see `lowercase`). `6847t2` is ours: the 6847T1 with a real caret for `^` and a real underscore for `_`. Inverse text in programs looks the same in all three. |
-| `lowercase` | `on` / `off` | `on` | With the `6847t2` font, shows true lower case and `{ \| } ~` all the time. Color BASIC keeps switching the 6847T1's lower case off (at the prompt and on every `PRINT`), so `POKE 65314,16` alone rarely lasts; this holds it on, and Caps Lock types real lower case at the prompt. The cost: programs that draw inverse text show it as lower case instead; put `lowercase = off` in such a game's own settings file. No effect with the other fonts. |
+| `font` | `classic` / `6847t1` / `6847t2` | `6847t2` | **CoCo 2.** The text font. `classic` is the original CoCo 1 and 2 chip: lower case shows as inverse capitals, `^` as an up arrow and `_` as a left arrow. `6847t1` is the later CoCo 2B chip: the same, until a program turns on true lower case with `POKE 65314,16`, which also shows `{ \| } ~` (BASIC switches it off again at the prompt and on `PRINT`; see `lowercase`). `6847t2` is ours: the 6847T1 with a real caret for `^` and a real underscore for `_`. Inverse text in programs looks the same in all three. |
+| `lowercase` | `on` / `off` | `on` | **CoCo 2.** With the `6847t2` font, shows true lower case and `{ \| } ~` all the time. Color BASIC keeps switching the 6847T1's lower case off (at the prompt and on every `PRINT`), so `POKE 65314,16` alone rarely lasts; this holds it on, and Caps Lock types real lower case at the prompt. The cost: programs that draw inverse text show it as lower case instead; put `lowercase = off` in such a game's own settings file. No effect with the other fonts. |
 | `key_repeat` | `on` / `off` | `on` | Auto-repeat for a key held on the USB-C keyboard, which Color BASIC does not do itself. The newest key held repeats; BREAK never does. Games that read held keys directly may see a key flicker; put `key_repeat = off` in such a game's own settings file. |
 | `soak_log` | `on` / `off` | `off` | Writes the board's once-a-second telemetry to `/coco/log/soak-NNN.txt` once a minute, timestamped, so a soak test runs from a power supply with no computer attached. One file per power-on. Read it with `scripts/soak.py analyse`. See docs/BUILD.md. |
 | `key_repeat_delay` | `100`-`2000` | `500` | Milliseconds a key is held before it starts repeating. |
 | `key_repeat_rate` | `1`-`30` | `10` | Repeats a second. Above 12 it is held to 12, so BASIC sees every press. |
-| `video_encoder` | `hardware` / `software` | `hardware` | How the picture is encoded for the display. `hardware` uses the encoder built into the RP2350 chip, which takes half the time. `software` is the older method, kept in case a display shows a problem with `hardware`. The picture should look the same either way. The INFO page (F12, then Left) shows which one is in use. |
+| `video_encoder` | `hardware` / `software` | `hardware` | How the picture is encoded for the display. `hardware` uses the encoder built into the RP2350 chip, which takes half the time. `software` is the older method, kept in case a display shows a problem with `hardware`. The picture should look the same either way. The INFO page (F12, then Left) shows which one is in use. **No effect at present:** since the 640-wide picture (PIZERO-134, 135) both machines always use the hardware encoder (PIZERO-240). |
 | `machine` | `coco2` / `coco3` | `coco2` | Which CoCo the board is: a Tandy Color Computer 2, or a 128 KB Color Computer 3 (needs `coco3.rom` on the card). In `settings.txt` it picks the machine at power-on and after RUN; saving a change restarts the board as the other machine, at the BASIC prompt. In a game's own settings file it switches when that game is launched: the board restarts, about two seconds, and starts the game. Launching a game without one goes back to `settings.txt`'s machine. Without `coco3.rom` a page says so and the board stays a CoCo 2. |
 | `dpad`, `pad_...` | see below | | What the gamepad's D-pad and each button do. See [Gamepad buttons](#gamepad-buttons). |
-| `color_NAME` | `#RRGGBB` | the 6847's | Overrides one palette color. See below. |
+| `color_NAME` | `#RRGGBB` | the 6847's | **CoCo 2.** Overrides one palette color. See below. |
 
 Names and values are not case-sensitive, so `VOLUME = 12` works too. Where a
 setting takes `on` / `off`, `yes` / `no` and `1` / `0` work as well. A `#`
@@ -178,6 +181,7 @@ with it.
 
 ## Colors
 
+These are the CoCo 2's: the CoCo 3's colours come from its GIME palette, which its programs set.
 The machine starts with the 6847's own colors. Any of them can be replaced
 with a `color_` line giving the new color as `#RRGGBB`:
 
