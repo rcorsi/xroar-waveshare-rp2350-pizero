@@ -234,6 +234,7 @@ emulation, so a different place from PIZERO-98's (`PIZERO-203`).
 
 How USB input got here, and the lessons along the way: [`docs/usb-retrospective.md`](docs/usb-retrospective.md).
 The two days before Tandy Assembly, and their lessons: [`docs/show-prep-retrospective.md`](docs/show-prep-retrospective.md).
+How the CoCo 3 got here, and its lessons: [`docs/coco3-retrospective.md`](docs/coco3-retrospective.md).
 Open work is in `issues.jsonl` (use `/issues`), sequenced in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 <details>
