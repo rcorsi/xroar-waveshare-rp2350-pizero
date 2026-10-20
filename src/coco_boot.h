@@ -148,6 +148,9 @@ void coco_boot_blit_vdg_1to1(uint16_t *small_fb);
 // 320x240 framebuffer for libdvi (2x scaled to 640x480). See coco_boot.cpp.
 void coco_boot_blit_vdg_pizero(uint16_t *fb);
 void coco_boot_blit_vdg_pizero_src(const uint8_t *src, uint16_t *fb);
+// PIZERO-135: the same into a 640-wide framebuffer of palette indices, each
+// pixel twice; sets pal565[base..base + 15] to the machine's palette.
+void coco_boot_blit_vdg_pizero8(uint8_t *fb, uint16_t *pal565, int base);
 
 /* PIZERO-92: a 32x16 text card in the machine's own font and palette, for
  * diagnostics that must be readable on a TV with no serial console. Costs 512

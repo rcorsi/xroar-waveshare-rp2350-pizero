@@ -236,6 +236,7 @@ static const struct dvi_timing dvi_timing_640x480p_57hz_240mhz = {
 #endif
 #define FB640_W 640
 #define PAL_CARD 64                    // g_pal565[64..]: the card's ink and paper
+#define PAL_VDG  80                    // PIZERO-135: g_pal565[80..95]: a CoCo 2's palette
 static uint8_t g_fb[FB640_W * FRAME_HEIGHT] __attribute__((aligned(4)));
 static const uint8_t * volatile g_front = g_fb;
 static uint16_t g_pal565[256];
@@ -675,7 +676,15 @@ static void hid_keyboard_apply(const uint8_t *report) {
 
 // ---- ROM/boot (same flow as the AMOLED port) -----------------------------
 #ifdef COCO3
-static uint8_t g_coco_rom[32768];          // PIZERO-133: coco3.rom
+// PIZERO-135: a build with the CoCo 3 in it can be either machine; the
+// machine setting picks one at boot, and switching restarts the board.
+static bool g_coco3_mode = false;
+#define IS_COCO3() g_coco3_mode
+#else
+#define IS_COCO3() false
+#endif
+#ifdef COCO3
+static uint8_t g_coco_rom[32768];          // PIZERO-133: coco3.rom (a CoCo 2 uses the first 16 KB)
 #else
 static uint8_t g_coco_rom[16384];
 #endif
@@ -1911,8 +1920,16 @@ void setup() {
     }
     coco_boot_clock_init();                    // PIZERO-201: before anything writes a file
 #ifdef COCO3
-    // PIZERO-133: the CoCo 3 build runs Super Extended Color BASIC only.
-    if (!coco_boot_load_coco3_rom(g_coco_rom)) {
+    // PIZERO-135: which machine, from settings.txt, before its ROMs load.
+    // The full settings are read again once the machine exists.
+    {
+        static struct coco_settings pre;
+        coco_boot_load_settings(&pre);
+        g_coco3_mode = pre.coco3;
+    }
+    // PIZERO-133: a CoCo 3 runs Super Extended Color BASIC only. Without a
+    // good coco3.rom the page says so, and the board carries on as a CoCo 2.
+    if (g_coco3_mode && !coco_boot_load_coco3_rom(g_coco_rom)) {
         const struct coco_rom_status *rs = coco_boot_rom_status();
         static char detail[96];
         if (rs->c3_found) {
@@ -1923,10 +1940,12 @@ void setup() {
         } else {
             boot_page(MSG_NOROM_TITLE, MSG_NOROM3_BODY, MSG_NOROM_DETAIL);
         }
-        return;
+        boot_wait(6000);                       // a key skips it (PIZERO-152)
+        g_coco3_mode = false;
     }
-#else
-    if (!coco_boot_load_rom_from_sd(g_coco_rom)) {
+    Serial.printf("[boot] machine: %s\r\n", g_coco3_mode ? "CoCo 3" : "CoCo 2");
+#endif
+    if (!IS_COCO3() && !coco_boot_load_rom_from_sd(g_coco_rom)) {
         Serial.print("ROM load FAILED (need /coco/roms/bas12.rom [+extbas11.rom])\r\n");
         // A present-but-wrong-size ROM is NOT the same problem as a missing
         // one, and saying "NO ROM FOUND" over a file sitting right there sends
@@ -1944,9 +1963,8 @@ void setup() {
         }
         return;
     }
-#endif
     Serial.printf("[mem] free heap %d bytes before the machine\r\n", rp2040.getFreeHeap());
-    if (!coco_machine_init(g_coco_rom, sizeof(g_coco_rom))) {
+    if (!coco_machine_init(g_coco_rom, IS_COCO3() ? 32768 : 16384)) {
         Serial.print("coco_machine_init failed\r\n");
         // Deliberately different wording from the missing-ROM case: this one
         // is a real fault, and confusing the two would send someone hunting
@@ -1954,11 +1972,11 @@ void setup() {
         boot_page(MSG_INIT_TITLE, MSG_INIT_BODY, MSG_INIT_DETAIL);
         return;
     }
-#ifdef COCO3
-    // PIZERO-133: the GIME draws straight into the one framebuffer.
-    coco_machine_set_framebuffer(g_fb);
-    Serial.printf("[mem] free heap %d bytes with the CoCo 3's 128 KB\r\n", rp2040.getFreeHeap());
-#endif
+    if (IS_COCO3()) {
+        // PIZERO-133: the GIME draws straight into the one framebuffer.
+        coco_machine_set_framebuffer(g_fb);
+        Serial.printf("[mem] free heap %d bytes with the CoCo 3's 128 KB\r\n", rp2040.getFreeHeap());
+    }
 
     // PIZERO-145: settings from the card, now that the machine exists to
     // take them and before AUTORUN, which reset_button governs.
@@ -1977,15 +1995,13 @@ void setup() {
     // Extended and Disk BASIC. Someone who notices DISK commands failing has
     // no way to connect that to a file they never copied, so say it once, on
     // the screen, before handing over to the machine.
-#ifndef COCO3                         // PIZERO-133: coco3.rom is the whole BASIC
-    {
+    if (!IS_COCO3()) {                   // PIZERO-133: coco3.rom is the whole BASIC
         const struct coco_rom_status *rs = coco_boot_rom_status();
         if (rs->ecb_bytes != 8192) {
             boot_page(MSG_CBONLY_TITLE, MSG_CBONLY_BODY, MSG_CBONLY_DETAIL);
             boot_wait(4000);      // long enough to read; a key skips it (PIZERO-152)
         }
     }
-#endif
 
     // PIZERO-81a: the disk catalogue the F12 overlay lists, dumped once so it
     // can be checked over serial before anything is drawn.
@@ -2242,15 +2258,17 @@ void loop() {
     wd_post_frame(coco_machine_cpu_pc(), g_usb_devices);   // PIZERO-227
     coco_boot_disk_tick();                       // PIZERO-66: sync an idle dirty drive
     b = micros();
-#ifdef COCO3
+    if (IS_COCO3()) {
     // PIZERO-133: the GIME drew each scanline into g_fb as it went.
     c = d = b;
-#else
+    } else {
     wd_phase(WP_RENDER);
     coco_machine_render_frame();                  // regenerate VDG buffer (SUPPRESS_RENDER_SCANLINE)
     c = micros();
     wd_phase(WP_BLIT);
-#ifdef FB_SINGLE
+#ifdef VIDEO_640
+    coco_boot_blit_vdg_pizero8(g_fb, g_pal565, PAL_VDG);   // PIZERO-135: each pixel twice
+#elif defined(FB_SINGLE)
     coco_boot_blit_vdg_pizero(g_fb);              // single buffer; g_front already points at it
 #else
     coco_boot_blit_vdg_pizero(g_fb[g_back]);      // render into the back buffer
@@ -2258,7 +2276,7 @@ void loop() {
     g_back ^= 1;
 #endif
     d = micros();
-#endif
+    }
     }
     if (g_shot_request) {
         // PIZERO-165: save what is on the screen now. The machine and its

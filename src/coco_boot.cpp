@@ -1177,6 +1177,26 @@ extern "C" void HOT_FUNC(coco_boot_blit_vdg_pizero_src)(const uint8_t *src, uint
     }
 }
 
+// PIZERO-135: a CoCo 2 on the 640-wide framebuffer. The palette (writable,
+// PIZERO-55) is copied into the scanout's slots each frame, and each pixel's
+// index is written twice: the same picture as the RGB565 blit.
+extern "C" void HOT_FUNC(coco_boot_blit_vdg_pizero8)(uint8_t *fb, uint16_t *pal565, int base) {
+    const uint16_t *pal = coco_machine_palette();
+    for (int i = 0; i < 16; i++) pal565[base + i] = pal[i];
+    const uint8_t *src = coco_machine_get_vdg_buffer();
+    // Two packed source pixels make four output bytes, one 32-bit store.
+    uint32_t quad[256];
+    for (int b = 0; b < 256; b++) {
+        uint32_t lo = (uint32_t)(base + (b & 0x0F)), hi = (uint32_t)(base + (b >> 4));
+        quad[b] = lo | lo << 8 | hi << 16 | hi << 24;
+    }
+    for (int cy = 0; cy < COCO_VDG_H; cy++) {
+        const uint8_t *srow = &src[cy * (COCO_VDG_W / 2)];
+        uint32_t *frow = (uint32_t *)&fb[(PIZERO_Y0 + cy) * (2 * PIZERO_FB_W) + 2 * PIZERO_X0];
+        for (int i = 0; i < COCO_VDG_W / 2; i++) frow[i] = quad[srow[i]];
+    }
+}
+
 // ---------------------------------------------------------------------------
 // PIZERO-92: a 32x16 text card, drawn in the machine's own 8x12 font and
 // palette so a diagnostic looks like it came from the CoCo rather than from

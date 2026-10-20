@@ -120,14 +120,16 @@ struct CocoMachine {
     // time (8 packed pixels per store), which was already assumed before
     // PIZERO-119 and is now relied on by three paths. Make it explicit.
 #ifdef COCO3
-    // PIZERO-133: the CoCo 3 build draws straight into the framebuffer, and
-    // needs these 24 KB for its ROM and the second 64 KB of RAM.
-    alignas(4) uint8_t vdg_buffer[4];
+    // PIZERO-133: a CoCo 3 draws straight into the framebuffer, and needs
+    // these 24 KB for its second 64 KB of RAM. PIZERO-135: a build that can
+    // be either machine takes them from the heap only as a CoCo 2.
+    uint8_t *vdg_buffer;
 #else
     alignas(4) uint8_t vdg_buffer[COCO_VDG_H * (COCO_VDG_W / 2)];
 #endif
 };
 static_assert((COCO_VDG_W & 1) == 0, "COCO_VDG_W must be even for nibble packing");
+#define COCO_VDG_BUF_BYTES (COCO_VDG_H * (COCO_VDG_W / 2))
 
 static CocoMachine g_m;
 
@@ -1456,7 +1458,11 @@ extern "C" _Bool coco_machine_init(const uint8_t *rom, size_t rom_len) {
     g_m.ram = (uint8_t *)rp_mem_malloc(64 * 1024);
     if (!g_m.ram) return 0;
     memset(g_m.ram, 0, 64 * 1024);
-    memset(g_m.vdg_buffer, 0, sizeof(g_m.vdg_buffer));
+#ifdef COCO3
+    g_m.vdg_buffer = (uint8_t *)malloc(COCO_VDG_BUF_BYTES);   // malloc is 8-aligned
+    if (!g_m.vdg_buffer) return 0;
+#endif
+    memset(g_m.vdg_buffer, 0, COCO_VDG_BUF_BYTES);
     fastbus_sync();
 
     // Event list MUST exist before any part_create() that uses MACHINE_EVENT_LIST.
