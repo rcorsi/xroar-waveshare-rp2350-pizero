@@ -7,9 +7,9 @@ ticket (`PIZERO-NN`) and the deep docs (`README.md`, `docs/`). The short ranked
 list of what to pick up next is `roadmap.jsonl` (shown at the top of
 `issues.html`).
 
-_Last updated: 2026-10-19 (HDMI audio delivery reworked, clean on two screens
-that garbled it, `PIZERO-232`, `233`; output gain doubled, `PIZERO-230`; one LCD
-still raspy, parked as `PIZERO-234`)._
+_Last updated: 2026-10-21 (the CoCo 3 track done, `PIZERO-135`; machine
+profiles `cocozero`, `coco2`, `coco3` waiting on a hardware check, `PIZERO-242`;
+the PSRAM board and a board of our own proposed, `PIZERO-243`, `244`)._
 
 ## Where things stand
 
@@ -19,12 +19,14 @@ were bring-up and stability: NitrOS-9, writable drives, and the first
 laptop-free soak. That soak came out well, so the stability work now runs in
 the background. From 2026-10-12 to 2026-10-13 the CoCo 3 track went from a
 benchmark to a 128 KB CoCo 3 running at 60 fps at both 0.89 and 1.79 MHz,
-and on 2026-10-20 it joined the CoCo 2 in one firmware (`PIZERO-135`).
+and on 2026-10-20 it joined the CoCo 2 in one firmware (`PIZERO-135`). Then
+the machine became three profiles (`PIZERO-242`): the CoCo Zero
+(the CoCo 2 with our extras, the default) and a stock CoCo 2 and CoCo 3.
 
 ## Shipped / working
 
-- **Video**: libdvi/PIO DVI, 320×240 → true **640×480p60** at 252 MHz
-  (`PIZERO-45`), horizontal blanking 8/92/60 so the control period before
+- **Video**: libdvi/PIO DVI, a 640×240 one-byte-a-pixel framebuffer with a
+  palette, shown as true **640×480p60** at 252 MHz (`PIZERO-45`, `134`), horizontal blanking 8/92/60 so the control period before
   video meets HDMI's 12px minimum (`PIZERO-233`); CoCo VDG render + blit, NTSC artifact color (`PIZERO-43`), F8
   cycles artifact colors per game (`PIZERO-186`). Screen fonts: the classic set,
   the 6847T1, and our 6847T2 by default (`PIZERO-166`).
@@ -42,8 +44,8 @@ and on 2026-10-20 it joined the CoCo 2 in one firmware (`PIZERO-135`).
   `POKE 65495,0` and `POKE 65497,0` run the machine up to 2× at 60 fps with
   full sound; normal speed by default and after reset (`docs/cpu-speed.md`).
 - **CoCo 3 extras on the CoCo 2**: the GIME palette at `$FFB0-$FFBF`
-  (`PIZERO-85`, `55`) and the GIME timer at `$FF90-$FF95` (`PIZERO-62`), both
-  on by default.
+  (`PIZERO-85`, `55`) and the GIME timer at `$FF90-$FF95` (`PIZERO-62`), on in
+  the default `cocozero` machine and off in the stock `coco2` (`PIZERO-242`).
 - **A 128 KB CoCo 3**, in the product firmware (`machine = coco3`, or a
   game's own file switches to it, `PIZERO-135`; loads `/coco/roms/coco3.rom`): the vendored GIME is the bus (`PIZERO-133`), the
   6809 reads and writes MMU pages directly (`PIZERO-213`), and a port-side GIME
@@ -82,20 +84,24 @@ and on 2026-10-20 it joined the CoCo 2 in one firmware (`PIZERO-135`).
   analyses soaks; `scripts/qc_flash.py` flashes and logs a batch of boards
   (`PIZERO-189`, 12 boards so far).
 - **Docs**: README, SETTINGS, AUTORUN, BUILD, pipeline, video-audio-notes,
-  cpu-speed, kit, coco3-plan, coco3-feasibility, usb-retrospective,
-  show-prep-retrospective.
+  cpu-speed, kit, coco3-plan, coco3-feasibility, coco3-titles,
+  usb-retrospective, show-prep-retrospective, coco3-retrospective; for the
+  hardware's future, supplier-primer and coco-zero-2-proposal.
 
 ## In flight (waiting on a hardware step)
 
 These need the board or the user rather than more code (`PIZERO-199`, NitrOS-9
 on the board, passed 2026-10-12):
 
+- **`PIZERO-242`: machine profiles.** Built and host-tested, not yet flashed.
+  A card whose `settings.txt` says `machine = coco2` now gets a stock CoCo 2;
+  `cocozero` (or no line) keeps the extras.
 - **`PIZERO-203`: the frame-pace recoveries.** The one live stability bug. A
   re-soak with deliberate overlay use is running; the serial-stall theory is
   tested and ruled out. Keep it soaking on one board while features are built
   on the other.
 
-## Now: the CoCo 3 track
+## Done: the CoCo 3 track
 
 The plan and its reasoning are in `docs/coco3-plan.md`; what fits and the
 measured outcome in `docs/coco3-feasibility.md`. Done so far:
@@ -119,17 +125,26 @@ measured outcome in `docs/coco3-feasibility.md`. Done so far:
 - **`PIZERO-135`**: one firmware, either machine; a game's own settings file
   switches to the CoCo 3, done 2026-10-20.
 
-What is left is small: **`PIZERO-216`** (LOADM under a non-default MMU map),
+What is left is small, and none of it blocks the next work: **`PIZERO-216`** (LOADM under a non-default MMU map),
 **`PIZERO-217`** (tearing), **`PIZERO-170`** (GIME timer reload quirk),
 **`PIZERO-178`** (render cost per mode, largely answered by 218-220) and
 **`PIZERO-237`** (faster 640-wide screenshots, a host test of that path).
 
 Related CPU-speed item: **`PIZERO-211`** (RAM back from the fast 6809 core).
 
-## After the CoCo 3: the AY-3-8910
+## Next: the AY-3-8910
 
 **`PIZERO-149`** (AY-3-8910 / YM2149 sound chip), raised to high on
-2026-10-19, starts as soon as the CoCo 3 work above is done.
+2026-10-19, is next now that the CoCo 3 is in the product.
+
+## Hardware direction
+
+The 512 KB CoCo 3 needs the board's empty PSRAM footprint filled: first
+Waveshare boards with it fitted at the factory, whose samples also measure
+whether 512 KB runs at full speed from PSRAM; later a board of our own
+designed around the pain points found so far (`PIZERO-244`,
+`docs/coco-zero-2-proposal.md`; ordering in `docs/supplier-primer.md`,
+`PIZERO-243`).
 
 ## Next: experience features (small, unblocked)
 
@@ -140,7 +155,8 @@ Good change-of-pace work between CoCo 3 stages. None waits on anything.
   autorun is for).
 - **`PIZERO-117`**: after mounting a disk, offer to run what is on it.
 - **`PIZERO-171`**: attract mode, a playlist of demos when idle.
-- **`PIZERO-177`**: a one-line `classic` setting for an authentic CoCo 2.
+- **`PIZERO-177`**: a one-line `classic` setting for an authentic CoCo 2. In
+  effect delivered by `PIZERO-242`'s `machine = coco2`; closes with it.
 - **`PIZERO-173`**: type `{ } | ~` and paste faster through BASIC's keyboard
   routine. **`PIZERO-197`**: Caps Lock chord for NitrOS-9.
 - **`PIZERO-205`**: the F1 help reader (CoCo-styled Markdown, built-in help,
@@ -213,8 +229,8 @@ matters now that the guest writes to the card. `PIZERO-69` (save-states) and
 ## Dependency notes
 
 - **CoCo 3**: `PIZERO-129` → `130` → `131` → `133` → `213` → `218` → `219` →
-  `220` (all done) → `214`, `215`; `135` still decides how
-  the mode is chosen; `134`/`179`/`216`/`217` after. `PIZERO-142`'s banked carts allocate on the
+  `220` → `214`, `215`, `134`, `135` (all done) → `242` (profiles);
+  `179`/`216`/`217` remain. A 512 KB CoCo 3 waits on PSRAM (`PIZERO-244`). `PIZERO-142`'s banked carts allocate on the
   heap only while installed, so they do not take the RAM 133 needs.
 - **Storage**: `PIZERO-70` → `71` → `72` → `73` → `74`; `PIZERO-79` needs 73
   for the default cart. `PIZERO-62`'s GIME timer occupies `$FF90-$FF95`, so

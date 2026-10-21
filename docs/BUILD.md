@@ -44,7 +44,7 @@ buildable on its own.
 
 | Env | Extends | Adds | Framebuffer | Audio | RAM |
 |-----|---------|------|-------------|-------|-----|
-| **`pizero_stream_60`** | `pizero_stream` | `-DAV_60HZ -DGIME_TIMER -DGIME_PALETTE` (and the PIZERO-232/233 audio flags) `-DCOCO3 -DVIDEO_640 -DTCC1014_PORT_FULL` | single-buffered | **THE PRODUCT: streaming audio @ true 640x480p60 + USB (PIZERO-45). Either machine (PIZERO-135): `machine = coco2 \| coco3` in settings.txt or a game's own file picks the CoCo 2 or the 128 KB CoCo 3, and a switch restarts the board** | ~81% |
+| **`pizero_stream_60`** | `pizero_stream` | `-DAV_60HZ -DGIME_TIMER -DGIME_PALETTE` (and the PIZERO-232/233 audio flags) `-DCOCO3 -DVIDEO_640 -DTCC1014_PORT_FULL` | single-buffered | **THE PRODUCT: streaming audio @ true 640x480p60 + USB (PIZERO-45). Either machine (PIZERO-135): `machine = cocozero \| coco2 \| coco3` in settings.txt or a game's own file picks the CoCo Zero (the default), a stock CoCo 2 or the 128 KB CoCo 3 (PIZERO-242), and a switch to or from the CoCo 3 restarts the board** | ~81% |
 | **`pizero_stream`** | `pizero_base` | `-DAV_DATA_ISLAND -DAV_STREAM_AUDIO` | single-buffered | streaming audio at the older ~52 Hz timing: the fallback. No GIME palette or timer | ~75% |
 | `pizero_usbdebug` | `pizero_stream_60` | `-DCFG_TUSB_DEBUG=2 -DCFG_TUD_LOG_LEVEL=3 -DCFG_TUSB_DEBUG_PRINTF=tusb_debug_printf -DSERIAL_TUSB_DEBUG=Serial` | single-buffered | product + TinyUSB host log on the serial console, for hub and enumeration faults (PIZERO-54) | ~75% |
 | `pizero_padprobe` | `pizero_stream_60` | `-DPAD_PROBE=1` | single-buffered | product + gamepad report dump on serial, for measuring a pad's buttons (PIZERO-13, 164) | ~75% |

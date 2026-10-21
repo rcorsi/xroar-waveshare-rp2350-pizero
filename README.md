@@ -15,8 +15,9 @@ size of a Raspberry Pi Zero.
 
 ## What it does
 
-**Two machines in one firmware.** The board is a CoCo 2 or a 128 KB CoCo 3. A game's own settings
-file can say which it needs, and launching it switches the board to that machine by itself.
+**Three machines in one firmware.** The board is the **CoCo Zero**, a CoCo 2 with some extras
+(the default); a stock **CoCo 2**; or a stock 128 KB **CoCo 3**. A game's own settings file can say
+which it needs, and launching it switches the board to that machine by itself.
 
 **As a CoCo 3:**
 - Super Extended Color BASIC at full speed, at 0.89 MHz and at 1.79 MHz (`POKE 65497,0`), with a
@@ -34,9 +35,13 @@ file can say which it needs, and launching it switches the board to that machine
   unlike a real CoCo 2 the screen stays clean.
 - A choice of fonts, including true lower case, and the NTSC artifact colours.
 
-**On both:**
-- Picture and sound over one video cable, at 60 frames per second.
+**As the CoCo Zero**, the CoCo 2 also has:
 - The three-voice sound chip from the Games Master Cartridge, built in.
+- The CoCo 3's palette registers and timer.
+- True lower case on screen, in the 6847T2 font.
+
+**On every machine:**
+- Picture and sound over one video cable, at 60 frames per second.
 - On-screen lists to pick disks, programs and cartridges.
 - A USB-C keyboard where each key types what is printed on it, and a USB-C gamepad that works as
   both joysticks and can pick and start games.
@@ -102,11 +107,21 @@ file can say which it needs, and launching it switches the board to that machine
 To start a game automatically when the board boots, see [`AUTORUN.md`](AUTORUN.md). Every setting is
 explained in [`SETTINGS.md`](SETTINGS.md).
 
-## CoCo 2 or CoCo 3
+## Choosing the machine
 
-The board starts as the machine `settings.txt` names: `machine = coco2`, the default, or
-`machine = coco3`. Change it on the board with **F11**, `SETTINGS.TXT`, and Ctrl-S: the board
-restarts as the other machine.
+The board starts as the machine `settings.txt` names:
+
+| `machine =` | What you get |
+|---|---|
+| `cocozero` (the default) | A CoCo 2 with the extras above: the sound chip, the CoCo 3 palette and timer, true lower case. |
+| `coco2` | A stock CoCo 2, as Tandy shipped it: no extras, the original font. |
+| `coco3` | A stock 128 KB CoCo 3. |
+
+The machine only sets the starting point for those extras. Any of them can still be turned on or
+off on its own in `settings.txt` or a game's file (see [`SETTINGS.md`](SETTINGS.md)), and a Games
+Master Cartridge brings its sound chip on any machine. Change the machine on the board with
+**F11**, `SETTINGS.TXT`, and Ctrl-S. Between the CoCo 2s it changes straight away; to or from the
+CoCo 3 the board restarts.
 
 The easier way is to mark the CoCo 3 games. In the list, highlight a CoCo 3 game, press **TAB** to
 make its own settings file, add the line `machine = coco3` and save. That file sits next to the
@@ -123,8 +138,10 @@ the same way. RUN and power-on always start that machine. Without `coco3.rom` on
 says so and the board stays a CoCo 2.
 
 The CoCo 3 is the 128 KB model. Software that needs 512 KB does not run: a program that checks says
-so, and one that does not crashes or hangs, as it would on a real 128 KB CoCo 3. The board has no
-room for more memory. What has been tried, title by title: [`docs/coco3-titles.md`](docs/coco3-titles.md).
+so, and one that does not crashes or hangs, as it would on a real 128 KB CoCo 3. As sold, the board
+has no room for more memory. What has been tried, title by title: [`docs/coco3-titles.md`](docs/coco3-titles.md).
+The board does have an empty spot for a PSRAM memory chip, and a 512 KB CoCo 3 on boards with it
+fitted is the plan; see [`docs/coco-zero-2-proposal.md`](docs/coco-zero-2-proposal.md).
 
 ## Controls
 
@@ -161,7 +178,8 @@ memory and USB devices.
 
 ## Status
 
-Everything above works on hardware.
+Everything above works on hardware, except the three machine profiles: they are new and still being
+checked on the board (PIZERO-242). Until then the stock `coco2` and `coco3` may not yet match this page.
 
 **The CoCo 3**, checked on the board: Super Extended Color BASIC at 60 fps at 0.89 and 1.79 MHz,
 with sound; WIDTH 40 and WIDTH 80 text; the palette, the GIME timer and the HSCREEN modes
@@ -175,7 +193,7 @@ Its limits:
 - **Slower screenshots.** A screenshot is 640x480 and pauses the machine for about a second
   (PIZERO-237).
 
-**Known gaps on both machines:**
+**Known gaps on every machine:**
 
 - **Plugging in while it is on:** a keyboard or gamepad plugged straight into the board must be
   there when you switch on. Through a USB-C hub, one plugged in later can work (PIZERO-51).
@@ -236,6 +254,9 @@ How USB input got here, and the lessons along the way: [`docs/usb-retrospective.
 The two days before Tandy Assembly, and their lessons: [`docs/show-prep-retrospective.md`](docs/show-prep-retrospective.md).
 How the CoCo 3 got here, and its lessons: [`docs/coco3-retrospective.md`](docs/coco3-retrospective.md).
 Open work is in `issues.jsonl` (use `/issues`), sequenced in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Where the hardware is going: a factory-fitted PSRAM board for a 512 KB CoCo 3, then a board of our
+own ([`docs/coco-zero-2-proposal.md`](docs/coco-zero-2-proposal.md)), and how to work with the
+board's maker ([`docs/supplier-primer.md`](docs/supplier-primer.md)).
 
 <details>
 <summary>Development phases</summary>
@@ -264,7 +285,7 @@ The rest of this README is for people who want to know how it is built.
 The RP2350-PiZero is a Raspberry Pi Zero form-factor board built around the **RP2350B**:
 
 - **MCU**: RP2350B (dual Cortex-M33 / dual Hazard3 RISC-V), 48 GPIO, 150 MHz stock (overclockable).
-- **Memory**: 520 KB on-chip SRAM, 16 MB flash. A PSRAM pad exists on the PCB but is **not populated**, so treat this as an SRAM-only target.
+- **Memory**: 520 KB on-chip SRAM, 16 MB flash. A PSRAM footprint (U1, chip select on GPIO 47) exists on the PCB but is **not populated**, so the firmware is SRAM-only. Fitting it is the route to a 512 KB CoCo 3 ([`docs/coco-zero-2-proposal.md`](docs/coco-zero-2-proposal.md)).
 - **Display**: mini video connector carrying a DVI signal, driven from GPIO via PIO (see below).
 - **Input**: a dedicated PIO-USB Type-C port usable as a USB 1.1 host (a second Type-C is power/programming).
 - **Storage**: microSD slot on SPI.
@@ -351,10 +372,11 @@ timing is kept only as a fallback env, without the CoCo 3-style palette and time
 └──────────────────────────────────────────────────────────┘
 ```
 
-The XRoar core (`lib/xroar_core`) and the CoCo glue (`lib/coco_machine`) are board-agnostic and are
-reused unchanged from the AMOLED port; only the RAM allocation (no PSRAM here) and the display blitter
-need adapting. Everything below the line (DVI, USB, SD) is board-specific and built on Waveshare's
-proven reference stack for this board (earlephilhower arduino-pico core).
+The XRoar core (`lib/xroar_core`) and the CoCo glue (`lib/coco_machine`) are board-agnostic. They
+started as the AMOLED port's, and have since grown the CoCo 3 (the GIME as the bus, the MMU fast
+path), the faster 6809 core and the extra joystick buttons. Everything below the line (DVI, USB, SD)
+is board-specific and built on Waveshare's proven reference stack for this board (earlephilhower
+arduino-pico core).
 
 ## Building from source
 
@@ -394,7 +416,7 @@ telemetry of the default build at the BASIC prompt, 2026-10-13):
 | Blit and the rest of the loop | ~2.4 ms | the blit into the 640-wide framebuffer (~0.9 ms), USB host, audio |
 | **Total** | **~9 ms** | at least 7.6 ms (about 45%) to spare in the tightest frame |
 
-As a CoCo 3 (`machine = coco3`) it runs about twice the cycles at 1.79 MHz and draws each scanline
+As a CoCo 3 it runs about twice the cycles at 1.79 MHz and draws each scanline
 as it goes, with no separate render or blit: about 13 ms a frame at the BASIC prompt and at most
 15.2 ms in a full-screen animation (PIZERO-220).
 

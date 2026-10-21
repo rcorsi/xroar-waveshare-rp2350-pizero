@@ -11,7 +11,7 @@ lines, it types those instead.
 It happens on every boot: switching on, pressing the reset button (marked
 RUN), and pressing ENTER on a disk in the F12 list.
 
-It works on both machines. If the game autorun starts has its own settings
+It works on every machine. If the game autorun starts has its own settings
 file saying `machine = coco3` (see SETTINGS.md), the board first restarts as a
 CoCo 3, then autoruns as usual.
 
@@ -78,7 +78,7 @@ without it. Names are not case-sensitive.
   bin/           programs (.bin)
   cart/          cartridges (.ccc)
   autorun.txt    optional
-  settings.txt   optional, see SETTINGS.md (machine = coco2 | coco3)
+  settings.txt   optional, see SETTINGS.md (machine = cocozero | coco2 | coco3)
   log/           written by the board (soak logs, a pending machine switch)
 ```
 
