@@ -45,7 +45,7 @@ uint32_t coco_machine_cart_csg_dropped(void);   /* ...of which too fast, ignored
  * odd mirrors of the disk latch), unless switched off here. On by default;
  * the settings page (PIZERO-53) will expose it. */
 void coco_machine_csg_always(_Bool on);
-void coco_machine_set_ay_carts(_Bool psg, _Bool sym12, _Bool deluxe);   /* PIZERO-149 */
+void coco_machine_set_ay_carts(_Bool psg, _Bool sym12, _Bool deluxe, _Bool sym12_stereo);   /* PIZERO-149/250 */
 uint32_t coco_machine_ay_writes(void);           /* AY register writes since reset */
 uint8_t coco_machine_ay_active(void);            /* bit per AY chip in use */
 
@@ -147,6 +147,9 @@ void coco_machine_cpu_prof(struct cpu_prof *out, uint32_t *window_in, uint32_t *
  * number read (0 if none pending). Samples are overwritten oldest-first if a
  * sink falls behind, so a slow/absent consumer never blocks emulation. */
 size_t coco_machine_audio_read(int16_t *dst, size_t max);
+/* PIZERO-250: the samples as left and right pairs, 2 * max values into lr.
+ * They differ only for the Symphony-12 in stereo; mono is their average. */
+size_t coco_machine_audio_read_lr(int16_t *lr, size_t max);
 uint32_t coco_machine_audio_rate(void);
 /* PIZERO-121: the rate the servo is currently asking the producer for. Differs
  * from the nominal rate by a few parts per million to hold the ring near half

@@ -1562,9 +1562,11 @@ extern "C" _Bool coco_machine_init(const uint8_t *rom, size_t rom_len) {
 // of ~924 samples is pushed during coco_machine_run_cycles, then drained steadily
 // by the core-1 IRQ). 8192 samples = ~170 ms = 16 KB (cheap now the streaming
 // build freed ~126 KB). Too-shallow caused overflow-skips -> pitch up + distortion.
+// PIZERO-250: a sample is a left and right pair now (32 KB), for the
+// Symphony-12 in stereo. Everything else puts the same value on both sides.
 #define AUDIO_RING_SAMPLES   8192u                     // pow2
 
-static int16_t           g_audio_ring[AUDIO_RING_SAMPLES];
+static int16_t           g_audio_ring[AUDIO_RING_SAMPLES][2];
 static volatile uint32_t g_audio_w = 0;                // monotonic write index
 static volatile uint32_t g_audio_r = 0;                // monotonic read index
 static bool              g_audio_primed = false;       // reader: wait for ~half-full before draining
@@ -1602,6 +1604,13 @@ static int32_t  g_dac_level = 0;                       // current DAC+1bit level
 static struct audio_integ g_aud;                       // the sample being integrated (audio_integ.h)
 static struct audio_lp g_lp;                           // PIZERO-212: the output low-pass (audio_lowpass.h)
 static struct audio_dc g_dc;                           // PIZERO-223: AC coupling, ahead of it
+// PIZERO-250: the right channel's filters. While both sides carry the same
+// sound only the left's run and the right copies its output; the right's
+// state is taken from the left when they part, and they rejoin once both
+// filters have settled to the same state, so neither edge clicks.
+static struct audio_lp g_lp_r;
+static struct audio_dc g_dc_r;
+static bool g_aud_split;
 
 // Recompute the cached audio level from PIA1 (called right after a PIA1 write).
 // Output gain. The 6-bit DAC swings 64 steps; a square wave's RMS == its peak,
@@ -1630,26 +1639,45 @@ static inline void audio_update_level(void) {
     g_dac_level = (dac6 - 32) * g_dac_gain;            // centred; +-11520 at volume 10
 }
 
-static inline void audio_emit(int s) {
+static inline int audio_clamp(int s) {
+    return s > 32767 ? 32767 : s < -32768 ? -32768 : s;
+}
+
+static inline void audio_emit(int s, int sr) {
     // PIZERO-212: the audio_lowpass setting. Clamped after it, since a
     // band-limited edge overshoots. (It replaces PIZERO-30's fixed 2-pole IIR,
     // which was built out because it dulled the tone at the default level.)
+    const bool same = s == sr;
+    if (!same && !g_aud_split) {
+        g_dc_r = g_dc;
+        g_lp_r = g_lp;
+        g_aud_split = true;
+    }
     s = audio_dc_run(&g_dc, s);   // PIZERO-223: AC coupled, as the CoCo's output is
-    s = audio_lp_run(&g_lp, s);
-    if (s > 32767) s = 32767; else if (s < -32768) s = -32768;
+    s = audio_clamp(audio_lp_run(&g_lp, s));
+    if (g_aud_split) {
+        sr = audio_dc_run(&g_dc_r, sr);
+        sr = audio_clamp(audio_lp_run(&g_lp_r, sr));
+        if (same && g_dc.y1 == g_dc_r.y1 && g_lp.x1 == g_lp_r.x1 && g_lp.x2 == g_lp_r.x2
+            && g_lp.y1 == g_lp_r.y1 && g_lp.y2 == g_lp_r.y2 && g_lp.err == g_lp_r.err)
+            g_aud_split = false;   // x1 already agrees: both just took the same input
+    } else {
+        sr = s;
+    }
     // PIZERO-39: single-producer/single-consumer. The writer (core 0) owns ONLY
     // g_audio_w; the reader (which may be the core-1 DMA IRQ in the streaming
     // build) owns g_audio_r and handles overflow on its side. The __dmb publishes
     // the sample BEFORE the index so a cross-core reader never sees w advance past
     // a slot that hasn't been written yet.
     uint32_t w = g_audio_w;
-    g_audio_ring[w & (AUDIO_RING_SAMPLES - 1)] = (int16_t)s;
+    g_audio_ring[w & (AUDIO_RING_SAMPLES - 1)][0] = (int16_t)s;
+    g_audio_ring[w & (AUDIO_RING_SAMPLES - 1)][1] = (int16_t)sr;
     __dmb();
     g_audio_w = w + 1;
     g_audio_produced++;
-    { int d = (int)(int16_t)s - (int)g_audio_prev;
+    { int m = (s + sr) / 2, d = m - (int)g_audio_prev;
       if (d > AUDIO_TONE_EPS || d < -AUDIO_TONE_EPS) g_audio_tone++;
-      g_audio_prev = (int16_t)s; }
+      g_audio_prev = (int16_t)m; }
 }
 
 // Called per memory access with the access duration in event ticks. Integrates
@@ -1663,8 +1691,14 @@ static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t t
     uint32_t t0 = cpu_prof_now();
 #endif
     if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume * AUDIO_GAIN_X / 10;   // PIZERO-143/145/223
-    if (g_ayb.active) s += ayb_render(&g_ayb, tk) * g_volume * AUDIO_GAIN_X / 10;  // PIZERO-149
-    audio_emit(s);
+    int sr = s;
+    if (g_ayb.active) {                                                             // PIZERO-149/250
+        int32_t l, r;
+        ayb_render_lr(&g_ayb, tk, &l, &r);
+        s += l * g_volume * AUDIO_GAIN_X / 10;
+        sr += r * g_volume * AUDIO_GAIN_X / 10;
+    }
+    audio_emit(s, sr);
 #ifdef CPU_PROF
     g_cpu_prof.samp_clk += cpu_prof_now() - t0;
     g_cpu_prof.samp_n++;
@@ -1740,7 +1774,8 @@ static inline __attribute__((always_inline)) void fastbus_deadline(void) {
 #else
 #define COCO_RAMFUNC __attribute__((section(".time_critical.coco_audio")))
 #endif
-extern "C" size_t COCO_RAMFUNC coco_machine_audio_read(int16_t *dst, size_t max) {
+// Up to `max` left and right pairs into lr (2 * max values).
+extern "C" size_t COCO_RAMFUNC coco_machine_audio_read_lr(int16_t *lr, size_t max) {
     uint32_t w = g_audio_w;
     __dmb();                                           // read index before data
     uint32_t r = g_audio_r;
@@ -1758,10 +1793,26 @@ extern "C" size_t COCO_RAMFUNC coco_machine_audio_read(int16_t *dst, size_t max)
     }
     size_t n = 0;
     while (n < max && r != w) {
-        dst[n++] = g_audio_ring[r & (AUDIO_RING_SAMPLES - 1)];
+        lr[2 * n] = g_audio_ring[r & (AUDIO_RING_SAMPLES - 1)][0];
+        lr[2 * n + 1] = g_audio_ring[r & (AUDIO_RING_SAMPLES - 1)][1];
+        n++;
         r++;
     }
     g_audio_r = r;
+    return n;
+}
+
+// The same, mixed to mono (the WAV dump and the non-streaming builds).
+extern "C" size_t coco_machine_audio_read(int16_t *dst, size_t max) {
+    int16_t lr[2 * 64];
+    size_t n = 0;
+    while (n < max) {
+        size_t want = max - n < 64 ? max - n : 64;
+        size_t got = coco_machine_audio_read_lr(lr, want);
+        for (size_t i = 0; i < got; i++) dst[n + i] = (int16_t)((lr[2 * i] + lr[2 * i + 1]) / 2);
+        n += got;
+        if (got < want) break;
+    }
     return n;
 }
 
@@ -1939,9 +1990,10 @@ extern "C" void coco_machine_csg_always(bool on) {   // PIZERO-143/145: the sn76
 }
 
 // PIZERO-149: which AY cartridges answer. A change silences the chips.
-extern "C" void coco_machine_set_ay_carts(bool psg, bool sym12, bool deluxe) {
+extern "C" void coco_machine_set_ay_carts(bool psg, bool sym12, bool deluxe, bool sym12_stereo) {
     uint8_t mask = (uint8_t)((psg ? AYB_PSG : 0) | (sym12 ? AYB_SYM12 : 0) | (deluxe ? AYB_DELUXE : 0));
     if (mask != g_ayb.enabled) { g_ayb.enabled = mask; ayb_reset(&g_ayb); }
+    g_ayb.stereo = sym12_stereo;                     // PIZERO-250: takes effect at once
 }
 extern "C" uint32_t coco_machine_ay_writes(void) { return g_ayb.writes; }
 extern "C" uint8_t coco_machine_ay_active(void) { return g_ayb.active; }
@@ -1958,6 +2010,7 @@ extern "C" void coco_machine_set_volume(int v) {
 // for the nominal rate; the servo moves the real one by under 0.3%.
 extern "C" void coco_machine_set_lowpass(int hz) {
     audio_lp_set(&g_lp, hz > 0 ? (uint32_t)hz : 0u, COCO_AUDIO_RATE);
+    g_lp_r = g_lp;
 }
 
 extern "C" void coco_machine_set_artifact(int mode) {

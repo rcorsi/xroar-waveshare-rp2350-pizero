@@ -11,6 +11,7 @@
 //   sn76489           = on | off              SN76489 at $FF41 without a GMC
 //   coco_psg          = on | off              PIZERO-149: CoCo PSG's AY at $FF5D-$FF5F
 //   symphony12        = on | off              PIZERO-149: Symphony-12's four AYs at $FF60
+//   symphony12_stereo = on | off              PIZERO-250: its chips 1-2 left, 3-4 right
 //   deluxe_psg        = on | off              PIZERO-149: Deluxe CoCo's AY at $FF38
 //   volume            = 0-15                  10 is the old fixed level
 //   audio_lowpass     = 1000-20000 | on | off PIZERO-212: output low-pass cutoff, Hz
@@ -73,6 +74,7 @@ struct coco_settings {
     bool    sn76489;
     bool    coco_psg;                 // PIZERO-149: the AY cartridges
     bool    symphony12;
+    bool    symphony12_stereo;        // PIZERO-250: the card's stereo jumper
     bool    deluxe_psg;
     uint8_t volume;                   // 0-15
     uint16_t lowpass_hz;              // PIZERO-212: 0 off, else 1000-20000
@@ -130,6 +132,7 @@ static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
 static inline void settings_defaults(struct coco_settings *s) {
     memset(s, 0, sizeof *s);
     s->sn76489 = true;
+    s->symphony12_stereo = true;      // PIZERO-250: a cartridge's jumper, not the machine's
     s->volume = 10;
     s->lowpass_hz = 8000;             // improvements are on by default
     s->artifact = ART_ON;
@@ -230,6 +233,7 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
     if (!strcmp(name, "sn76489"))           { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->sn76489 = b; }
     else if (!strcmp(name, "coco_psg"))     { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->coco_psg = b; }
     else if (!strcmp(name, "symphony12"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->symphony12 = b; }
+    else if (!strcmp(name, "symphony12_stereo")) { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->symphony12_stereo = b; }
     else if (!strcmp(name, "deluxe_psg"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->deluxe_psg = b; }
     else if (!strcmp(name, "gime_palette")) { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_palette = b; }
     else if (!strcmp(name, "gime_timer"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_timer = b; }
@@ -451,6 +455,7 @@ static inline int settings_template(char *out, size_t n) {
         "# font = %s\n"
         "# lowercase = %s\n"
         "# key_repeat = %s\n"
+        "symphony12_stereo = %s\n"
         "deluxe_psg = %s\n"
         "volume = %u\n"
         "audio_lowpass = %u\n"
@@ -470,7 +475,7 @@ static inline int settings_template(char *out, size_t n) {
         d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
         d.font == FONT_CLASSIC ? "classic" : d.font == FONT_6847T1 ? "6847t1" : "6847t2",
         d.lowercase ? "on" : "off", d.key_repeat ? "on" : "off",
-        d.deluxe_psg ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
+        d.symphony12_stereo ? "on" : "off", d.deluxe_psg ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
         d.artifact == ART_OFF ? "off" : d.artifact == ART_SWAPPED ? "swapped" : "on",
         d.autorun ? "on" : "off", d.reset_to_basic ? "basic" : "autorun", d.serial_keyboard ? "on" : "off",
         d.joystick_swap ? "on" : "off",

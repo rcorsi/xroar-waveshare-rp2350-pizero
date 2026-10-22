@@ -38,7 +38,7 @@ which it needs, and launching it switches the board to that machine by itself.
 **As the CoCo Zero**, the CoCo 2 also has:
 - The three-voice sound chip from the Games Master Cartridge, built in.
 - The AY-3-8910 sound chips of the CoCo PSG and Symphony-12 cartridges, built in: up to four
-  chips and twelve voices.
+  chips and twelve voices, the Symphony-12's in stereo.
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
 - Auto-repeat for a key held down, which Color BASIC never did.

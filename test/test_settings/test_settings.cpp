@@ -260,6 +260,7 @@ static void test_machine_profiles(void) {
         TEST_ASSERT_EQUAL(zero, s.coco_psg);            // PIZERO-149
         TEST_ASSERT_EQUAL(zero, s.symphony12);
         TEST_ASSERT_FALSE(s.deluxe_psg);
+        TEST_ASSERT_TRUE(s.symphony12_stereo);          // PIZERO-250: the card's, any machine
         TEST_ASSERT_EQUAL_UINT8(3, s.volume);
         TEST_ASSERT_EQUAL_UINT16(500, s.key_repeat_delay);
     }
@@ -269,6 +270,7 @@ static void test_machine_profiles(void) {
     TEST_ASSERT_TRUE(s.key_repeat);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("deluxe_psg = on"));   TEST_ASSERT_TRUE(s.deluxe_psg);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("symphony12 = on"));   TEST_ASSERT_TRUE(s.symphony12);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("symphony12_stereo = off")); TEST_ASSERT_FALSE(s.symphony12_stereo);
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("coco_psg = loud"));
 }
 

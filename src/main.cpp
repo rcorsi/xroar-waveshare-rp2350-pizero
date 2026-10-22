@@ -914,7 +914,7 @@ static int      g_vpool_w = 0;                     // next vblank pool slot (IRQ
 #else
 #define STREAM_METER_LINES 480
 #endif
-static int16_t  g_stream_last = 0;                 // hold-last on ring underrun (IRQ-only)
+static int16_t  g_stream_last[2] = { 0, 0 };       // hold-last on ring underrun (IRQ-only)
 static volatile uint32_t g_stream_under = 0;       // ring-underrun (hold-last) count (diagnostic)
 #ifdef AV_AUDIO_SYNTH
 #define SYNTH_TBL 512
@@ -954,10 +954,10 @@ static uint32_t g_irq_bank = 0;                   // latched once per frame (IRQ
 #endif // AV_STREAM_AUDIO
 
 #ifdef AV_STREAM_AUDIO
-// One mono sample for the streaming meter. Synth = a 440 Hz wavetable (no sinf in
-// the IRQ); live = the CoCo ring (hold-last on underrun). Both run on core 1.
-static inline int16_t __not_in_flash_func(stream_next_sample)(void) {
 #ifdef AV_AUDIO_SYNTH
+// The synth's mono sample for the streaming meter: a 440 Hz wavetable (no sinf
+// in the IRQ), on core 1.
+static inline int16_t __not_in_flash_func(stream_next_mono)(void) {
 #ifdef AV_AUDIO_SYNTH_CHORD
     uint32_t n = g_chord_n;
     g_chord_n = (n + 1 >= 9u * 48000u) ? 0 : n + 1;
@@ -979,6 +979,15 @@ static inline int16_t __not_in_flash_func(stream_next_sample)(void) {
     g_synth_ph += g_synth_inc;
     return s;
 #endif
+}
+#endif
+
+// One left and right pair for the streaming meter: the synth, or the CoCo
+// ring (hold-last on underrun). PIZERO-250: the two sides differ for the
+// Symphony-12 in stereo. Runs on core 1.
+static inline void __not_in_flash_func(stream_next_sample)(int16_t *lr) {
+#ifdef AV_AUDIO_SYNTH
+    lr[0] = lr[1] = stream_next_mono();
 #else
     // PIZERO-81c: while the overlay pauses the machine, the ring is left
     // exactly as it was (the producer is stopped too, so the rate servo sees
@@ -988,13 +997,19 @@ static inline int16_t __not_in_flash_func(stream_next_sample)(void) {
     static uint16_t gain = 256;
     if (g_audio_paused) {
         if (gain) gain--;
-        return (int16_t)(((int32_t)g_stream_last * gain) >> 8);
+        lr[0] = (int16_t)(((int32_t)g_stream_last[0] * gain) >> 8);
+        lr[1] = (int16_t)(((int32_t)g_stream_last[1] * gain) >> 8);
+        return;
     }
-    int16_t s;
-    if (coco_machine_audio_read(&s, 1) < 1) { s = g_stream_last; g_stream_under++; }   // PIZERO-39: ring from IRQ
-    g_stream_last = s;
-    if (gain < 256) { gain++; return (int16_t)(((int32_t)s * gain) >> 8); }
-    return s;
+    if (coco_machine_audio_read_lr(lr, 1) < 1) {   // PIZERO-39: ring from IRQ
+        lr[0] = g_stream_last[0]; lr[1] = g_stream_last[1]; g_stream_under++;
+    }
+    g_stream_last[0] = lr[0]; g_stream_last[1] = lr[1];
+    if (gain < 256) {
+        gain++;
+        lr[0] = (int16_t)(((int32_t)lr[0] * gain) >> 8);
+        lr[1] = (int16_t)(((int32_t)lr[1] * gain) >> 8);
+    }
 #endif
 }
 
@@ -1017,7 +1032,7 @@ static inline int __not_in_flash_func(stream_meter)(void) {
 // Encode n samples as one audio island into a pool slot's three lane buffers.
 static inline void __not_in_flash_func(stream_encode)(int n, uint32_t *b0, uint32_t *b1, uint32_t *b2) {
     int16_t lr[8];
-    for (int f = 0; f < n; ++f) { int16_t s = stream_next_sample(); lr[2*f] = lr[2*f+1] = s; }
+    for (int f = 0; f < n; ++f) stream_next_sample(&lr[2*f]);
     dvi_data_packet_t pkt;
     dvi_di_set_audio_samples(&pkt, lr, n, g_aud_framectr);
     g_aud_framectr = (g_aud_framectr + (uint32_t)n) % 192u;
@@ -1150,21 +1165,26 @@ static void synth_fill(int16_t *out, int n) {
 static void audio_encode_frame(void) {
     const uint32_t off = g_active_bank ^ 1u;
     const int hv = ((!DVI_TIMING.v_sync_polarity) ? 2 : 0) | ((!DVI_TIMING.h_sync_polarity) ? 1 : 0);
+#ifdef AV_AUDIO_SYNTH
     int16_t mono[12];
-    int16_t lr[8];
+#endif
+    int16_t stereo[24];
     dvi_data_packet_t pkt;
     for (int line = 0; line < N_ALINES; ++line) {
         const int np = aline_pkts(line);
         const int want = np * 4;
 #ifdef AV_AUDIO_SYNTH
         synth_fill(mono, want);                       // clean sine, no emulation
+        for (int i = 0; i < want; ++i) stereo[2*i] = stereo[2*i + 1] = mono[i];
 #else
-        size_t n = coco_machine_audio_read(mono, (size_t)want);
-        for (size_t i = n; i < (size_t)want; ++i) mono[i] = (i ? mono[i - 1] : 0);   // hold last on underrun
+        size_t n = coco_machine_audio_read_lr(stereo, (size_t)want);   // PIZERO-250
+        for (size_t i = n; i < (size_t)want; ++i) {                     // hold last on underrun
+            stereo[2*i] = i ? stereo[2*i - 2] : 0;
+            stereo[2*i + 1] = i ? stereo[2*i - 1] : 0;
+        }
 #endif
         for (int k = 0; k < np; ++k) {
-            for (int f = 0; f < 4; ++f) { int16_t s = mono[k*4 + f]; lr[2*f] = lr[2*f+1] = s; }
-            dvi_di_set_audio_samples(&pkt, lr, 4, g_aud_framectr);
+            dvi_di_set_audio_samples(&pkt, &stereo[k * 8], 4, g_aud_framectr);
             g_aud_framectr = (g_aud_framectr + 4) % 192u;
             dvi_di_compute_parity(&pkt);
             // Rewrite only the data words (preamble/guards/framing are static).
@@ -1410,7 +1430,7 @@ static const char *on_file_saved(const char *path) {
 static void settings_apply(void) {
     const struct coco_settings *st = &g_settings;
     coco_machine_csg_always(st->sn76489);
-    coco_machine_set_ay_carts(st->coco_psg, st->symphony12, st->deluxe_psg);   // PIZERO-149
+    coco_machine_set_ay_carts(st->coco_psg, st->symphony12, st->deluxe_psg, st->symphony12_stereo);   // PIZERO-149/250
     coco_machine_set_volume(st->volume);
     coco_machine_set_lowpass(st->lowpass_hz);   // PIZERO-212
     coco_machine_set_artifact(st->artifact);
@@ -1423,7 +1443,7 @@ static void settings_apply(void) {
     Serial.printf("[settings] machine=%s sn76489=%s coco_psg=%s symphony12=%s deluxe_psg=%s volume=%u audio_lowpass=%u artifact_colors=%s gime_palette=%s gime_timer=%s "
                   "autorun=%s reset_button=%s serial_keyboard=%s joystick_swap=%s font=%s lowercase=%s key_repeat=%s/%ums/%u video_encoder=%s soak_log=%s colors_overridden=%04x\r\n",
                   SETTINGS_MACHINE_NAMES[st->machine], st->sn76489 ? "on" : "off",
-                  st->coco_psg ? "on" : "off", st->symphony12 ? "on" : "off", st->deluxe_psg ? "on" : "off", st->volume, (unsigned)st->lowpass_hz,
+                  st->coco_psg ? "on" : "off", st->symphony12 ? (st->symphony12_stereo ? "stereo" : "mono") : "off", st->deluxe_psg ? "on" : "off", st->volume, (unsigned)st->lowpass_hz,
                   st->artifact == ART_OFF ? "off" : st->artifact == ART_SWAPPED ? "swapped" : "on",
                   st->gime_palette ? "on" : "off", st->gime_timer ? "on" : "off",
                   st->autorun ? "on" : "off", st->reset_to_basic ? "basic" : "autorun", st->serial_keyboard ? "on" : "off",

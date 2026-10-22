@@ -278,6 +278,44 @@ static void test_bank_mix_is_silent_until_used_and_scales(void) {
     TEST_ASSERT_EQUAL_UINT8(AYB_PSG | AYB_SYM12, b.enabled);
 }
 
+// PIZERO-250: with the jumper on, Symphony-12 chips 1-2 play left and 3-4
+// right, each side mixed by its own chips; a chip the CoCo PSG wrote last
+// is in the centre. With it off both sides are the mono mix.
+static void test_symphony12_stereo_pans_its_chips(void) {
+    int32_t l, r;
+    bank_reset(AYB_PSG | AYB_SYM12);
+    b.stereo = 1;
+    ayb_write(&b, 0xFF61, 0); ayb_write(&b, 0xFF60, 0xFF); ayb_write(&b, 0xFF61, 4);
+    ayb_write(&b, 0xFF63, 0); ayb_write(&b, 0xFF62, 0xFF); ayb_write(&b, 0xFF63, 4);
+    sym12_reg(0, 7, 0x3F); sym12_reg(0, 8, 15);
+    ayb_render_lr(&b, 298, &l, &r);
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15], l);
+    TEST_ASSERT_EQUAL_INT32(0, r);
+    for (int k = 1; k < 4; k++) { sym12_reg(k, 7, 0x3F); sym12_reg(k, 8, 15); }
+    ayb_render_lr(&b, 298, &l, &r);
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15] * 2 * 2 / 3, l);
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15] * 2 * 2 / 3, r);
+    sym12_reg(0, 8, 0); sym12_reg(1, 8, 0); sym12_reg(2, 8, 0);
+    ayb_render_lr(&b, 298, &l, &r);
+    TEST_ASSERT_EQUAL_INT32(0, l);                   // only chip 4, on the right
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15], r);
+    // The CoCo PSG takes chip 1 back to the centre.
+    ayb_write(&b, 0xFF5E, 8); ayb_write(&b, 0xFF5F, 15);
+    ayb_render_lr(&b, 298, &l, &r);
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15], l);
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15] * 2 * 2 / 3, r);
+    // Jumper off: mono, and a reset keeps the jumper.
+    b.stereo = 0;
+    for (int k = 0; k < 4; k++) sym12_reg(k, 8, 15);
+    ayb_render_lr(&b, 298, &l, &r);
+    TEST_ASSERT_EQUAL_INT32(AY_LEVEL[15] * 4 * 2 / 5, l);
+    TEST_ASSERT_EQUAL_INT32(l, r);
+    b.stereo = 1;
+    ayb_reset(&b);
+    TEST_ASSERT_EQUAL_UINT8(1, b.stereo);
+    TEST_ASSERT_EQUAL_UINT8(0, b.sym12);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_starts_silent);
@@ -294,5 +332,6 @@ int main(void) {
     RUN_TEST(test_symphony12_ignores_a_port_left_as_input);
     RUN_TEST(test_deluxe_coco_registers);
     RUN_TEST(test_bank_mix_is_silent_until_used_and_scales);
+    RUN_TEST(test_symphony12_stereo_pans_its_chips);
     return UNITY_END();
 }

@@ -211,13 +211,16 @@ struct ay_bank {
     uint8_t  psg_ctrl;           // CoCo PSG $FF5D
     uint8_t  ora, ddra, cra;     // Symphony-12's PIA
     uint8_t  orb, ddrb, crb;
+    uint8_t  stereo;             // PIZERO-250: the Symphony-12's stereo jumper
+    uint8_t  sym12;              // bit per chip: last written by the Symphony-12
     uint32_t writes;             // register writes, for telemetry
 };
 
 static inline void ayb_reset(struct ay_bank *b) {
-    uint8_t en = b->enabled;
+    uint8_t en = b->enabled, st = b->stereo;
     memset(b, 0, sizeof *b);
     b->enabled = en;
+    b->stereo = st;
     for (int i = 0; i < AY_CHIPS; i++) ay_reset(&b->chip[i], AY_CLK_PSG_2MHZ);
 }
 
@@ -235,7 +238,7 @@ static inline void ayb_sym12_bus(struct ay_bank *b) {
     for (int k = 0; k < AY_CHIPS; k++) {
         unsigned f = (ctl >> (2 * k)) & 3;
         if (f == 3) ay_latch(&b->chip[k], data);
-        else if (f == 2) ayb_chip_write(b, k, data);
+        else if (f == 2) { ayb_chip_write(b, k, data); b->sym12 |= (uint8_t)(1u << k); }
     }
 }
 
@@ -263,7 +266,11 @@ static inline bool ayb_owns(const struct ay_bank *b, uint16_t a) {
 
 static inline void ayb_write(struct ay_bank *b, uint16_t a, uint8_t d) {
     switch (a) {
-    case 0xFF38: ay_set_clock(&b->chip[0], AY_CLK_DELUXE); ayb_chip_write(b, 0, d); break;
+    case 0xFF38:
+        ay_set_clock(&b->chip[0], AY_CLK_DELUXE);
+        ayb_chip_write(b, 0, d);
+        b->sym12 &= (uint8_t)~1u;
+        break;
     case 0xFF39: ay_latch(&b->chip[0], d); break;
     case 0xFF5D:
         b->psg_ctrl = d;
@@ -273,6 +280,7 @@ static inline void ayb_write(struct ay_bank *b, uint16_t a, uint8_t d) {
     case 0xFF5F:
         ay_set_clock(&b->chip[0], (b->psg_ctrl & 1) ? AY_CLK_PSG_1MHZ : AY_CLK_PSG_2MHZ);
         ayb_chip_write(b, 0, d);
+        b->sym12 &= (uint8_t)~1u;
         break;
     case 0xFF60:
         if (b->cra & 4) b->ora = d; else b->ddra = d;
@@ -305,17 +313,35 @@ static inline uint8_t ayb_read(const struct ay_bank *b, uint16_t a) {
 // Every chip in use, mixed: one chip at its own level, more scaled down so
 // four at full are 1.6 times one rather than four times. A chip with all
 // three levels at 0 is silent whatever its tones do, so it is not run.
-static inline int32_t ayb_render(struct ay_bank *b, uint32_t event_ticks) {
-    int32_t sum = 0;
-    int n = 0;
+//
+// PIZERO-250: with the stereo jumper on, a chip the Symphony-12 last wrote
+// plays on one side only, chips 1 and 2 left and 3 and 4 right, as MAME
+// routes them. A chip the CoCo PSG or Deluxe CoCo wrote stays in the centre.
+// Each side is mixed like the mono bank, by the chips on that side, so one
+// Symphony-12 chip on its own is as loud as a CoCo PSG.
+static inline void ayb_render_lr(struct ay_bank *b, uint32_t event_ticks,
+                                 int32_t *left, int32_t *right) {
+    int32_t sl = 0, sr = 0;
+    int nl = 0, nr = 0;
+    const uint8_t panned = b->stereo ? b->sym12 : 0;
     for (int k = 0; k < AY_CHIPS; k++) {
         if (!(b->active & (1u << k))) continue;
         const uint8_t *r = b->chip[k].reg;
         if (!(r[8] | r[9] | r[10])) continue;
-        sum += ay_render(&b->chip[k], event_ticks);
-        n++;
+        int32_t v = ay_render(&b->chip[k], event_ticks);
+        if (!(panned & (1u << k)))  { sl += v; nl++; sr += v; nr++; }
+        else if (k < AY_CHIPS / 2)  { sl += v; nl++; }
+        else                        { sr += v; nr++; }
     }
-    return n <= 1 ? sum : sum * 2 / (n + 1);
+    *left = nl <= 1 ? sl : sl * 2 / (nl + 1);
+    *right = nr <= 1 ? sr : sr * 2 / (nr + 1);
+}
+
+// The mono mix, which is what the bank gives with the jumper off.
+static inline int32_t ayb_render(struct ay_bank *b, uint32_t event_ticks) {
+    int32_t l, r;
+    ayb_render_lr(b, event_ticks, &l, &r);
+    return (l + r) / 2;
 }
 
 #endif  // PSG_AY8910_H
