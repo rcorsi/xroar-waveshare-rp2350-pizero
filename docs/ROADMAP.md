@@ -93,9 +93,6 @@ the machine became three profiles (`PIZERO-242`): the CoCo Zero
 These need the board or the user rather than more code (`PIZERO-199`, NitrOS-9
 on the board, passed 2026-10-12):
 
-- **`PIZERO-242`: machine profiles.** Built and host-tested, not yet flashed.
-  A card whose `settings.txt` says `machine = coco2` now gets a stock CoCo 2;
-  `cocozero` (or no line) keeps the extras.
 - **`PIZERO-203`: the frame-pace recoveries.** The one live stability bug. A
   re-soak with deliberate overlay use is running; the serial-stall theory is
   tested and ruled out. Keep it soaking on one board while features are built
@@ -156,7 +153,7 @@ Good change-of-pace work between CoCo 3 stages. None waits on anything.
 - **`PIZERO-117`**: after mounting a disk, offer to run what is on it.
 - **`PIZERO-171`**: attract mode, a playlist of demos when idle.
 - **`PIZERO-177`**: a one-line `classic` setting for an authentic CoCo 2. In
-  effect delivered by `PIZERO-242`'s `machine = coco2`; closes with it.
+  Done 2026-10-22 as `PIZERO-242`'s `machine = coco2`.
 - **`PIZERO-173`**: type `{ } | ~` and paste faster through BASIC's keyboard
   routine. **`PIZERO-197`**: Caps Lock chord for NitrOS-9.
 - **`PIZERO-205`**: the F1 help reader (CoCo-styled Markdown, built-in help,

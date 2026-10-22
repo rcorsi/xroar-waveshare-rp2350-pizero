@@ -178,8 +178,7 @@ memory and USB devices.
 
 ## Status
 
-Everything above works on hardware, except the three machine profiles: they are new and still being
-checked on the board (PIZERO-242). Until then the stock `coco2` and `coco3` may not yet match this page.
+Everything above works on hardware.
 
 **The CoCo 3**, checked on the board: Super Extended Color BASIC at 60 fps at 0.89 and 1.79 MHz,
 with sound; WIDTH 40 and WIDTH 80 text; the palette, the GIME timer and the HSCREEN modes
