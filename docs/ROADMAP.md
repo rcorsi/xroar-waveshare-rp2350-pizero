@@ -129,10 +129,14 @@ What is left is small, and none of it blocks the next work: **`PIZERO-216`** (LO
 
 Related CPU-speed item: **`PIZERO-211`** (RAM back from the fast 6809 core).
 
-## Next: the AY-3-8910
+## The AY-3-8910 (done 2026-10-22)
 
-**`PIZERO-149`** (AY-3-8910 / YM2149 sound chip), raised to high on
-2026-10-19, is next now that the CoCo 3 is in the product.
+**`PIZERO-149`**: one bank of four AY chips behind three cartridge front-ends,
+the CoCo PSG (`$FF5E`), the Symphony-12 (PIA at `$FF60`) and the Deluxe CoCo
+(`$FF38`, off by default), on in the CoCo Zero. Left: **`PIZERO-251`** (real
+software: Lyra 1.2, the Sierra PSG games), **`PIZERO-248`** (render cost,
+needed before four chips on a CoCo 3 at 1.79 MHz), **`PIZERO-249`** (the
+Speech/Sound Cartridge), **`PIZERO-250`** (Symphony-12 stereo).
 
 ## Hardware direction
 
@@ -165,7 +169,7 @@ Good change-of-pace work between CoCo 3 stages. None waits on anything.
 ## Add-on hardware (bigger, unstarted)
 
 - **Sound**: `PIZERO-148` (Orchestra-90CC). (`PIZERO-149`, the AY-3-8910,
-  is scheduled after the CoCo 3, above.)
+  is done, above.)
 - **Video**: `PIZERO-16` (TMS9918A), `PIZERO-176` (MC6845 80-column card);
   the new-device chain `PIZERO-83` (decision) → `PIZERO-84` (linear 320×240) and
   `PIZERO-89` (wide text).

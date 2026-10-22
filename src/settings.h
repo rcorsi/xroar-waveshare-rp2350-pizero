@@ -9,6 +9,9 @@
 //
 //   # comment lines start with '#'
 //   sn76489           = on | off              SN76489 at $FF41 without a GMC
+//   coco_psg          = on | off              PIZERO-149: CoCo PSG's AY at $FF5D-$FF5F
+//   symphony12        = on | off              PIZERO-149: Symphony-12's four AYs at $FF60
+//   deluxe_psg        = on | off              PIZERO-149: Deluxe CoCo's AY at $FF38
 //   volume            = 0-15                  10 is the old fixed level
 //   audio_lowpass     = 1000-20000 | on | off PIZERO-212: output low-pass cutoff, Hz
 //   artifact_colors   = on | off | swapped    PMODE 4 color, or plain mono
@@ -68,6 +71,9 @@ enum { FONT_CLASSIC = 0, FONT_6847T1 = 1, FONT_6847T2 = 2 };
 
 struct coco_settings {
     bool    sn76489;
+    bool    coco_psg;                 // PIZERO-149: the AY cartridges
+    bool    symphony12;
+    bool    deluxe_psg;
     uint8_t volume;                   // 0-15
     uint16_t lowpass_hz;              // PIZERO-212: 0 off, else 1000-20000
     uint8_t artifact;                 // ART_*
@@ -103,13 +109,17 @@ static inline bool settings_is_coco3(const struct coco_settings *s) {
 // PIZERO-242: a profile's starting point for the settings that describe the
 // emulated hardware. Only cocozero adds anything: the GIME-style palette and
 // timer, the SN76489 without a cartridge (a Games Master cartridge brings it
-// on any machine), the 6847T2 font with true lower case, and auto-repeat
+// on any machine), the AY cartridges' chips (PIZERO-149: the CoCo PSG and
+// the Symphony-12; the Deluxe CoCo's stays off, its addresses being PIA1's
+// mirror on a CoCo 2), the 6847T2 font with true lower case, and auto-repeat
 // (PIZERO-247: the stock machines' BASIC never repeated a key). settings.txt,
 // then a game's own file, go on top, so any of it can be changed.
 static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
     bool zero = machine == MACH_COCOZERO;
     s->machine = machine;
     s->sn76489 = zero;
+    s->coco_psg = zero;
+    s->symphony12 = zero;
     s->gime_palette = zero;
     s->gime_timer = zero;
     s->font = zero ? FONT_6847T2 : FONT_CLASSIC;
@@ -218,6 +228,9 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
     if (name_out) snprintf(name_out, name_sz, "%s", name);
     bool b;
     if (!strcmp(name, "sn76489"))           { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->sn76489 = b; }
+    else if (!strcmp(name, "coco_psg"))     { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->coco_psg = b; }
+    else if (!strcmp(name, "symphony12"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->symphony12 = b; }
+    else if (!strcmp(name, "deluxe_psg"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->deluxe_psg = b; }
     else if (!strcmp(name, "gime_palette")) { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_palette = b; }
     else if (!strcmp(name, "gime_timer"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_timer = b; }
     else if (!strcmp(name, "autorun"))           { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->autorun = b; }
@@ -431,11 +444,14 @@ static inline int settings_template(char *out, size_t n) {
         "# THE MACHINE SETS THESE. A LINE HERE\n"
         "# WOULD HOLD FOR EVERY GAME:\n"
         "# sn76489 = %s\n"
+        "# coco_psg = %s\n"
+        "# symphony12 = %s\n"
         "# gime_palette = %s\n"
         "# gime_timer = %s\n"
         "# font = %s\n"
         "# lowercase = %s\n"
         "# key_repeat = %s\n"
+        "deluxe_psg = %s\n"
         "volume = %u\n"
         "audio_lowpass = %u\n"
         "artifact_colors = %s\n"
@@ -450,10 +466,11 @@ static inline int settings_template(char *out, size_t n) {
         "# color_green = #00FF00\n"
         "# color_dark_green = #006500\n",
         SETTINGS_MACHINE_NAMES[d.machine],
-        d.sn76489 ? "on" : "off", d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
+        d.sn76489 ? "on" : "off", d.coco_psg ? "on" : "off", d.symphony12 ? "on" : "off",
+        d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
         d.font == FONT_CLASSIC ? "classic" : d.font == FONT_6847T1 ? "6847t1" : "6847t2",
         d.lowercase ? "on" : "off", d.key_repeat ? "on" : "off",
-        d.volume, (unsigned)d.lowpass_hz,
+        d.deluxe_psg ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
         d.artifact == ART_OFF ? "off" : d.artifact == ART_SWAPPED ? "swapped" : "on",
         d.autorun ? "on" : "off", d.reset_to_basic ? "basic" : "autorun", d.serial_keyboard ? "on" : "off",
         d.joystick_swap ? "on" : "off",

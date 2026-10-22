@@ -45,6 +45,9 @@ uint32_t coco_machine_cart_csg_dropped(void);   /* ...of which too fast, ignored
  * odd mirrors of the disk latch), unless switched off here. On by default;
  * the settings page (PIZERO-53) will expose it. */
 void coco_machine_csg_always(_Bool on);
+void coco_machine_set_ay_carts(_Bool psg, _Bool sym12, _Bool deluxe);   /* PIZERO-149 */
+uint32_t coco_machine_ay_writes(void);           /* AY register writes since reset */
+uint8_t coco_machine_ay_active(void);            /* bit per AY chip in use */
 
 /* PIZERO-145: runtime switches set from /coco/settings.txt. Each takes
  * effect at once. volume 0-15 (10 = the old fixed level); artifact 0 off

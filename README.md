@@ -37,6 +37,8 @@ which it needs, and launching it switches the board to that machine by itself.
 
 **As the CoCo Zero**, the CoCo 2 also has:
 - The three-voice sound chip from the Games Master Cartridge, built in.
+- The AY-3-8910 sound chips of the CoCo PSG and Symphony-12 cartridges, built in: up to four
+  chips and twelve voices.
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
 - Auto-repeat for a key held down, which Color BASIC never did.
@@ -114,7 +116,7 @@ The board starts as the machine `settings.txt` names:
 
 | `machine =` | What you get |
 |---|---|
-| `cocozero` (the default) | A CoCo 2 with the extras above: the sound chip, the CoCo 3 palette and timer, true lower case, auto-repeat. |
+| `cocozero` (the default) | A CoCo 2 with the extras above: the sound chips, the CoCo 3 palette and timer, true lower case, auto-repeat. |
 | `coco2` | A stock CoCo 2, as Tandy shipped it: no extras, the original font, no auto-repeat. |
 | `coco3` | A stock 128 KB CoCo 3, no auto-repeat. |
 

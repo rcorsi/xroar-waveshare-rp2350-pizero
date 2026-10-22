@@ -60,11 +60,14 @@ one, since its file would be one of the machine's own.
 machine           = cocozero
 # The machine sets these. A line here would hold for every game:
 # sn76489         = on
+# coco_psg        = on
+# symphony12      = on
 # gime_palette    = on
 # gime_timer      = on
 # font            = 6847t2
 # lowercase       = on
 # key_repeat      = on
+deluxe_psg        = off
 volume            = 10
 audio_lowpass     = 8000
 artifact_colors   = on
@@ -92,7 +95,7 @@ pad_r3            = none
 
 That file sets every setting to its default, so it behaves exactly like
 having no file at all. Change the lines you care about and delete the rest.
-The six commented lines are the ones the machine decides. Leave them
+The eight commented lines are the ones the machine decides. Leave them
 commented unless you want that value on every machine: `sn76489 = on`
 uncommented would also give the stock CoCo 2 and CoCo 3 the sound chip.
 
@@ -106,6 +109,9 @@ off (or the original font) for the stock CoCo 2 and CoCo 3.
 | Setting | Values | Default | What it does |
 |---|---|---|---|
 | `sn76489` | `on` / `off` | machine | The SN76489 sound chip at `$FF41`, without a Games Master Cartridge. `off` gives `$FF41` back to the disk controller. With a GMC plugged in, the chip is there either way. |
+| `coco_psg` | `on` / `off` | machine | The CoCo PSG cartridge's sound chip, an AY-3-8910 type (YM2149): register select at `$FF5E`, data at `$FF5F`, and `$FF5D` bit 0 for its 2 MHz or 1 MHz clock. Its flash, RAM and joystick ports are not emulated. |
+| `symphony12` | `on` / `off` | machine | The Speech Systems Symphony-12 cartridge: four AY-3-8910 chips, twelve voices, through a PIA at `$FF60`-`$FF63`, mixed to mono. It shares its first chip with `coco_psg` and `deluxe_psg`. A chip costs time only while one of its voices is turned up: four playing at once take about 6 ms of each 16.7 ms frame, which a CoCo 2 has to spare and a CoCo 3 at 1.79 MHz may not (PIZERO-248). |
+| `deluxe_psg` | `on` / `off` | `off` | The sound chip of Tandy's unreleased Deluxe Color Computer, at `$FF38` (data) and `$FF39` (register). Off on every machine, because on a CoCo 2 those addresses repeat the keyboard and sound PIA, and a program that uses the repeat would break. Nearly no software uses it. |
 | `volume` | `0`-`15` | `10` | Overall sound level. `0` is silent; `15` is half as loud again as the default. Each number is louder than it used to be: three times on 2026-10-14 (PIZERO-223) and twice again on 2026-10-16 (PIZERO-230), six times in all, so a `settings.txt` written before then plays louder at the same number. Above `10`, music that drives the CoCo's sound hard may clip (PIZERO-231). |
 | `audio_lowpass` | `1000`-`20000` / `on` / `off` | `8000` | Softens the sound: a filter that takes off what is above this many hertz, the way the TV did on the real machine. It mostly removes the harsh buzz of the CoCo's sound steps. Lower is mellower, higher is brighter; `off` gives the raw sound, and `on` means `8000`. Try a game's own settings file for one that sounds muffled. |
 | `artifact_colors` | `on` / `off` / `swapped` | `on` | **CoCo 2.** Color in PMODE 4 graphics, from the NTSC artifact effect. `off` shows plain black and white; `swapped` exchanges the blue and orange, for games drawn with the other phase. **F8** steps through on, swapped and off while a program runs, and saves the choice in that game's own settings file (or in `settings.txt` when nothing was launched). |
@@ -122,7 +128,7 @@ off (or the original font) for the stock CoCo 2 and CoCo 3.
 | `key_repeat_delay` | `100`-`2000` | `500` | Milliseconds a key is held before it starts repeating. |
 | `key_repeat_rate` | `1`-`30` | `10` | Repeats a second. Above 12 it is held to 12, so BASIC sees every press. |
 | `video_encoder` | `hardware` / `software` | `hardware` | How the picture is encoded for the display. `hardware` uses the encoder built into the RP2350 chip, which takes half the time. `software` is the older method, kept in case a display shows a problem with `hardware`. The picture should look the same either way. The INFO page (F12, then Left) shows which one is in use. **No effect at present:** since the 640-wide picture (PIZERO-134, 135) both machines always use the hardware encoder (PIZERO-240). |
-| `machine` | `cocozero` / `coco2` / `coco3` | `cocozero` | Which CoCo the board is. `cocozero` is a CoCo 2 with this project's extras: the SN76489, the CoCo 3-style palette and timer, the `6847t2` font and true lower case. `coco2` is a stock Tandy Color Computer 2 and `coco3` a stock 128 KB Color Computer 3 (needs `coco3.rom` on the card), with those settings and auto-repeat off and the `classic` font. The machine only sets their starting point: a line for any of them in `settings.txt` or a game's file still wins. In `settings.txt` it picks the machine at power-on and after RUN; saving a change to or from `coco3` restarts the board as the other machine, at the BASIC prompt, and between `cocozero` and `coco2` it applies at once. In a game's own settings file it switches when that game is launched: the board restarts, about two seconds, and starts the game. Launching a game without one goes back to `settings.txt`'s machine. Without `coco3.rom` a page says so and the board stays a CoCo 2. |
+| `machine` | `cocozero` / `coco2` / `coco3` | `cocozero` | Which CoCo the board is. `cocozero` is a CoCo 2 with this project's extras: the SN76489, the CoCo 3-style palette and timer, the `6847t2` font and true lower case. `coco2` is a stock Tandy Color Computer 2 and `coco3` a stock 128 KB Color Computer 3 (needs `coco3.rom` on the card), with those settings (the AY cartridges included) and auto-repeat off and the `classic` font. The machine only sets their starting point: a line for any of them in `settings.txt` or a game's file still wins. In `settings.txt` it picks the machine at power-on and after RUN; saving a change to or from `coco3` restarts the board as the other machine, at the BASIC prompt, and between `cocozero` and `coco2` it applies at once. In a game's own settings file it switches when that game is launched: the board restarts, about two seconds, and starts the game. Launching a game without one goes back to `settings.txt`'s machine. Without `coco3.rom` a page says so and the board stays a CoCo 2. |
 | `dpad`, `pad_...` | see below | | What the gamepad's D-pad and each button do. See [Gamepad buttons](#gamepad-buttons). |
 | `color_NAME` | `#RRGGBB` | the 6847's | **CoCo 2.** Overrides one palette color. See below. |
 

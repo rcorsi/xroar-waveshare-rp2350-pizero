@@ -19,6 +19,7 @@
 #include "vdg_pack.h"
 #include "cart_gmc.h"          // PIZERO-142, host-tested
 #include "csg_sn76489.h"       // PIZERO-143, host-tested
+#include "psg_ay8910.h"        // PIZERO-149, host-tested
 #include "joy_compare.h"       // PIZERO-13, host-tested
 #include "coco_palette.h"
 #include "audio_servo.h"
@@ -788,6 +789,11 @@ static void csg_reset(void) {
     g_csg_active = false;
 }
 
+// PIZERO-149: the AY-3-8910 bank, shared by the CoCo PSG, Symphony-12 and
+// Deluxe CoCo front-ends (psg_ay8910.h). Same timing as the SN76489: written
+// from the bus, rendered at each audio sample, idle until first written.
+static struct ay_bank g_ayb;
+
 // Available all the time by default, not only with a GMC in (see
 // csg_on_latch_mirror in cart_gmc.h); the settings page will switch it.
 static bool g_csg_always = true;
@@ -1065,7 +1071,9 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
     // dispatch at the bottom runs less often.
     //
     // Now use SAM->S (set by mem_cycle) to route data on the bus.
-    if (RnW) {
+    if (RnW && ayb_owns(&g_ayb, A)) {
+        g_m.cpu->D = ayb_read(&g_ayb, A);                // PIZERO-149
+    } else if (RnW) {
         switch (g_m.sam->S) {
         case 0:  g_m.cpu->D = g_m.ram[A]; break;
         case 1:
@@ -1114,7 +1122,9 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
               FDC_TRACE_PORT.printf("[fdc] pia0 %04x=%02x pc=%04x\r\n", A, g_m.cpu->D, g_m.cpu->reg_pc);
           } }
 #endif
-        if ((A & 0xFFE0) == 0xFF00) {
+        if (ayb_owns(&g_ayb, A)) {
+            ayb_write(&g_ayb, A, g_m.cpu->D);           // PIZERO-149
+        } else if ((A & 0xFFE0) == 0xFF00) {
             mc6821_write(g_m.pia0, A, g_m.cpu->D);
             if (A & 1) g_m.pia_irq_dirty = true;       // CRA/CRB write may change IRQ enable
         } else if ((A & 0xFFE0) == 0xFF20) {
@@ -1295,6 +1305,12 @@ static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_
     audio_catch_up();     // before a PIA1 write can change the level
     g_m.total_mem_cycles++;
     uint8_t *D = &g_m.cpu->D;
+    // PIZERO-149: the AY cartridges' registers. All are in the I/O page,
+    // which has no RAM behind it, so the bus has nothing else to move.
+    if (ayb_owns(&g_ayb, A)) {
+        if (RnW) *D = ayb_read(&g_ayb, A);
+        else     ayb_write(&g_ayb, A, *D);
+    } else
     switch (coco3_bus_cycle(&g_c3bus, g_gime3->S, g_gime3->RAS, g_gime3->Z, RnW, A, D)) {
     case C3_BUS_PIA0:
         if (RnW) *D = mc6821_read(g_m.pia0, A);
@@ -1647,6 +1663,7 @@ static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t t
     uint32_t t0 = cpu_prof_now();
 #endif
     if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume * AUDIO_GAIN_X / 10;   // PIZERO-143/145/223
+    if (g_ayb.active) s += ayb_render(&g_ayb, tk) * g_volume * AUDIO_GAIN_X / 10;  // PIZERO-149
     audio_emit(s);
 #ifdef CPU_PROF
     g_cpu_prof.samp_clk += cpu_prof_now() - t0;
@@ -1921,6 +1938,14 @@ extern "C" void coco_machine_csg_always(bool on) {   // PIZERO-143/145: the sn76
     if (!on && !g_m.cart_banked) csg_reset();
 }
 
+// PIZERO-149: which AY cartridges answer. A change silences the chips.
+extern "C" void coco_machine_set_ay_carts(bool psg, bool sym12, bool deluxe) {
+    uint8_t mask = (uint8_t)((psg ? AYB_PSG : 0) | (sym12 ? AYB_SYM12 : 0) | (deluxe ? AYB_DELUXE : 0));
+    if (mask != g_ayb.enabled) { g_ayb.enabled = mask; ayb_reset(&g_ayb); }
+}
+extern "C" uint32_t coco_machine_ay_writes(void) { return g_ayb.writes; }
+extern "C" uint8_t coco_machine_ay_active(void) { return g_ayb.active; }
+
 // PIZERO-145: the rest of the settings.txt switches.
 extern "C" void coco_machine_set_volume(int v) {
     if (v < 0) v = 0; else if (v > 15) v = 15;
@@ -1987,6 +2012,7 @@ extern "C" void coco_machine_cold_reset(void) {
         if (g_m.cart_banked) g_m.cart_rom = g_m.cart_base;
         fastbus_sync();
         csg_reset();
+        ayb_reset(&g_ayb);                           // PIZERO-149
         tcc1014_reset(g_gime3);
         fastbus_sync();                              // PIZERO-213: the map after reset
         g_m.cpu->reset(g_m.cpu);
@@ -2014,6 +2040,7 @@ extern "C" void coco_machine_cold_reset(void) {
     if (g_m.cart_banked) g_m.cart_rom = g_m.cart_base;   // PIZERO-142: bank 0
     fastbus_sync();                                       // PIZERO-131: TY and the bank
     csg_reset();                                          // PIZERO-143: silent at power-on
+    ayb_reset(&g_ayb);                                    // PIZERO-149
     g_m.cpu->reset(g_m.cpu);
 }
 
