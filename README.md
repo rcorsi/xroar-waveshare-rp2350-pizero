@@ -39,6 +39,7 @@ which it needs, and launching it switches the board to that machine by itself.
 - The three-voice sound chip from the Games Master Cartridge, built in.
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
+- Auto-repeat for a key held down, which Color BASIC never did.
 
 **On every machine:**
 - Picture and sound over one video cable, at 60 frames per second.
@@ -113,9 +114,9 @@ The board starts as the machine `settings.txt` names:
 
 | `machine =` | What you get |
 |---|---|
-| `cocozero` (the default) | A CoCo 2 with the extras above: the sound chip, the CoCo 3 palette and timer, true lower case. |
-| `coco2` | A stock CoCo 2, as Tandy shipped it: no extras, the original font. |
-| `coco3` | A stock 128 KB CoCo 3. |
+| `cocozero` (the default) | A CoCo 2 with the extras above: the sound chip, the CoCo 3 palette and timer, true lower case, auto-repeat. |
+| `coco2` | A stock CoCo 2, as Tandy shipped it: no extras, the original font, no auto-repeat. |
+| `coco3` | A stock 128 KB CoCo 3, no auto-repeat. |
 
 The machine only sets the starting point for those extras. Any of them can still be turned on or
 off on its own in `settings.txt` or a game's file (see [`SETTINGS.md`](SETTINGS.md)), and a Games

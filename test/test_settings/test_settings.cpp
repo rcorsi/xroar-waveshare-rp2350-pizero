@@ -242,6 +242,30 @@ static void test_the_template_parses_back_to_the_defaults(void) {
     TEST_ASSERT_EQUAL_MEMORY(&d, &s, sizeof s);
 }
 
+static void test_machine_profiles(void) {
+    // PIZERO-242/247: cocozero turns the extras on; the stock machines are
+    // as Tandy shipped them, auto-repeat included. The rest is untouched.
+    for (int m = MACH_COCOZERO; m <= MACH_COCO3; m++) {
+        settings_defaults(&s);
+        s.volume = 3;
+        settings_profile(&s, (uint8_t)m);
+        bool zero = m == MACH_COCOZERO;
+        TEST_ASSERT_EQUAL_UINT8(m, s.machine);
+        TEST_ASSERT_EQUAL(zero, s.sn76489);
+        TEST_ASSERT_EQUAL(zero, s.gime_palette);
+        TEST_ASSERT_EQUAL(zero, s.gime_timer);
+        TEST_ASSERT_EQUAL_UINT8(zero ? FONT_6847T2 : FONT_CLASSIC, s.font);
+        TEST_ASSERT_EQUAL(zero, s.lowercase);
+        TEST_ASSERT_EQUAL(zero, s.key_repeat);
+        TEST_ASSERT_EQUAL_UINT8(3, s.volume);
+        TEST_ASSERT_EQUAL_UINT16(500, s.key_repeat_delay);
+    }
+    // A line after the profile still wins.
+    settings_profile(&s, MACH_COCO2);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("key_repeat = on"));
+    TEST_ASSERT_TRUE(s.key_repeat);
+}
+
 static void test_game_settings_path(void) {
     char p[96];
     TEST_ASSERT_TRUE(settings_game_path("0:/coco/bin/ORBIT.BIN", p, sizeof p));
@@ -266,6 +290,7 @@ int main(void) {
     RUN_TEST(test_bad_lines_are_reported_and_change_nothing);
     RUN_TEST(test_rgb565_rounding);
     RUN_TEST(test_the_template_parses_back_to_the_defaults);
+    RUN_TEST(test_machine_profiles);
     RUN_TEST(test_set_line_replaces_adds_and_keeps_the_rest);
     RUN_TEST(test_tidy_puts_comments_first_and_sorts_settings);
     RUN_TEST(test_tidy_keeps_repeated_names_in_order);

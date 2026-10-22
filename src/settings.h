@@ -103,7 +103,8 @@ static inline bool settings_is_coco3(const struct coco_settings *s) {
 // PIZERO-242: a profile's starting point for the settings that describe the
 // emulated hardware. Only cocozero adds anything: the GIME-style palette and
 // timer, the SN76489 without a cartridge (a Games Master cartridge brings it
-// on any machine), and the 6847T2 font with true lower case. settings.txt,
+// on any machine), the 6847T2 font with true lower case, and auto-repeat
+// (PIZERO-247: the stock machines' BASIC never repeated a key). settings.txt,
 // then a game's own file, go on top, so any of it can be changed.
 static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
     bool zero = machine == MACH_COCOZERO;
@@ -113,6 +114,7 @@ static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
     s->gime_timer = zero;
     s->font = zero ? FONT_6847T2 : FONT_CLASSIC;
     s->lowercase = zero;
+    s->key_repeat = zero;
 }
 
 static inline void settings_defaults(struct coco_settings *s) {
@@ -433,6 +435,7 @@ static inline int settings_template(char *out, size_t n) {
         "# gime_timer = %s\n"
         "# font = %s\n"
         "# lowercase = %s\n"
+        "# key_repeat = %s\n"
         "volume = %u\n"
         "audio_lowpass = %u\n"
         "artifact_colors = %s\n"
@@ -440,7 +443,6 @@ static inline int settings_template(char *out, size_t n) {
         "reset_button = %s\n"
         "serial_keyboard = %s\n"
         "joystick_swap = %s\n"
-        "key_repeat = %s\n"
         "key_repeat_delay = %u\n"
         "key_repeat_rate = %u\n"
         "video_encoder = %s\n"
@@ -450,12 +452,11 @@ static inline int settings_template(char *out, size_t n) {
         SETTINGS_MACHINE_NAMES[d.machine],
         d.sn76489 ? "on" : "off", d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
         d.font == FONT_CLASSIC ? "classic" : d.font == FONT_6847T1 ? "6847t1" : "6847t2",
-        d.lowercase ? "on" : "off",
+        d.lowercase ? "on" : "off", d.key_repeat ? "on" : "off",
         d.volume, (unsigned)d.lowpass_hz,
         d.artifact == ART_OFF ? "off" : d.artifact == ART_SWAPPED ? "swapped" : "on",
         d.autorun ? "on" : "off", d.reset_to_basic ? "basic" : "autorun", d.serial_keyboard ? "on" : "off",
         d.joystick_swap ? "on" : "off",
-        d.key_repeat ? "on" : "off",
         (unsigned)d.key_repeat_delay, (unsigned)d.key_repeat_rate,
         d.video_hw_encode ? "hardware" : "software", d.soak_log ? "on" : "off");
     if (k < 0 || k >= (int)n) return (k < 0) ? 0 : (int)n - 1;
