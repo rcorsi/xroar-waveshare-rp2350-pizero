@@ -2627,7 +2627,8 @@ void loop() {
                         (unsigned long)(p.sec_clk[2] * 10ull / n / 10), (unsigned long)(p.sec_clk[2] * 10ull / n % 10),
                         (unsigned long)(p.sec_clk[3] * 10ull / n / 10), (unsigned long)(p.sec_clk[3] * 10ull / n % 10));
                 // PIZERO-220: the CoCo 3's slow cycles, events and sink, per frame.
-                if (p.slow_n)
+                // PIZERO-248: the CoCo 2 too, for its audio samples' cost.
+                if (p.slow_n || p.samp_n)
                     tprintf("[prof3] per frame: slow=%lu (%lu clk: bus %lu tail %lu) ev=%lu (%lu clk) lines=%lu sink=%lu clk run=%lu clk | samples=%lu (%lu clk) catch=%lu clk\r\n",
                             (unsigned long)(p.slow_n / 60), (unsigned long)(p.slow_clk / 60),
                             (unsigned long)(p.cb_bus_clk / 60), (unsigned long)(p.cb_tail_clk / 60),

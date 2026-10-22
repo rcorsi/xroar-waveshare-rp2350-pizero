@@ -31,6 +31,12 @@
 #include <stdint.h>
 #include <string.h>
 
+// PIZERO-248: in RAM on the board, as psg_ay8910.h explains.
+#ifndef SOUND_HOT
+#define SOUND_HOT
+#define SOUND_TABLE
+#endif
+
 #define SN_REF_HZ       250000u     // 4 MHz clock / 16
 #define SN_EVENT_HZ     14318180u   // the machine's event ticks per second
 
@@ -41,7 +47,7 @@
 // Level of one channel at each attenuation, 10^(-i/10) of full scale: 2 dB
 // per step. Full scale per channel is a quarter of the DAC's swing, so all
 // four at full volume match the DAC's loudest, as in XRoar's mix.
-static const uint16_t SN_LEVEL[16] = {
+static const uint16_t SN_LEVEL[16] SOUND_TABLE = {   // in RAM on the board (PIZERO-248)
     945, 751, 596, 474, 376, 299, 237, 188,
     150, 119,  95,  75,  60,  47,  38,   0
 };
@@ -107,8 +113,16 @@ static inline bool sn_ready(uint32_t last_write_tick, uint32_t now_tick) {
     return (uint32_t)(now_tick - last_write_tick) >= SN_READY_TICKS;
 }
 
+// The summed output level as the chip stands.
+static inline SOUND_HOT int32_t sn_mix(const struct sn76489 *c) {
+    int32_t out = 0;
+    for (int ch = 0; ch < 4; ch++)
+        if (c->state[ch]) out += SN_LEVEL[c->att[ch]];
+    return out;
+}
+
 // Advance one chip tick (250 kHz) and return the summed output level.
-static inline int32_t sn_tick(struct sn76489 *c) {
+static inline SOUND_HOT int32_t sn_tick(struct sn76489 *c) {
     bool noise_clock = false;
     for (int ch = 0; ch < 3; ch++) {
         if (--c->count[ch] == 0) {
@@ -127,22 +141,46 @@ static inline int32_t sn_tick(struct sn76489 *c) {
         c->lfsr = (uint16_t)((c->lfsr >> 1) | (fb << 14));
         c->state[3] = c->lfsr & 1;
     }
-    int32_t out = 0;
-    for (int ch = 0; ch < 4; ch++)
-        if (c->state[ch]) out += SN_LEVEL[c->att[ch]];
-    return out;
+    return sn_mix(c);
+}
+
+// PIZERO-248: the ticks until a counter runs out (a tone edge, or the noise
+// clock's), at least 1. Nothing changes before then, so ticks short of it
+// are taken in one go.
+static inline SOUND_HOT uint32_t sn_quiet_ticks(const struct sn76489 *c) {
+    uint32_t q = c->count[0];
+    if (c->count[1] < q) q = c->count[1];
+    if (c->count[2] < q) q = c->count[2];
+    if (!c->noise_tone3 && c->count[3] < q) q = c->count[3];
+    return q;
+}
+
+static inline SOUND_HOT void sn_skip(struct sn76489 *c, uint32_t k) {
+    for (int ch = 0; ch < 3; ch++) c->count[ch] = (uint16_t)(c->count[ch] - k);
+    if (!c->noise_tone3) c->count[3] = (uint16_t)(c->count[3] - k);
 }
 
 // The chip's average output over `event_ticks` of machine time: one audio
 // sample's worth. Averaging, not point-sampling, keeps high tones from
-// aliasing, as the DAC path does.
-static inline int32_t sn_render(struct sn76489 *c, uint32_t event_ticks) {
-    uint64_t f = (uint64_t)c->frac + (uint64_t)event_ticks * SN_REF_HZ;
-    uint32_t n = (uint32_t)(f / SN_EVENT_HZ);
-    c->frac = (uint32_t)(f % SN_EVENT_HZ);
+// aliasing, as the DAC path does. PIZERO-248: 32-bit arithmetic, as
+// ay_render: a 64-bit divide is a library call (in flash) on the RP2350.
+// 16000 ticks * 250 kHz plus the carry stays under 2^32.
+static inline SOUND_HOT int32_t sn_render(struct sn76489 *c, uint32_t event_ticks) {
+    if (event_ticks > 16000) event_ticks = 16000;
+    uint32_t f = c->frac + event_ticks * SN_REF_HZ;
+    uint32_t n = f / SN_EVENT_HZ;
+    c->frac = f - n * SN_EVENT_HZ;
     if (n == 0) return c->last;
-    int32_t sum = 0;
-    for (uint32_t i = 0; i < n; i++) sum += sn_tick(c);
+    int32_t sum = 0, out = sn_mix(c);
+    for (uint32_t left = n;;) {                  // PIZERO-248: quiet ticks in one go
+        uint32_t q = sn_quiet_ticks(c);
+        if (q > left) { sn_skip(c, left); sum += out * (int32_t)left; break; }
+        sn_skip(c, q - 1);
+        sum += out * (int32_t)(q - 1);
+        out = sn_tick(c);
+        sum += out;
+        if ((left -= q) == 0) break;
+    }
     c->last = sum / (int32_t)n;
     return c->last;
 }

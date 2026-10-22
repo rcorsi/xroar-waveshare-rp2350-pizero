@@ -120,6 +120,43 @@ static void test_writes_too_close_together_are_refused(void) {
     TEST_ASSERT_TRUE(sn_ready(0xFFFFFFF0u, 0x100));  // across tick wrap
 }
 
+// PIZERO-248: sn_render takes the ticks in which no counter runs out in
+// one go. It must match stepping every tick exactly, sample for sample and
+// in the state it leaves, under random writes (short and long periods,
+// every noise mode) between samples of random length.
+static int32_t render_by_ticks(struct sn76489 *x, uint32_t event_ticks) {
+    uint32_t f = x->frac + event_ticks * SN_REF_HZ;
+    uint32_t n = f / SN_EVENT_HZ;
+    x->frac = f - n * SN_EVENT_HZ;
+    if (n == 0) return x->last;
+    int32_t sum = 0;
+    for (uint32_t i = 0; i < n; i++) sum += sn_tick(x);
+    x->last = sum / (int32_t)n;
+    return x->last;
+}
+
+static void test_render_skipping_matches_every_tick(void) {
+    struct sn76489 a, r;
+    uint32_t seed = 777;
+    #define RND() (seed = seed * 1103515245u + 12345u, (seed >> 16) & 0x7FFF)
+    for (int run = 0; run < 40; run++) {
+        sn_reset(&a);
+        r = a;
+        for (int s = 0; s < 4000; s++) {
+            if (RND() % 6 == 0) {
+                uint8_t d = (uint8_t)RND();
+                if ((d & 0x80) && !(d & 0x10) && RND() % 2) d &= 0xF1;   // short periods
+                sn_write(&a, d);
+                sn_write(&r, d);
+            }
+            uint32_t t = 200 + RND() % 400;
+            TEST_ASSERT_EQUAL_INT32(render_by_ticks(&r, t), sn_render(&a, t));
+        }
+        TEST_ASSERT_EQUAL_MEMORY(&r, &a, sizeof a);
+    }
+    #undef RND
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_starts_silent);
@@ -131,5 +168,6 @@ int main(void) {
     RUN_TEST(test_white_noise_varies_and_resets);
     RUN_TEST(test_noise_rate_3_follows_tone_three);
     RUN_TEST(test_writes_too_close_together_are_refused);
+    RUN_TEST(test_render_skipping_matches_every_tick);
     return UNITY_END();
 }

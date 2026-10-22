@@ -6,6 +6,7 @@
 //
 //   pio test -e native
 
+#include <stddef.h>
 #include <unity.h>
 
 #include "../../lib/coco_machine/src/psg_ay8910.h"
@@ -316,6 +317,48 @@ static void test_symphony12_stereo_pans_its_chips(void) {
     TEST_ASSERT_EQUAL_UINT8(0, b.sym12);
 }
 
+// PIZERO-248: ay_render runs only the parts that can be heard, and skips
+// the ticks in which none of them changes. It must give exactly what
+// stepping every part every tick gives, sample for sample, and once caught
+// up leave the chip in exactly the same state, whatever the registers do:
+// random writes (tone periods short and long, noise and envelope in use or
+// not, every envelope shape) between samples of random length.
+static int32_t render_by_ticks(struct ay8910 *c, uint32_t event_ticks) {
+    uint32_t f = c->frac + event_ticks * (c->clock_hz >> 3);
+    uint32_t n = f / AY_EVENT_HZ;
+    c->frac = f - n * AY_EVENT_HZ;
+    if (n == 0) return c->last;
+    int32_t sum = 0;
+    for (uint32_t i = 0; i < n; i++) sum += ay_tick(c);
+    c->last = sum / (int32_t)n;
+    return c->last;
+}
+
+static void test_render_skipping_matches_every_tick(void) {
+    struct ay8910 a, r;
+    uint32_t seed = 12345;
+    #define RND() (seed = seed * 1103515245u + 12345u, (seed >> 16) & 0x7FFF)
+    for (int run = 0; run < 40; run++) {
+        ay_reset(&a, run & 1 ? AY_CLK_PSG_2MHZ : AY_CLK_SYM12);
+        r = a;
+        for (int s = 0; s < 4000; s++) {
+            if (RND() % 8 == 0) {
+                uint8_t reg = (uint8_t)(RND() % 14), v = (uint8_t)RND();
+                if (reg == 0 || reg == 2 || reg == 4) v = (uint8_t)(RND() % 4 ? v : RND() % 4);
+                if (reg == 6 && RND() % 2) v = (uint8_t)(RND() % 3);
+                if (reg == 11 || reg == 12) v = (uint8_t)(RND() % 3 ? RND() % 8 : v);
+                ay_latch(&a, reg); ay_write(&a, v);
+                ay_latch(&r, reg); ay_write(&r, v);
+            }
+            uint32_t t = 200 + RND() % 400;
+            TEST_ASSERT_EQUAL_INT32(render_by_ticks(&r, t), ay_render(&a, t));
+        }
+        ay_sync(&a);                             // the parts no one heard, caught up
+        TEST_ASSERT_EQUAL_MEMORY(&r, &a, offsetof(struct ay8910, valid));   // the cache is not state
+    }
+    #undef RND
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_starts_silent);
@@ -333,5 +376,6 @@ int main(void) {
     RUN_TEST(test_deluxe_coco_registers);
     RUN_TEST(test_bank_mix_is_silent_until_used_and_scales);
     RUN_TEST(test_symphony12_stereo_pans_its_chips);
+    RUN_TEST(test_render_skipping_matches_every_tick);
     return UNITY_END();
 }

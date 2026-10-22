@@ -49,6 +49,15 @@
 #include <stdint.h>
 #include <string.h>
 
+// PIZERO-248: the render path's functions and tables go in RAM on the board
+// (coco_machine.cpp defines SOUND_HOT as a RAM section). Left to the
+// compiler, ay_tick came out as a function in flash, and the level table
+// was read from flash too, both thousands of times a frame.
+#ifndef SOUND_HOT
+#define SOUND_HOT
+#define SOUND_TABLE
+#endif
+
 #define AY_EVENT_HZ      14318180u        // the machine's event ticks per second
 #define AY_CHIPS         4
 
@@ -59,8 +68,8 @@
 
 // Level of one channel at each 4-bit amplitude: full scale 1260, each step
 // down 1/sqrt 2. One chip's three channels at full match the DAC's loudest,
-// as the SN76489's four do (csg_sn76489.h).
-static const uint16_t AY_LEVEL[16] = {
+// as the SN76489's four do (csg_sn76489.h). In RAM on the board (PIZERO-248).
+static const uint16_t AY_LEVEL[16] SOUND_TABLE = {
        0,   10,   14,   20,   28,   39,   56,   79,
      111,  158,  223,  315,  445,  630,  891, 1260
 };
@@ -88,6 +97,20 @@ struct ay8910 {
     uint32_t clock_hz;
     uint32_t frac;               // event ticks not yet turned into chip ticks
     int32_t  last;               // last output level
+    // PIZERO-248: chip ticks run so far, and the tick each part (tones 0-2,
+    // noise, envelope) has been brought up to. A part no one can hear is
+    // left behind and caught up exactly when a register write might make
+    // it heard (ay_sync).
+    uint32_t now;
+    uint32_t since[5];
+    // PIZERO-248: what the last render found, kept while no register is
+    // written: the heard parts, the output, the ticks before a heard part
+    // changes, and the ticks the heard parts are owed (taken in ay_flush).
+    bool     valid;
+    uint8_t  parts;
+    int32_t  out;
+    uint32_t quiet;
+    uint32_t pending;
 };
 
 static inline void ay_set_clock(struct ay8910 *c, uint32_t hz) { c->clock_hz = hz; }
@@ -113,29 +136,13 @@ static inline void ay_env_set_level(struct ay8910 *c) {
 
 static inline void ay_latch(struct ay8910 *c, uint8_t d) { c->addr = d & 0x0F; }
 
-static inline void ay_write(struct ay8910 *c, uint8_t d) {
-    unsigned r = c->addr;
-    c->reg[r] = d & AY_REG_MASK[r];
-    if (r == 13) {                           // a new shape restarts the envelope
-        c->env_cont = (d & 8) != 0;
-        c->env_att  = (d & 4) != 0;
-        c->env_alt  = (d & 2) != 0;
-        c->env_hold = (d & 1) != 0;
-        c->env_pos = 0;
-        c->env_holding = false;
-        c->env_count = 1;
-        c->env_half = 0;
-        ay_env_set_level(c);
-    }
-}
-
 static inline uint8_t ay_read(const struct ay8910 *c) {
     return c->addr >= 14 ? 0xFF : c->reg[c->addr];
 }
 
 // One envelope step: the next level of the ramp, or what the shape does at
 // its end.
-static inline void ay_env_step(struct ay8910 *c) {
+static inline SOUND_HOT void ay_env_step(struct ay8910 *c) {
     if (c->env_holding) return;
     if (++c->env_pos < 16) { ay_env_set_level(c); return; }
     if (!c->env_cont) {                      // shapes 0-7: one ramp, then 0
@@ -152,26 +159,8 @@ static inline void ay_env_step(struct ay8910 *c) {
     }
 }
 
-// Advance one chip tick (clock / 8) and return the summed output level.
-static inline int32_t ay_tick(struct ay8910 *c) {
-    for (int ch = 0; ch < 3; ch++) {
-        if (--c->tone_count[ch] == 0) {
-            c->tone_count[ch] = (uint16_t)ay_tone_period(c, ch);
-            c->tone_out[ch] ^= 1;
-        }
-    }
-    if ((c->noise_half ^= 1) == 0 && --c->noise_count == 0) {
-        unsigned np = c->reg[6] & 0x1F;
-        c->noise_count = (uint8_t)(np ? np : 1);
-        uint32_t fb = (c->lfsr ^ (c->lfsr >> 3)) & 1;
-        c->lfsr = (c->lfsr >> 1) | (fb << 16);
-        c->noise_out = c->lfsr & 1;
-    }
-    if ((c->env_half ^= 1) == 0 && --c->env_count == 0) {
-        unsigned ep = ((unsigned)c->reg[12] << 8) | c->reg[11];
-        c->env_count = (uint16_t)(ep ? ep : 1);
-        ay_env_step(c);
-    }
+// The summed output level of the chip as it stands.
+static inline SOUND_HOT int32_t ay_mix(const struct ay8910 *c) {
     uint8_t mix = c->reg[7];
     int32_t out = 0;
     for (int ch = 0; ch < 3; ch++) {
@@ -183,21 +172,220 @@ static inline int32_t ay_tick(struct ay8910 *c) {
     return out;
 }
 
+static inline SOUND_HOT void ay_noise_step(struct ay8910 *c) {
+    uint32_t fb = (c->lfsr ^ (c->lfsr >> 3)) & 1;
+    c->lfsr = (c->lfsr >> 1) | (fb << 16);
+    c->noise_out = c->lfsr & 1;
+}
+
+// The parts of the chip, as bits of a mask: tones 0-2, noise, envelope.
+enum { AY_PART_NOISE = 1u << 3, AY_PART_ENV = 1u << 4, AY_PARTS = 0x1F };
+
+// One chip tick (clock / 8) for the parts in `parts`; the summed output.
+static inline SOUND_HOT int32_t ay_tick_parts(struct ay8910 *c, uint32_t parts) {
+    for (int ch = 0; ch < 3; ch++) {
+        if ((parts & (1u << ch)) && --c->tone_count[ch] == 0) {
+            c->tone_count[ch] = (uint16_t)ay_tone_period(c, ch);
+            c->tone_out[ch] ^= 1;
+        }
+    }
+    if ((parts & AY_PART_NOISE) && (c->noise_half ^= 1) == 0 && --c->noise_count == 0) {
+        unsigned np = c->reg[6] & 0x1F;
+        c->noise_count = (uint8_t)(np ? np : 1);
+        ay_noise_step(c);
+    }
+    if ((parts & AY_PART_ENV) && (c->env_half ^= 1) == 0 && --c->env_count == 0) {
+        unsigned ep = ((unsigned)c->reg[12] << 8) | c->reg[11];
+        c->env_count = (uint16_t)(ep ? ep : 1);
+        ay_env_step(c);
+    }
+    c->now++;
+    return ay_mix(c);
+}
+
+// A counter that reloads from `period` each time it runs out, moved on by
+// k ticks. Returns how many times it ran out.
+static inline SOUND_HOT uint32_t ay_count_skip(uint32_t *count, uint32_t period, uint32_t k) {
+    if (k < *count) { *count -= k; return 0; }
+    k -= *count;
+    *count = period - k % period;
+    return 1 + k / period;
+}
+
+// The noise and envelope generators count every other tick: the count goes
+// down by the ticks that land on the counting half.
+static inline SOUND_HOT uint32_t ay_half_skip(uint8_t *half, uint32_t *count,
+                                              uint32_t period, uint32_t k) {
+    uint32_t d = (k + *half) >> 1;
+    *half ^= (uint8_t)(k & 1);
+    return ay_count_skip(count, period, d);
+}
+
+// Give the heard parts the ticks the quick path of ay_render owes them.
+static inline SOUND_HOT void ay_flush(struct ay8910 *c);
+
+// Bring every part left behind up to `now`, exactly as ticking it would
+// have. A tone costs a division or two; the noise and envelope take one
+// step per time they ran out, and over a run of catch-ups those add up to
+// no more than ticking them would have taken.
+static inline SOUND_HOT void ay_sync(struct ay8910 *c) {
+    ay_flush(c);
+    for (int ch = 0; ch < 3; ch++) {
+        uint32_t k = c->now - c->since[ch];
+        if (!k) continue;
+        uint32_t cnt = c->tone_count[ch];
+        if (ay_count_skip(&cnt, ay_tone_period(c, ch), k) & 1) c->tone_out[ch] ^= 1;
+        c->tone_count[ch] = (uint16_t)cnt;
+        c->since[ch] = c->now;
+    }
+    uint32_t k = c->now - c->since[3];
+    if (k) {
+        uint32_t np = c->reg[6] & 0x1F, cnt = c->noise_count;
+        uint32_t steps = ay_half_skip(&c->noise_half, &cnt, np ? np : 1, k);
+        c->noise_count = (uint8_t)cnt;
+        while (steps--) ay_noise_step(c);
+        c->since[3] = c->now;
+    }
+    k = c->now - c->since[4];
+    if (k) {
+        uint32_t ep = ((uint32_t)c->reg[12] << 8) | c->reg[11], cnt = c->env_count;
+        uint32_t steps = ay_half_skip(&c->env_half, &cnt, ep ? ep : 1, k);
+        c->env_count = (uint16_t)cnt;
+        while (steps-- && !c->env_holding) ay_env_step(c);
+        c->since[4] = c->now;
+    }
+}
+
+// Advance one chip tick, every part, and return the summed output level.
+static inline SOUND_HOT int32_t ay_tick(struct ay8910 *c) {
+    ay_sync(c);
+    int32_t out = ay_tick_parts(c, AY_PARTS);
+    for (int i = 0; i < 5; i++) c->since[i] = c->now;
+    c->valid = false;
+    return out;
+}
+
+// The parts that can be heard: a tone on in the mixer of a channel with a
+// level above 0 (or under the envelope), the noise if such a channel takes
+// it, the envelope if a channel is under it and it is still moving. Only
+// these can change the output, so only these are run.
+static inline SOUND_HOT uint32_t ay_heard(const struct ay8910 *c) {
+    uint32_t parts = 0, mix = c->reg[7];
+    for (int ch = 0; ch < 3; ch++) {
+        uint8_t a = c->reg[8 + ch];
+        if (!(a & 0x1F)) continue;
+        if (!((mix >> ch) & 1)) parts |= 1u << ch;
+        if (!((mix >> (ch + 3)) & 1)) parts |= AY_PART_NOISE;
+        if (a & 0x10) parts |= AY_PART_ENV;
+    }
+    if (c->env_holding) parts &= ~(uint32_t)AY_PART_ENV;
+    return parts;
+}
+
+// The ticks until a heard part next changes; at least 1.
+static inline SOUND_HOT uint32_t ay_quiet_ticks(const struct ay8910 *c, uint32_t parts) {
+    uint32_t q = 0xFFFFFFFFu;
+    for (int ch = 0; ch < 3; ch++)
+        if ((parts & (1u << ch)) && c->tone_count[ch] < q) q = c->tone_count[ch];
+    if (parts & AY_PART_NOISE) {
+        uint32_t t = 2u * c->noise_count - c->noise_half;
+        if (t < q) q = t;
+    }
+    if (parts & AY_PART_ENV) {
+        uint32_t t = 2u * c->env_count - c->env_half;
+        if (t < q) q = t;
+    }
+    return q;
+}
+
+// k ticks for the heard parts, fewer than ay_quiet_ticks: nothing runs out.
+static inline SOUND_HOT void ay_advance(struct ay8910 *c, uint32_t parts, uint32_t k) {
+    for (int ch = 0; ch < 3; ch++)
+        if (parts & (1u << ch)) c->tone_count[ch] = (uint16_t)(c->tone_count[ch] - k);
+    if (parts & AY_PART_NOISE) {
+        c->noise_count = (uint8_t)(c->noise_count - ((k + c->noise_half) >> 1));
+        c->noise_half ^= (uint8_t)(k & 1);
+    }
+    if (parts & AY_PART_ENV) {
+        c->env_count = (uint16_t)(c->env_count - ((k + c->env_half) >> 1));
+        c->env_half ^= (uint8_t)(k & 1);
+    }
+    c->now += k;
+}
+
+static inline SOUND_HOT void ay_flush(struct ay8910 *c) {
+    if (!c->pending) return;
+    ay_advance(c, c->parts, c->pending);
+    c->pending = 0;
+    for (int i = 0; i < 5; i++)
+        if (c->parts & (1u << i)) c->since[i] = c->now;
+}
+
 // The chip's average output over `event_ticks` of machine time: one audio
 // sample's worth. 32-bit arithmetic only: the RP2350 divides 32 bits in
 // hardware but 64 in a library call, and that call, once per chip per
 // sample, cost about 2 ms a frame per chip (PIZERO-149). A sample is about
 // 300 event ticks; the clamp keeps the product in range for any caller.
-static inline int32_t ay_render(struct ay8910 *c, uint32_t event_ticks) {
+// PIZERO-248: only the heard parts run (ay_heard), and the ticks in which
+// none of them changes are taken in one go. A sample in which nothing heard
+// changes, most of them, only counts down what the last render found and
+// returns its output. Stepping every part every tick cost about 400 CPU
+// clocks a chip a sample on the board, 1.3 ms a frame a chip.
+static inline SOUND_HOT int32_t ay_render(struct ay8910 *c, uint32_t event_ticks) {
     if (event_ticks > 16000) event_ticks = 16000;
     uint32_t f = c->frac + event_ticks * (c->clock_hz >> 3);
     uint32_t n = f / AY_EVENT_HZ;
     c->frac = f - n * AY_EVENT_HZ;
     if (n == 0) return c->last;
-    int32_t sum = 0;
-    for (uint32_t i = 0; i < n; i++) sum += ay_tick(c);
+    if (c->valid && n < c->quiet) {              // nothing heard changes
+        c->quiet -= n;
+        c->pending += n;
+        return c->last = c->out;
+    }
+    ay_flush(c);
+    uint32_t parts = ay_heard(c);
+    int32_t out = ay_mix(c), sum = 0;
+    for (uint32_t left = n;;) {
+        uint32_t q = ay_quiet_ticks(c, parts);
+        if (q > left) { ay_advance(c, parts, left); sum += out * (int32_t)left; break; }
+        ay_advance(c, parts, q - 1);
+        sum += out * (int32_t)(q - 1);
+        out = ay_tick_parts(c, parts);
+        sum += out;
+        if ((parts & AY_PART_ENV) && c->env_holding) {   // it stopped: leave it
+            c->since[4] = c->now;
+            parts &= ~(uint32_t)AY_PART_ENV;
+        }
+        if ((left -= q) == 0) break;
+    }
+    for (int i = 0; i < 5; i++)
+        if (parts & (1u << i)) c->since[i] = c->now;
+    c->parts = (uint8_t)parts;
+    c->out = out;
+    c->quiet = ay_quiet_ticks(c, parts);
+    c->valid = true;
     c->last = sum / (int32_t)n;
     return c->last;
+}
+
+// A register write. Every part is caught up first, as the write may make
+// one heard (or change a period it was being counted with).
+static inline void ay_write(struct ay8910 *c, uint8_t d) {
+    ay_sync(c);
+    c->valid = false;
+    unsigned r = c->addr;
+    c->reg[r] = d & AY_REG_MASK[r];
+    if (r == 13) {                           // a new shape restarts the envelope
+        c->env_cont = (d & 8) != 0;
+        c->env_att  = (d & 4) != 0;
+        c->env_alt  = (d & 2) != 0;
+        c->env_hold = (d & 1) != 0;
+        c->env_pos = 0;
+        c->env_holding = false;
+        c->env_count = 1;
+        c->env_half = 0;
+        ay_env_set_level(c);
+    }
 }
 
 // - - - the cartridges - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -319,7 +507,7 @@ static inline uint8_t ayb_read(const struct ay_bank *b, uint16_t a) {
 // routes them. A chip the CoCo PSG or Deluxe CoCo wrote stays in the centre.
 // Each side is mixed like the mono bank, by the chips on that side, so one
 // Symphony-12 chip on its own is as loud as a CoCo PSG.
-static inline void ayb_render_lr(struct ay_bank *b, uint32_t event_ticks,
+static inline SOUND_HOT void ayb_render_lr(struct ay_bank *b, uint32_t event_ticks,
                                  int32_t *left, int32_t *right) {
     int32_t sl = 0, sr = 0;
     int nl = 0, nr = 0;

@@ -18,6 +18,9 @@
 #include <Arduino.h>
 #include "vdg_pack.h"
 #include "cart_gmc.h"          // PIZERO-142, host-tested
+// PIZERO-248: the sound chips' render path in RAM (see psg_ay8910.h).
+#define SOUND_HOT __attribute__((section(".time_critical.sound")))
+#define SOUND_TABLE __attribute__((section(".data.sound_tables")))
 #include "csg_sn76489.h"       // PIZERO-143, host-tested
 #include "psg_ay8910.h"        // PIZERO-149, host-tested
 #include "joy_compare.h"       // PIZERO-13, host-tested
@@ -1643,7 +1646,8 @@ static inline int audio_clamp(int s) {
     return s > 32767 ? 32767 : s < -32768 ? -32768 : s;
 }
 
-static inline void audio_emit(int s, int sr) {
+// PIZERO-248: once a sample, so in RAM; left alone it went to flash.
+static void HOT_FUNC(audio_emit)(int s, int sr) {
     // PIZERO-212: the audio_lowpass setting. Clamped after it, since a
     // band-limited edge overshoots. (It replaces PIZERO-30's fixed 2-pole IIR,
     // which was built out because it dulled the tone at the default level.)
