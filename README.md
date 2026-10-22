@@ -38,7 +38,8 @@ which it needs, and launching it switches the board to that machine by itself.
 **As the CoCo Zero**, the CoCo 2 also has:
 - The three-voice sound chip from the Games Master Cartridge, built in.
 - The AY-3-8910 sound chips of the CoCo PSG and Symphony-12 cartridges, built in: up to four
-  chips and twelve voices, the Symphony-12's in stereo.
+  chips and twelve voices, the Symphony-12's in stereo. How to program each one, and what it
+  costs: [`docs/sound.md`](docs/sound.md).
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
 - Auto-repeat for a key held down, which Color BASIC never did.
@@ -271,7 +272,7 @@ board's maker ([`docs/supplier-primer.md`](docs/supplier-primer.md)).
 | 3 | Autonomous self-running demo | PIZERO-10 | ✅ done |
 | 4 | USB-host keyboard / joystick input | PIZERO-11/11a/11b/12/13/54 | 🟡 keyboard, gamepad and hub done; hot-replug open |
 | 5 | Dual-core split + performance | PIZERO-14..15 | ✅ done |
-| 6 | Sound over the video cable (CoCo 6-bit DAC + 1-bit sound, and the SN76489) | PIZERO-18, 26–35, 38/39, 143 | ✅ done: streaming per-active-line delivery (warble fixed) |
+| 6 | Sound over the video cable (CoCo 6-bit DAC, and the SN76489) | PIZERO-18, 26–35, 38/39, 143 | ✅ done: streaming per-active-line delivery (warble fixed) |
 | 7 | Clean audio + stability | PIZERO-33 (watchdog), PIZERO-35/38 (delivery re-arch) | ✅ done |
 | 8 | True in-spec 640×480p60 + audio + USB at 252 MHz | PIZERO-44/45 | ✅ done: now the default build |
 | 9 | A 128 KB CoCo 3 at full speed, 640 wide, in the same firmware | PIZERO-129..135, 213..236 | ✅ done |

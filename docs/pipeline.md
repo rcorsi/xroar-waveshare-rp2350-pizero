@@ -4,6 +4,7 @@ How the emulated Tandy CoCo's screen and sound become a DVI signal on the
 Waveshare RP2350-PiZero, end to end. This is the **map** of the whole path; the
 deep dives live elsewhere and are linked inline:
 
+- The sound chips (SN76489, the AY-3-8910 cartridges, stereo) → [`sound.md`](sound.md)
 - Audio internals & hard-won gotchas → [`video-audio-notes.md`](video-audio-notes.md)
 - Original audio scoping/decision record → [`audio-decision.md`](audio-decision.md)
 - Build envs & flags (authoritative) → [`BUILD.md`](BUILD.md)
@@ -24,8 +25,8 @@ core 0  (emulation + audio generation)        core 1  (display + audio encode)
   ├─ VDG 256×192 palette-indexed                  ▲
   │    └─ blit → 320×240 RGB565 ───── g_front ─────┘   (sampled once per frame)
   │
-  └─ 6-bit DAC (PIA1) integrate-and-dump (+ SN76489)
-       └─ 48 kHz mono → SPSC ring ───── g_audio_w/g_audio_r ──┐
+  └─ 6-bit DAC (PIA1) integrate-and-dump (+ SN76489, + AY bank)
+       └─ 48 kHz L/R → SPSC ring ───── g_audio_w/g_audio_r ──┐
                                                               ▼
                                           per line (active + vblank), DMA IRQ:
                                           meter → full 4-sample packet every
@@ -175,9 +176,15 @@ The **SN76489** sound chip (PIZERO-143) is the second source. Writes to `$FF41` 
 it through `csg_bus_write`, either from a Game Master Cartridge or, with the
 `sn76489` setting on (the default), with no such cartridge. `audio_integrate` adds
 its output (`sn_render`, scaled by the `volume` setting) to the DAC sample before
-emitting it, so both share one mono stream.
+emitting it. The **AY-3-8910 bank** (PIZERO-149: the CoCo PSG, Symphony-12 and
+Deluxe CoCo cartridges) is the third, added the same way in `audio_sample`
+(`ayb_render_lr`). Since PIZERO-250 a sample is a left and right pair: the DAC
+and the SN76489 go to both sides, and the Symphony-12 in stereo puts its first
+two chips on the left and the other two on the right. The chips, their
+addresses, settings and costs are in [`sound.md`](sound.md).
 
-`audio_emit` then shapes the sample on its way to the ring (PIZERO-223, PIZERO-212):
+`audio_emit` then shapes each side on its way to the ring (PIZERO-223, PIZERO-212;
+the right side's filters run only while the two sides differ, PIZERO-250):
 a **DC blocker** (`audio_dc_run`, a one-pole high-pass near 5 Hz) makes the output
 AC coupled like the real CoCo's, so a parked DAC no longer sits as an offset taking
 headroom; then the **`audio_lowpass`** filter (`audio_lp_run`, 8 kHz by default)
@@ -188,7 +195,9 @@ times the pre-PIZERO-223 level (PIZERO-223 tripled it, PIZERO-230 doubled it), s
 by the `volume` setting. At volume 10 a full DAC swing peaks near -3 dBFS in the
 worst AC-coupled case; volumes above 10 may clip on such waveforms.
 
-Samples go into an 8192-deep **SPSC ring** (`audio_emit`, `AUDIO_RING_SAMPLES`).
+Samples go into an 8192-deep **SPSC ring** of left and right pairs (`audio_emit`,
+`AUDIO_RING_SAMPLES`; `coco_machine_audio_read_lr` reads pairs, and
+`coco_machine_audio_read` their average for the WAV dump).
 Core 0 owns the write index `g_audio_w` and publishes with a `__dmb()`; the consumer
 owns `g_audio_r`.
 
@@ -222,7 +231,7 @@ counting in 480ths of a sample (`g_meter_acc`, step `AUDIO_SAMPLES_PER_FRAME`; i
 16.16 fixed point until PIZERO-223, which truncated to 47,999.7 samples/s) releases
 **0–4 samples per line**,
 spreading `AUDIO_SAMPLES_PER_FRAME` evenly across the 480 active lines. It reads those
-samples from the ring (`coco_machine_audio_read`, `coco_machine.cpp`), builds and
+samples from the ring (`coco_machine_audio_read_lr`, `coco_machine.cpp`), builds and
 parity-stamps one island,
 encodes it into a rotating buffer pool, and repoints the back-porch DMA at it. This
 even, per-line feed is what eliminated the warble of the older pre-encoded-bank scheme.
@@ -279,12 +288,14 @@ Symbols rather than line numbers, since the files move.
 | Core 1 launch                 | `src/main.cpp` : `core1_main` / `multicore_launch_core1`             |
 | Audio source / resampler      | `lib/coco_machine/src/coco_machine.cpp` : `audio_update_level` / `audio_integrate` / `audio_catch_up`; `audio_integ.h` |
 | SN76489                       | `lib/coco_machine/src/coco_machine.cpp` : `csg_bus_write`; chip model `csg_sn76489.h` |
-| Audio ring                    | `lib/coco_machine/src/coco_machine.cpp` : `audio_emit` / `coco_machine_audio_read` |
+| AY-3-8910 bank                | `lib/coco_machine/src/coco_machine.cpp` : `ayb_owns` / `ayb_write` in the bus paths; chips and front-ends `psg_ay8910.h` |
+| Audio mix and ring            | `lib/coco_machine/src/coco_machine.cpp` : `audio_sample` / `audio_emit` / `coco_machine_audio_read_lr` |
 | Data-island encoder           | `lib/libdvi/dvi_data_island.c`                                       |
 | Per-line streaming delivery   | `src/main.cpp` : `stream_audio_cb` / `g_meter_step`                  |
 
 ## See also
 
+- [`sound.md`](sound.md): the sound chips, their addresses, settings and costs
 - [`video-audio-notes.md`](video-audio-notes.md): audio architecture, rationale, gotchas
 - [`cpu-speed.md`](cpu-speed.md): emulation pacing & CoCo high-speed (double-speed) behavior
 - [`audio-decision.md`](audio-decision.md): original scoping/decision record

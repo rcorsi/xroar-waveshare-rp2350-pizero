@@ -107,6 +107,10 @@ Most settings work the same on every machine. Those marked **CoCo 2** only chang
 its programs. Where the default says **machine**, it depends on `machine`: on for the CoCo Zero,
 off (or the original font) for the stock CoCo 2 and CoCo 3.
 
+The sound chips behind `sn76489`, `coco_psg`, `symphony12`, `symphony12_stereo` and `deluxe_psg`
+(their addresses, how to program them from BASIC, and test programs) are in
+[`docs/sound.md`](docs/sound.md).
+
 | Setting | Values | Default | What it does |
 |---|---|---|---|
 | `sn76489` | `on` / `off` | machine | The SN76489 sound chip at `$FF41`, without a Games Master Cartridge. `off` gives `$FF41` back to the disk controller. With a GMC plugged in, the chip is there either way. |

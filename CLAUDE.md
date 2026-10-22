@@ -6,7 +6,8 @@ XRoar (Tandy CoCo) on the **Waveshare RP2350-PiZero** (mini video port + USB hos
 the `libdvi`/HSTX rationale, the display geometry, and the clock-conflict risk are written up there, not
 here. Don't duplicate them. This file is just pointers and conventions for working in the repo.
 The end-to-end video+audio signal path (CoCo → video out) is mapped in `docs/pipeline.md`, which links the
-deeper `docs/video-audio-notes.md` and `docs/BUILD.md`.
+deeper `docs/video-audio-notes.md` and `docs/BUILD.md`. The sound chips (SN76489, the AY cartridges,
+stereo, their render cost) are in `docs/sound.md`, with test programs in `docs/ay-checks/`.
 `docs/ROADMAP.md` sequences the open work (a navigation map over `issues.jsonl`: what's shipped,
 what's next, and dependencies); it points to tickets, it doesn't restate them.
 
