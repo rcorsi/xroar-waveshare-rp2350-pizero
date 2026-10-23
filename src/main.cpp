@@ -1384,8 +1384,23 @@ static void handoff_read(void) {
 static bool machine_available(bool coco3) {
     char p[80];
     FILINFO fi;
-    if (!coco_boot_resolve("rom", coco3 ? "coco3.rom" : "bas12.rom", p, sizeof p)) return false;
-    return f_stat(p, &fi) == FR_OK && fi.fsize == (coco3 ? 32768u : 8192u);
+    const char *rom = coco3 ? "coco3.rom" : "bas12.rom";
+    const FSIZE_t want = coco3 ? 32768u : 8192u;
+    // PIZERO-261: say why not, so a missing or wrong-size ROM is found at once.
+    if (!coco_boot_resolve("rom", rom, p, sizeof p)) {
+        Serial.printf("[machine] %s not found in /coco/roms/ or /coco/\r\n", rom);
+        return false;
+    }
+    FRESULT r = f_stat(p, &fi);
+    if (r != FR_OK) {
+        Serial.printf("[machine] %s: cannot read it (%d)\r\n", p, (int)r);
+        return false;
+    }
+    if (fi.fsize != want) {
+        Serial.printf("[machine] %s is %lu bytes, needs %lu\r\n", p, (unsigned long)fi.fsize, (unsigned long)want);
+        return false;
+    }
+    return true;
 }
 
 // Restart as the other machine, then do `what`. Returns only if the record
