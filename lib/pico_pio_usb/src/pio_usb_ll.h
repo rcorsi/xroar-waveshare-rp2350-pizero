@@ -195,8 +195,8 @@ enum {
   PIO_USB_TX_ENCODED_DATA_COMP = 2,
   PIO_USB_TX_ENCODED_DATA_J = 3,
 };
-uint8_t pio_usb_ll_encode_tx_data(uint8_t const *buffer, uint8_t buffer_len,
-                                  uint8_t *encoded_data);
+uint16_t pio_usb_ll_encode_tx_data(uint8_t const *buffer, uint16_t buffer_len,
+                                   uint8_t *encoded_data);
 
 //--------------------------------------------------------------------
 // Host Controller functions
@@ -221,6 +221,8 @@ bool pio_usb_host_endpoint_transfer(uint8_t root_idx, uint8_t device_address,
                                     uint16_t buflen);
 bool pio_usb_host_endpoint_abort_transfer(uint8_t root_idx, uint8_t device_address,
                                           uint8_t ep_address);
+
+// PIZERO-255 (this project): the isochronous OUT stream is declared in pio_usb.h.
 
 //--------------------------------------------------------------------
 // Device Controller functions

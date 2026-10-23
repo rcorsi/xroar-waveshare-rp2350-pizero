@@ -17,5 +17,19 @@ as they were; the examples and CI files are left out.
 
 ## Local modifications (this project)
 
-None yet at the time of vendoring: the first commit of this directory is the
-upstream files unchanged, so later changes read as a diff against it.
+The first commit of this directory (29f10b0) is the upstream files unchanged,
+so the changes read as a diff against it. All are marked `PIZERO-255 (this
+project)` in the source:
+
+- `pio_usb.c`, `pio_usb_ll.h`: `pio_usb_ll_encode_tx_data` takes and returns
+  16-bit lengths and indexes its output with a 16-bit index. The upstream
+  `uint8_t` wrapped for any packet that encodes past 255 bytes, which a
+  192-byte isochronous audio packet does (about 460 bytes).
+- `usb_definitions.h`: `endpoint_t.encoded_data_len` is `uint16_t`.
+- `pio_usb_host.c`, `pio_usb.h`: an isochronous OUT stream,
+  `pio_usb_host_iso_out_stream(root, address, endpoint, fill)` and
+  `pio_usb_host_iso_frames()`. The 1 ms frame handler calls `fill` for the
+  frame's packet, builds DATA0 and its CRC16, encodes it into its own buffer
+  (up to `PIO_USB_ISO_MAX` bytes) before sending the OUT token, then sends the
+  packet and waits for no handshake. Upstream had no isochronous support: an
+  OUT transaction always waited for a handshake.

@@ -74,7 +74,7 @@ typedef struct {
   volatile bool transfer_aborted;
 
   uint8_t buffer[(64 + 4) * 2 * 7 / 6 + 2];
-  uint8_t encoded_data_len;
+  uint16_t encoded_data_len;   // PIZERO-255 (this project): was uint8_t
   uint8_t failed_count;
 
   uint8_t *app_buf;

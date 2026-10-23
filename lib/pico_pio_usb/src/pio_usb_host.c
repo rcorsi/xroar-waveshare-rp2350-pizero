@@ -253,6 +253,35 @@ static int usb_setup_transaction(pio_port_t *pp, endpoint_t *ep);
 static int usb_in_transaction(pio_port_t *pp, endpoint_t *ep);
 static int usb_out_transaction(pio_port_t *pp, endpoint_t *ep);
 
+// PIZERO-255 (this project): the isochronous OUT stream (pio_usb_ll.h). The
+// packet is built and encoded before its token goes out, since the data
+// packet has to follow the token within a few bit times.
+static endpoint_t *volatile iso_ep;
+static volatile pio_usb_iso_fill_t iso_fill;
+static uint8_t iso_raw[PIO_USB_ISO_MAX + 4];
+static uint8_t iso_enc[(PIO_USB_ISO_MAX + 4) * 2 * 7 / 6 + 2];
+static volatile uint32_t iso_frames;
+
+static void __no_inline_not_in_flash_func(usb_iso_out_frame)(pio_port_t *pp, endpoint_t *ep,
+                                                             pio_usb_iso_fill_t fill) {
+  uint16_t max = ep->size < PIO_USB_ISO_MAX ? ep->size : PIO_USB_ISO_MAX;
+  uint16_t len = fill(iso_raw + 2, max);
+  if (len > max) {
+    len = max;
+  }
+  iso_raw[0] = USB_SYNC;
+  iso_raw[1] = USB_PID_DATA0;
+  uint16_t const crc16 = calc_usb_crc16(iso_raw + 2, len);
+  iso_raw[2 + len] = crc16 & 0xff;
+  iso_raw[2 + len + 1] = crc16 >> 8;
+  uint16_t const enc_len = pio_usb_ll_encode_tx_data(iso_raw, len + 4, iso_enc);
+
+  pio_usb_bus_send_token(pp, USB_PID_OUT, ep->dev_addr, ep->ep_num);
+  pio_usb_bus_usb_transfer(pp, iso_enc, enc_len);
+  iso_frames++;
+}
+
+
 void __not_in_flash_func(pio_usb_host_frame)(void) {
   if (!timer_active) {
     return;
@@ -290,6 +319,11 @@ void __not_in_flash_func(pio_usb_host_frame)(void) {
          ep_pool_idx++) {
       endpoint_t *ep = PIO_USB_ENDPOINT(ep_pool_idx);
       if ((ep->root_idx == root_idx) && ep->size) {
+        pio_usb_iso_fill_t const fill = iso_fill;
+        if (ep == iso_ep && fill) {          // PIZERO-255: one packet a frame
+          usb_iso_out_frame(pp, ep, fill);
+          continue;
+        }
         bool const is_periodic = ((ep->attr & 0x03) == EP_ATTR_INTERRUPT);
 
         if (is_periodic && (ep->interval_counter > 0)) {
@@ -451,6 +485,25 @@ bool pio_usb_host_endpoint_open(uint8_t root_idx, uint8_t device_address,
 
   return false;
 }
+
+// PIZERO-255 (this project): start or stop the isochronous OUT stream.
+bool pio_usb_host_iso_out_stream(uint8_t root_idx, uint8_t device_address,
+                                 uint8_t ep_address, pio_usb_iso_fill_t fill) {
+  iso_fill = NULL;
+  if (fill == NULL) {
+    iso_ep = NULL;
+    return true;
+  }
+  endpoint_t *ep = _find_ep(root_idx, device_address, ep_address);
+  if (!ep || !ep->is_tx || (ep->attr & 0x03) != EP_ATTR_ISOCHRONOUS) {
+    return false;
+  }
+  iso_ep = ep;
+  iso_fill = fill;
+  return true;
+}
+
+uint32_t pio_usb_host_iso_frames(void) { return iso_frames; }
 
 bool pio_usb_host_endpoint_close(uint8_t root_idx, uint8_t device_address,
                                  uint8_t ep_address) {

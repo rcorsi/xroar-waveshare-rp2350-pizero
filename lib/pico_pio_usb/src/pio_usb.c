@@ -456,15 +456,17 @@ void __no_inline_not_in_flash_func(pio_usb_ll_configure_endpoint)(
 }
 
 // Encode transfer data to 2bit sequence represents TX PIO instruction address
-uint8_t __no_inline_not_in_flash_func(pio_usb_ll_encode_tx_data)(
-    uint8_t const *buffer, uint8_t buffer_len, uint8_t *encoded_data) {
+// PIZERO-255 (this project): lengths and the output index are 16-bit, so a
+// packet longer than 64 bytes (an isochronous audio frame) can be encoded.
+uint16_t __no_inline_not_in_flash_func(pio_usb_ll_encode_tx_data)(
+    uint8_t const *buffer, uint16_t buffer_len, uint8_t *encoded_data) {
   uint16_t bit_idx = 0;
   int current_state = 1;
   int bit_stuffing = 6;
   for (int idx = 0; idx < buffer_len; idx++) {
     uint8_t data_byte = buffer[idx];
     for (int b = 0; b < 8; b++) {
-      uint8_t byte_idx = bit_idx >> 2;
+      uint16_t byte_idx = bit_idx >> 2;
       encoded_data[byte_idx] <<= 2;
       if (data_byte & (1 << b)) {
         if (current_state) {
@@ -503,7 +505,7 @@ uint8_t __no_inline_not_in_flash_func(pio_usb_ll_encode_tx_data)(
     }
   }
 
-  uint8_t byte_idx = bit_idx >> 2;
+  uint16_t byte_idx = bit_idx >> 2;
   encoded_data[byte_idx] <<= 2;
   encoded_data[byte_idx] |= PIO_USB_TX_ENCODED_DATA_SE0;
   bit_idx++;
