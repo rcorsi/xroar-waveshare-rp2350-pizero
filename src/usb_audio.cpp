@@ -25,6 +25,9 @@ static bool     g_ua_busy;           // a device's setup in progress
 static struct uac_out g_ua;
 static uint8_t  g_ua_rate[4];        // 48,000, little-endian
 static const char *g_ua_state = "none";
+static bool     g_ua_enabled = true; // the usb_audio setting
+static bool     g_ua_ready;          // set up, the endpoint open: can stream
+static bool     g_ua_streaming;
 
 // UAC1 and UAC2 both: a type I PCM format, 2 channels of 16 bits in 2-byte
 // slots, on an isochronous OUT endpoint. UAC1 lists its rates in the format
@@ -97,6 +100,28 @@ static uint16_t __not_in_flash_func(ua_fill)(uint8_t *buf, uint16_t max) {
 }
 #endif
 
+#ifndef USB_AUDIO_TONE
+#define ua_fill usb_audio_fill       // the machine's sound (main.cpp)
+#endif
+
+// Start or stop the stream, and move the sound to match.
+static void ua_stream(bool on) {
+    if (on == g_ua_streaming) return;
+    if (on) {
+        if (!pio_usb_host_iso_out_stream(0, g_ua_daddr, g_ua.ep[2], ua_fill)) {
+            g_ua_state = "stream not started";
+            return;
+        }
+        g_ua_streaming = true;
+        g_ua_state = "streaming";
+        usb_audio_route(true);
+    } else {
+        pio_usb_host_iso_out_stream(0, 0, 0, NULL);
+        g_ua_streaming = false;
+        usb_audio_route(false);
+    }
+}
+
 static void ua_fail(const char *what) {
     g_ua_state = what;
     Serial.printf("[uac] addr=%u %s\r\n", g_ua_daddr, what);
@@ -111,15 +136,13 @@ static void ua_rate_done(tuh_xfer_t *x) {
 #ifdef USB_AUDIO_TONE
     for (int k = 0; k < UA_SINE; k++) g_ua_sine[k] = (int16_t)(8000.0 * sin(2 * M_PI * k / UA_SINE));
     g_ua_inc = (uint32_t)(440.0 * 4294967296.0 / 48000.0);
-    bool ok = pio_usb_host_iso_out_stream(0, g_ua_daddr, g_ua.ep[2], ua_fill);
-#else
-    bool ok = false;
 #endif
-    if (!ok) { ua_fail("stream not started"); return; }
-    g_ua_state = "streaming";
+    g_ua_ready = true;
     g_ua_busy = false;
-    Serial.printf("[uac] addr=%u streaming: UAC%u interface %u alt %u endpoint %02X max %u\r\n",
-                  g_ua_daddr, g_ua.uac2 ? 2 : 1, g_ua.itf, g_ua.alt, g_ua.ep[2], g_ua.ep[4] | g_ua.ep[5] << 8);
+    g_ua_state = "ready, usb_audio off";
+    if (g_ua_enabled) ua_stream(true);
+    Serial.printf("[uac] addr=%u %s: UAC%u interface %u alt %u endpoint %02X max %u\r\n",
+                  g_ua_daddr, g_ua_state, g_ua.uac2 ? 2 : 1, g_ua.itf, g_ua.alt, g_ua.ep[2], g_ua.ep[4] | g_ua.ep[5] << 8);
 }
 
 static void ua_alt_done(tuh_xfer_t *x) {
@@ -170,17 +193,29 @@ void usb_audio_mount(uint8_t daddr) {
 
 void usb_audio_umount(uint8_t daddr) {
     if (daddr != g_ua_daddr) return;
-    pio_usb_host_iso_out_stream(0, 0, 0, NULL);
+    ua_stream(false);
     g_ua_daddr = 0;
+    g_ua_ready = false;
     g_ua_state = "unplugged";
 }
 
-void usb_audio_telemetry(void) {
-    static uint32_t last;
+// The setting can change while running (the settings editor): stop or
+// restart the stream on the device already set up.
+void usb_audio_enable(bool on) {
+    g_ua_enabled = on;
+    if (!g_ua_ready) return;
+    ua_stream(on);
+    if (!on) g_ua_state = "ready, usb_audio off";
+}
+
+void usb_audio_telemetry(uint32_t under) {
+    static uint32_t last, last_under;
     uint32_t f = pio_usb_host_iso_frames();
     if (g_ua_daddr || f)
-        Serial.printf("[uac] %s packets=%lu (%lu/s)\r\n", g_ua_state, (unsigned long)f, (unsigned long)(f - last));
+        Serial.printf("[uac] %s packets=%lu (%lu/s) under=%lu/s\r\n", g_ua_state, (unsigned long)f,
+                      (unsigned long)(f - last), (unsigned long)(under - last_under));
     last = f;
+    last_under = under;
 }
 
 #endif  // USB_AUDIO

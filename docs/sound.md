@@ -299,6 +299,47 @@ Cost: a write is one more check on the bus's slow path. `orch90.bas`'s
 machine-code loop, writing each DAC about 42,000 times a second, took a
 frame to 8.9 ms (6.8 ms at rest), with no underruns.
 
+## Sound out of a USB headphone DAC
+
+Plug a USB headphone DAC (a USB-C headphone dongle, or a hub with its own
+headphone jack) into the hub before switching on, and the sound plays from it
+instead of the video cable. Most class-compliant DACs work: the board looks
+for a USB Audio Class 1 or 2 playback setting that takes 16-bit stereo at
+48 kHz, which is what the CoCo Zero makes, and streams 48 sample pairs to it
+every millisecond.
+
+- **`usb_audio = on`** (the default) gives the sound to a DAC found at boot.
+  With none, or with `usb_audio = off`, the sound stays on the video cable.
+  It goes to one or the other, not both.
+- **Plug in before power-on.** The board does not yet see devices plugged in
+  later (PIZERO-51). Some hubs only show their headphone chip while something
+  is plugged into the jack, so plug the headphones in too.
+- **Tested:** a USB-C headphone dongle (UAC1, adaptive) and the headphone jack
+  of a four-port USB-C hub (UAC2, synchronous); their descriptors are in
+  [`measurements/usb-audio-dongle-001F-0B21.txt`](measurements/usb-audio-dongle-001F-0B21.txt)
+  and [`measurements/usb-audio-hub-001F-0B21.txt`](measurements/usb-audio-hub-001F-0B21.txt).
+- **Cost:** sending the stream takes about 2.3 ms of each 16.7 ms frame on the
+  emulator's core, more under heavy sound. `allvoice.bas` runs over the frame
+  for a few seconds at its loudest with the DAC in use.
+- The serial log shows `[uac] streaming packets=N (1000/s) under=N/s`.
+
+How it works: Pico-PIO-USB, the USB host, is kept in `lib/pico_pio_usb` with
+an isochronous OUT stream added (`PROVENANCE.md` there lists the changes).
+`src/usb_audio.cpp` finds the playback setting, selects it, sets 48 kHz and
+starts the stream, which takes its samples from the same ring the video
+cable's sound uses. The ring's rate servo holds it half full against
+whichever output drains it, so the machine follows the USB clock.
+
+## Volume keys
+
+The volume keys of a USB keyboard and the buttons of a USB headphone DAC
+change the `volume` setting while you play: Volume Up and Down step it by one
+(0 to 15), and Mute silences the sound until Mute, Up or Down is pressed
+again. The new level is written into `settings.txt` two seconds after the
+last press; mute is not saved. Any USB device that sends the Consumer page's
+Volume Increment, Volume Decrement or Mute works, whatever its report layout
+(`src/hid_consumer.h`, tested by `test_hid_consumer`).
+
 ## How loud each source is
 
 All sources add into one sample per side, then go through the DC blocker and

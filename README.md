@@ -43,6 +43,8 @@ which it needs, and launching it switches the board to that machine by itself.
   what it costs: [`docs/sound.md`](docs/sound.md).
 - Every sound source at once, the DAC and the sound cartridges together, where the real CoCo
   switched between them, and joystick reads that make no sound.
+- Sound from a USB headphone DAC as well as the video cable, with the volume on the keyboard's
+  volume keys or the DAC's buttons.
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
 - Auto-repeat for a key held down, which Color BASIC never did.

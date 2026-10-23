@@ -14,6 +14,7 @@
 //   symphony12_stereo = on | off              PIZERO-250: its chips 1-2 left, 3-4 right
 //   deluxe_psg        = on | off              PIZERO-149: Deluxe CoCo's AY at $FF38
 //   orchestra90       = on | off              PIZERO-148: Orchestra-90CC's DACs at $FF7A/$FF7B
+//   usb_audio         = on | off              PIZERO-255: a USB headphone DAC at boot takes the sound
 //   sound_sources     = all | switched        PIZERO-253: every source at once, or the multiplexer
 //   joystick_quiet    = on | off              PIZERO-253: joystick reads not heard
 //   volume            = 0-15                  10 is the old fixed level
@@ -80,6 +81,7 @@ struct coco_settings {
     bool    symphony12_stereo;        // PIZERO-250: the card's stereo jumper
     bool    deluxe_psg;
     bool    orchestra90;              // PIZERO-148
+    bool    usb_audio;                // PIZERO-255
     bool    sound_all;                // PIZERO-253: sound_sources = all (else switched)
     bool    joystick_quiet;           // PIZERO-253
     uint8_t volume;                   // 0-15
@@ -161,6 +163,7 @@ static inline void settings_defaults(struct coco_settings *s) {
     s->key_repeat_delay = 500;
     s->key_repeat_rate = 10;
     s->orchestra90 = true;            // PIZERO-148
+    s->usb_audio = true;              // PIZERO-255: plugging a DAC in means wanting it
     s->sound_all = true;              // PIZERO-253: improvements are on by default
     s->joystick_quiet = true;
     pad_map_defaults(&s->pad);
@@ -255,6 +258,7 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
         else if (!strcmp(v, "switched")) s->sound_all = false;
         else return SET_BAD_VALUE;
     }
+    else if (!strcmp(name, "usb_audio"))         { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->usb_audio = b; }
     else if (!strcmp(name, "orchestra90"))       { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->orchestra90 = b; }
     else if (!strcmp(name, "joystick_quiet"))    { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->joystick_quiet = b; }
     else if (!strcmp(name, "deluxe_psg"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->deluxe_psg = b; }
@@ -483,6 +487,7 @@ static inline int settings_template(char *out, size_t n) {
         "# joystick_quiet = %s\n"
         "symphony12_stereo = %s\n"
         "deluxe_psg = %s\n"
+        "usb_audio = %s\n"
         "volume = %u\n"
         "audio_lowpass = %u\n"
         "artifact_colors = %s\n"
@@ -503,7 +508,7 @@ static inline int settings_template(char *out, size_t n) {
         d.font == FONT_CLASSIC ? "classic" : d.font == FONT_6847T1 ? "6847t1" : "6847t2",
         d.lowercase ? "on" : "off", d.key_repeat ? "on" : "off",
         d.sound_all ? "all" : "switched", d.joystick_quiet ? "on" : "off",
-        d.symphony12_stereo ? "on" : "off", d.deluxe_psg ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
+        d.symphony12_stereo ? "on" : "off", d.deluxe_psg ? "on" : "off", d.usb_audio ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
         d.artifact == ART_OFF ? "off" : d.artifact == ART_SWAPPED ? "swapped" : "on",
         d.autorun ? "on" : "off", d.reset_to_basic ? "basic" : "autorun", d.serial_keyboard ? "on" : "off",
         d.joystick_swap ? "on" : "off",

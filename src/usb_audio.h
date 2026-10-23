@@ -8,8 +8,10 @@
 // and starts Pico-PIO-USB's isochronous stream, which asks for 48 sample
 // pairs every 1 ms frame.
 //
-// Built only with USB_AUDIO. With USB_AUDIO_TONE the stream is a 440 Hz
-// test tone rather than the machine's sound.
+// While it streams, the sound goes to the DAC and the video carries silence;
+// with no DAC at boot, unplugged, or usb_audio = off, it stays on the video.
+// Built only with USB_AUDIO (the streaming builds). With USB_AUDIO_TONE the
+// stream is a 440 Hz test tone rather than the machine's sound.
 
 #pragma once
 #include <stdint.h>
@@ -17,5 +19,12 @@
 #ifdef USB_AUDIO
 void usb_audio_mount(uint8_t daddr);      // from tuh_mount_cb
 void usb_audio_umount(uint8_t daddr);     // from tuh_umount_cb
-void usb_audio_telemetry(void);           // once a second: [uac] ...
+void usb_audio_enable(bool on);           // the usb_audio setting
+void usb_audio_telemetry(uint32_t under); // once a second: [uac] ...
+
+// Supplied by main.cpp: a packet of the machine's sound (48 left and right
+// pairs), called from the USB frame interrupt, and the switch that gives
+// the ring to USB (and silence to the video) or back.
+uint16_t usb_audio_fill(uint8_t *buf, uint16_t max);
+void usb_audio_route(bool usb);
 #endif
