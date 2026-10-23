@@ -514,7 +514,7 @@ line shows `sn76489`, `coco_psg`, `symphony12` (`stereo`, `mono` or `off`) and
 - **Real AY software** (PIZERO-251): Lyra 1.2 with the Symphony 12 Enhancer, and
   the Sierra games' PSG music, which need a 512 KB CoCo 3.
 - **The Orchestra-90's own music program** has not yet been run on the board
-  (its ROM is not on the card); PIZERO-148's test is `orch90.bas`.
+  (its ROM is not on the card, PIZERO-260); the DACs are proven by `orch90.bas`.
 - **The CoCo 3 at 1.79 MHz** with all four AY chips is not yet measured
   (PIZERO-252).
 - **The video cable and a USB DAC at once,** an on-screen volume display, and
