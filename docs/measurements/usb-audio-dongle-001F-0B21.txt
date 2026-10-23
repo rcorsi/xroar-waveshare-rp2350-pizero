@@ -1,0 +1,68 @@
+USB-C headphone dongle (PIZERO-255 spike, 2026-10-23)
+
+Plugged into a USB-C port of the GL850G hub, headphones in. Captured with the
+pizero_usbdump env. Full speed. Configuration descriptor 218 bytes (fits
+TinyUSB's default 256-byte enumeration buffer).
+
+VID 001F PID 0B21: the same IDs as the audio chip in the hub
+(usb-audio-hub-001F-0B21.txt), but this one is USB Audio Class 1.
+
+Decoded:
+  AC header UAC1.
+  Interface 1 (playback): alt 1 = PCM, 2 channels, 16-bit (subframe 2),
+    48,000 Hz only; EP 03 OUT isochronous ADAPTIVE, max 384 bytes, interval 1.
+    48 kHz stereo 16-bit is 192 bytes a frame.
+  Interface 2 (capture): alt 1 = mono 16-bit 48 kHz, EP 83 IN isochronous
+    async, max 208 bytes.
+  Interface 3: HID, interrupt IN 82 (the volume keys).
+
+Against the hub's chip: both take 16-bit stereo 48 kHz on isochronous OUT
+EP 03 with no feedback endpoint, so one driver sends 48 sample pairs a frame
+to either. Only the setup differs: UAC1 sets the rate with an endpoint
+SAMPLING_FREQ SET_CUR and mute/volume through its feature unit; UAC2 with
+the clock source's CUR and the UAC2 feature unit.
+
+[usbdesc] lines from the board (raw bytes after each descriptor):
+  [usbdesc] addr=1 vid=001F pid=0B21 speed=full config_len=218
+  [usbdesc]    raw 09 02 DA 00 04 01 00 80 32
+  [usbdesc]  interface 0 alt 0 class 01/01/00 endpoints 0 (audio control)
+  [usbdesc]    raw 09 04 00 00 00 01 01 00 00
+  [usbdesc]   audio control subtype 01 header UAC1
+  [usbdesc]    raw 0A 24 01 00 01 47 00 02 01 02
+  [usbdesc]   audio control subtype 02
+  [usbdesc]    raw 0C 24 02 01 01 01 00 02 03 00 00 00
+  [usbdesc]   audio control subtype 06
+  [usbdesc]    raw 0A 24 06 02 01 01 03 00 00 00
+  [usbdesc]   audio control subtype 03
+  [usbdesc]    raw 09 24 03 03 01 03 00 02 00
+  [usbdesc]   audio control subtype 02
+  [usbdesc]    raw 0C 24 02 04 01 02 00 01 00 00 00 00
+  [usbdesc]   audio control subtype 06
+  [usbdesc]    raw 09 24 06 05 04 01 03 00 00
+  [usbdesc]   audio control subtype 03
+  [usbdesc]    raw 09 24 03 06 01 01 00 05 00
+  [usbdesc]  interface 1 alt 0 class 01/02/00 endpoints 0 (audio streaming)
+  [usbdesc]    raw 09 04 01 00 00 01 02 00 00
+  [usbdesc]  interface 1 alt 1 class 01/02/00 endpoints 1 (audio streaming)
+  [usbdesc]    raw 09 04 01 01 01 01 02 00 00
+  [usbdesc]    raw 07 24 01 01 01 01 00
+  [usbdesc]   UAC1 format type I: channels=2 subframe=2 bits=16 rates=48000
+  [usbdesc]    raw 0B 24 02 01 02 02 10 01 80 BB 00
+  [usbdesc]   endpoint 03 OUT isochronous sync=adaptive usage=data max=384 interval=1
+  [usbdesc]    raw 09 05 03 09 80 01 01 00 00
+  [usbdesc]    raw 07 25 01 01 01 01 00
+  [usbdesc]  interface 2 alt 0 class 01/02/00 endpoints 0 (audio streaming)
+  [usbdesc]    raw 09 04 02 00 00 01 02 00 00
+  [usbdesc]  interface 2 alt 1 class 01/02/00 endpoints 1 (audio streaming)
+  [usbdesc]    raw 09 04 02 01 01 01 02 00 00
+  [usbdesc]    raw 07 24 01 06 01 01 00
+  [usbdesc]   UAC1 format type I: channels=1 subframe=2 bits=16 rates=48000
+  [usbdesc]    raw 0B 24 02 01 01 02 10 01 80 BB 00
+  [usbdesc]   endpoint 83 IN isochronous sync=async usage=data max=208 interval=1
+  [usbdesc]    raw 09 05 83 05 D0 00 01 00 00
+  [usbdesc]    raw 07 25 01 01 00 00 00
+  [usbdesc]  interface 3 alt 0 class 03/00/00 endpoints 1 (HID)
+  [usbdesc]    raw 09 04 03 00 01 03 00 00 00
+  [usbdesc]    raw 09 21 01 02 00 01 22 36 00
+  [usbdesc]   endpoint 82 IN interrupt sync=none usage=data max=16 interval=1
+  [usbdesc]    raw 07 05 82 03 10 00 01
