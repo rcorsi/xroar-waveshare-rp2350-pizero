@@ -20,6 +20,7 @@
 void usb_audio_mount(uint8_t daddr);      // from tuh_mount_cb
 void usb_audio_umount(uint8_t daddr);     // from tuh_umount_cb
 void usb_audio_enable(bool on);           // the usb_audio setting
+void usb_audio_set_db(int db);            // usb_audio_db: the DAC's own level, -60 to 0 dB, at setup
 void usb_audio_telemetry(uint32_t under); // once a second: [uac] ...
 
 // Supplied by main.cpp: a packet of the machine's sound (48 left and right

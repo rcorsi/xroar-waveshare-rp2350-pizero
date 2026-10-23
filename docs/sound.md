@@ -311,6 +311,11 @@ every millisecond.
 - **`usb_audio = on`** (the default) gives the sound to a DAC found at boot.
   With none, or with `usb_audio = off`, the sound stays on the video cable.
   It goes to one or the other, not both.
+- **`usb_audio_db`** (default -10) sets the DAC's own volume when it starts,
+  -60 to 0 dB, and its mute off. The machine's sound is pitched for a TV, and
+  at a DAC's full 0 dB that is hot in headphones (the hub's chip powers up at
+  0 dB). The log shows the chip's range and the level it came up at:
+  `[uac] addr=2 volume: range -60.00 to 0.00 dB, came up at 0.00 dB, set to -10.00 dB`.
 - **Plug in before power-on.** The board does not yet see devices plugged in
   later (PIZERO-51). Some hubs only show their headphone chip while something
   is plugged into the jack, so plug the headphones in too.

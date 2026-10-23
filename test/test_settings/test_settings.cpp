@@ -279,6 +279,11 @@ static void test_machine_profiles(void) {
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("sound_sources = loud"));
     TEST_ASSERT_EQUAL_INT(SET_OK, line("joystick_quiet = on"));  TEST_ASSERT_TRUE(s.joystick_quiet);
     TEST_ASSERT_EQUAL_INT(SET_OK, line("orchestra90 = on"));     TEST_ASSERT_TRUE(s.orchestra90);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("usb_audio_db = -24"));   TEST_ASSERT_EQUAL_INT(-24, s.usb_audio_db);
+    TEST_ASSERT_EQUAL_INT(SET_OK, line("usb_audio_db = 0"));     TEST_ASSERT_EQUAL_INT(0, s.usb_audio_db);
+    TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("usb_audio_db = 6"));
+    TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("usb_audio_db = -61"));
+    TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("usb_audio_db = loud"));
     TEST_ASSERT_EQUAL_INT(SET_BAD_VALUE, line("coco_psg = loud"));
 }
 
