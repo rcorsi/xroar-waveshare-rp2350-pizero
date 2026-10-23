@@ -108,6 +108,27 @@ static void test_plain_keyboard_has_none(void) {
     TEST_ASSERT_FALSE(mine);
 }
 
+// The user's USB-C headphone dongle (001F:0B21), as it reported on the
+// board: ten one-bit Consumer buttons (Volume Up and Down are bits 8 and 9),
+// a Telephony bit, then padding; no report ID. Its headphones sent only
+// 04 00 (Play/Pause) for every button, which must not change the volume.
+static void test_the_users_dongle(void) {
+    static const uint8_t d[] = {
+        0x05, 0x0C, 0x09, 0x01, 0xA1, 0x01, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x0A,
+        0x09, 0xB5, 0x09, 0xB6, 0x09, 0xCD, 0x09, 0xE2, 0x09, 0xB7, 0x0A, 0x5B, 0x02, 0x0A, 0x5C, 0x02,
+        0x0A, 0x62, 0x02, 0x09, 0xE9, 0x09, 0xEA, 0x81, 0x02, 0x05, 0x0B, 0x95, 0x01, 0x09, 0x21, 0x81, 0x02,
+        0x75, 0x05, 0x95, 0x01, 0x81, 0x03, 0xC0 };
+    TEST_ASSERT_TRUE(hidc_parse(d, sizeof d, &m));
+    bool mine;
+    const uint8_t play[] = { 0x04, 0x00 }, mute[] = { 0x08, 0x00 },
+                  up[] = { 0x00, 0x01 }, down[] = { 0x00, 0x02 }, none[] = { 0x00, 0x00 };
+    TEST_ASSERT_EQUAL_UINT8(0, dec(play, 2, &mine));          TEST_ASSERT_TRUE(mine);
+    TEST_ASSERT_EQUAL_UINT8(HIDC_MUTE, dec(mute, 2, &mine));
+    TEST_ASSERT_EQUAL_UINT8(HIDC_UP, dec(up, 2, &mine));
+    TEST_ASSERT_EQUAL_UINT8(HIDC_DOWN, dec(down, 2, &mine));
+    TEST_ASSERT_EQUAL_UINT8(0, dec(none, 2, &mine));
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_keyboard_style_array_with_report_id);
@@ -116,5 +137,6 @@ int main(void) {
     RUN_TEST(test_array_of_listed_usages);
     RUN_TEST(test_extended_usage);
     RUN_TEST(test_plain_keyboard_has_none);
+    RUN_TEST(test_the_users_dongle);
     return UNITY_END();
 }

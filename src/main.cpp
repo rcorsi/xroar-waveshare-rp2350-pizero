@@ -2966,6 +2966,12 @@ void tuh_hid_mount_cb(uint8_t daddr, uint8_t idx,
                   daddr, idx, vid, pid, proto, kind, desc_len);
     if (idx < HIDC_N && hidc_parse(desc_report, desc_len, &g_hidc[idx]))   // PIZERO-255
         Serial.printf("[usb] volume keys on addr=%u idx=%u\r\n", daddr, idx);
+#ifdef USB_DESC_DUMP
+    Serial.printf("[usbhid] addr=%u idx=%u report descriptor %u bytes:", daddr, idx, desc_len);
+    for (uint16_t i = 0; i < desc_len; i++)
+        Serial.printf("%s%02X", (i % 32) ? " " : "\r\n[usbhid]   ", desc_report[i]);
+    Serial.print("\r\n");
+#endif
     if (idx < HIDC_N) g_hidc_held[idx] = 0;
     if (daddr <= USB_PAD_MAX_DADDR) g_pad_kind_of[daddr] = pad;
 #if PAD_PROBE
@@ -3002,6 +3008,24 @@ void tuh_hid_report_received_cb(uint8_t daddr, uint8_t idx,
     // a boot mouse (no consumer yet: PIZERO-13). Other lengths: ignore.
     // PIZERO-13: the bound pad goes to the joysticks. Any known pad identity
     // is kept off the keyboard path: its 64-byte reports would type junk.
+#ifdef USB_DESC_DUMP
+    // PIZERO-255 diagnosis: each report from a non-pad, non-boot-keyboard
+    // interface, when it changes, with what the volume decoder made of it.
+    if (!pad_addr(daddr) && len != 8 && idx < HIDC_N) {
+        static uint8_t last[HIDC_N][16];
+        static uint8_t last_len[HIDC_N];
+        uint8_t n = (uint8_t)(len < 16 ? len : 16);
+        if (n != last_len[idx] || memcmp(report, last[idx], n)) {
+            memcpy(last[idx], report, n);
+            last_len[idx] = n;
+            bool mine = false;
+            uint8_t k = g_hidc[idx].has ? hidc_decode(&g_hidc[idx], report, len, &mine) : 0;
+            Serial.printf("[usbhid] addr=%u idx=%u len=%u:", daddr, idx, len);
+            for (uint8_t i = 0; i < n; i++) Serial.printf(" %02X", report[i]);
+            Serial.printf("  -> mine=%u keys=%u\r\n", mine, k);
+        }
+    }
+#endif
     // PIZERO-255: a report carrying volume keys goes to them and no further.
     if (idx < HIDC_N && g_hidc[idx].has) {
         bool mine;
