@@ -518,4 +518,4 @@ line shows `sn76489`, `coco_psg`, `symphony12` (`stereo`, `mono` or `off`) and
 - **The CoCo 3 at 1.79 MHz** with all four AY chips is not yet measured
   (PIZERO-252).
 - **The video cable and a USB DAC at once,** an on-screen volume display, and
-  a DAC plugged in after power-on (PIZERO-255, PIZERO-51).
+  a DAC plugged in after power-on (PIZERO-257, PIZERO-258, PIZERO-51).
