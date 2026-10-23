@@ -10,6 +10,7 @@ mixed sample.
 | Source | Voices | Addresses | Setting | `cocozero` | `coco2` | `coco3` |
 |---|---|---|---|---|---|---|
 | The CoCo's 6-bit DAC | 1 | `$FF20` bits 2-7 | always on | on | on | on |
+| Single-bit output | 1 | `$FF22` bit 1 | always on | on | on | on |
 | SN76489 (Games Master Cartridge) | 3 tones + noise | `$FF41` | `sn76489` | on | off* | off* |
 | AY-3-8910 (CoCo PSG) | 3 tones + noise | `$FF5D`-`$FF5F` | `coco_psg` | on | off | off |
 | 4 x AY-3-8910 (Symphony-12) | 12 tones + 4 noise | `$FF60`-`$FF63` | `symphony12` | on | off | off |
@@ -22,6 +23,10 @@ Everything can play at once: on the CoCo Zero that is the DAC, three SN76489
 tones and its noise, and twelve AY tones, sixteen voices plus the DAC.
 [`ay-checks/allvoice.bas`](ay-checks/allvoice.bas) does exactly that.
 
+How they reach the speaker, together or picked by the CoCo's multiplexer, is
+the `sound_sources` setting (below): `all` on the CoCo Zero, `switched`, as
+the real machine, on the stock CoCo 2 and CoCo 3.
+
 The settings are lines in `/coco/settings.txt`, or in a game's own file beside it
 (`STARCAST.TXT` for `STARCAST.DSK`); see [`../SETTINGS.md`](../SETTINGS.md). The
 machine profile sets the defaults above, and a line in either file overrides them.
@@ -33,12 +38,59 @@ nearly every game use it. The level is picked up the moment the CPU writes the
 port and averaged over each output sample, so edges land in the right place
 and high tones do not alias.
 
-Not emulated: the single-bit sound output (PIA1 port B bit 1, `$FF22`), the
-sound enable (PIA1 CB2) and the analog multiplexer that picks between the DAC,
-the cassette and the cartridge's sound line (PIA0 CA2 and CB2). The DAC is
-always heard, and the cartridge chips are mixed in directly rather than
-through the multiplexer, so a program that switches the multiplexer away from
-the cartridge does not silence them (PIZERO-253).
+### Which sources are heard: `sound_sources`
+
+On the real CoCo a multiplexer picks what reaches the TV. PIA0 CA2 and CB2
+select one of four sources, 0 the DAC, 1 the cassette input, 2 the
+cartridge's sound line, 3 nothing, and PIA1 CB2 is the sound enable. The same
+two select lines pick the joystick axis for the comparator, so reading a
+joystick switches the sound source too. The single-bit output, PIA1 port B
+bit 1 (`$FF22`), counts while that pin is an output: it shifts each source's
+level and, with the multiplexer off, drives the line on its own. With nothing
+driving it the line holds its last level. The levels are XRoar's, measured
+on a real Dragon, whose sound section is the CoCo's (`coco_sound.h`).
+
+Color BASIC leaves PB1 an input and the sound enable off at rest; `SOUND`
+and `PLAY` turn the enable on and select the DAC. A Games Master or CoCo PSG
+game selects the cartridge line and turns the enable on itself.
+
+| `sound_sources` | What is heard | Default on |
+|---|---|---|
+| `switched` | As the real CoCo: the source the multiplexer picks, while the enable is on. The single-bit output as above. | `coco2`, `coco3` |
+| `all` | Everything at once: the DAC, the single-bit output and every cartridge chip, whatever the multiplexer and the enable say. A program that would have to choose between the DAC and its sound cartridge can play both. | `cocozero` |
+
+Which chips come through the cartridge line under `switched`: the SN76489,
+the CoCo PSG, and the Symphony-12 in mono. The Symphony-12 in stereo plays
+from its own jacks and the Deluxe CoCo's chip is inside that machine, so
+those are always heard, as if the stereo jacks were plugged into the
+speakers.
+
+The cassette input carries nothing (no tape is played), so selecting it
+gives only its small offset.
+
+### Joystick reads: `joystick_quiet`
+
+A program reads an analog joystick by writing trial values to the DAC and
+testing the comparator (PIA0 PA7) after each, six or so per axis. With the
+sound on, those trial values are heard as a buzz or a whine whenever the
+joystick is read: Double Back does this, and so does a real CoCo running it.
+Color BASIC's `JOYSTK` turns the sound off first, so on a real CoCo it is
+quiet; under `sound_sources = all` the DAC is always heard, so it would not be.
+
+With `joystick_quiet = on` (the default on `cocozero`), a DAC write that is
+followed within 16 CPU cycles by a read of PIA0 port A is taken to be a
+trial, and its sound is taken back from the moment of the write, as if it
+had never been heard. The comparator still sees the value written, so the
+joystick reads exactly as before. To make that possible the sound is held
+back one sample (about 21 microseconds). Color BASIC's own `SOUND`, `PLAY`
+and cassette routines never read PIA0 right after a DAC write, so they are
+not touched; the serial log's `[snd] joystick_probes=N` counts the trials
+taken out. A program that wrote the DAC and then read the keyboard within 16
+cycles, every time, would lose that sound: if one turns up, give it
+`joystick_quiet = off` in its own file.
+
+`joystick_quiet = off` (the default on the stock `coco2` and `coco3`) leaves
+every DAC write heard, as on the real machine.
 
 ## SN76489: the Games Master Cartridge
 
@@ -162,11 +214,15 @@ Lines starting with `'` are comments for the reader and are not typed in.
 | AY chip | `lib/coco_machine/src/psg_ay8910.h` : `ay_write`, `ay_render` |
 | AY bank and front-ends | `lib/coco_machine/src/psg_ay8910.h` : `struct ay_bank`, `ayb_owns`, `ayb_write`, `ayb_read`, `ayb_render_lr` |
 | Bus hookup | `lib/coco_machine/src/coco_machine.cpp` : `csg_bus_write`; `ayb_owns` in the CoCo 2 read and write paths and in `coco3_cpu_cycle` |
+| The multiplexer, enable, single-bit, joystick trials | `lib/coco_machine/src/coco_sound.h` : `snd_line_mv`, `snd_probe_write`, `snd_probe_read`; in the machine `audio_update_level`, `audio_pia1_written`, `audio_comparator_read` |
 | Mixing, filters, stereo ring | `lib/coco_machine/src/coco_machine.cpp` : `audio_sample`, `audio_emit`, `coco_machine_audio_read_lr` |
 | Settings | `src/settings.h` : `settings_profile`; applied in `src/main.cpp` : `settings_apply` |
 
 Both chip models are plain integer C, tested on the host (`pio test -e native -f
-test_csg_sn76489 -f test_psg_ay8910 -f test_cart_gmc`). Each chip is rendered once
+test_csg_sn76489 -f test_psg_ay8910 -f test_cart_gmc -f test_coco_sound`).
+`test_coco_sound` checks the multiplexer's levels and runs a program that
+plays a tone while reading the joystick through the audio integrator: with
+`joystick_quiet` the samples are those of the tone alone. Each chip is rendered once
 per 48 kHz output sample, averaging its output over the sample's time, which keeps
 tones above the sample rate from aliasing.
 
@@ -220,4 +276,3 @@ line shows `sn76489`, `coco_psg`, `symphony12` (`stereo`, `mono` or `off`) and
 - **Orchestra-90CC** (PIZERO-148): two 8-bit DACs at `$FF7A`/`$FF7B`.
 - **The CoCo 3 at 1.79 MHz** with all four AY chips is not yet measured
   (PIZERO-252).
-- The single-bit sound and the sound multiplexer (PIZERO-253), above.

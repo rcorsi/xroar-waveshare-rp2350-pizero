@@ -401,6 +401,7 @@ struct ay_bank {
     uint8_t  orb, ddrb, crb;
     uint8_t  stereo;             // PIZERO-250: the Symphony-12's stereo jumper
     uint8_t  sym12;              // bit per chip: last written by the Symphony-12
+    bool     deluxe;             // PIZERO-253: chip 1 last written by the Deluxe CoCo
     uint32_t writes;             // register writes, for telemetry
 };
 
@@ -426,7 +427,11 @@ static inline void ayb_sym12_bus(struct ay_bank *b) {
     for (int k = 0; k < AY_CHIPS; k++) {
         unsigned f = (ctl >> (2 * k)) & 3;
         if (f == 3) ay_latch(&b->chip[k], data);
-        else if (f == 2) { ayb_chip_write(b, k, data); b->sym12 |= (uint8_t)(1u << k); }
+        else if (f == 2) {
+            ayb_chip_write(b, k, data);
+            b->sym12 |= (uint8_t)(1u << k);
+            if (k == 0) b->deluxe = false;
+        }
     }
 }
 
@@ -458,6 +463,7 @@ static inline void ayb_write(struct ay_bank *b, uint16_t a, uint8_t d) {
         ay_set_clock(&b->chip[0], AY_CLK_DELUXE);
         ayb_chip_write(b, 0, d);
         b->sym12 &= (uint8_t)~1u;
+        b->deluxe = true;
         break;
     case 0xFF39: ay_latch(&b->chip[0], d); break;
     case 0xFF5D:
@@ -469,6 +475,7 @@ static inline void ayb_write(struct ay_bank *b, uint16_t a, uint8_t d) {
         ay_set_clock(&b->chip[0], (b->psg_ctrl & 1) ? AY_CLK_PSG_1MHZ : AY_CLK_PSG_2MHZ);
         ayb_chip_write(b, 0, d);
         b->sym12 &= (uint8_t)~1u;
+        b->deluxe = false;
         break;
     case 0xFF60:
         if (b->cra & 4) b->ora = d; else b->ddra = d;
@@ -502,27 +509,51 @@ static inline uint8_t ayb_read(const struct ay_bank *b, uint16_t a) {
 // four at full are 1.6 times one rather than four times. A chip with all
 // three levels at 0 is silent whatever its tones do, so it is not run.
 //
+// A side of the mix: n chips scaled so four alike are 1.6 times one.
+static inline int32_t ayb_scale(int32_t sum, int n) {
+    return n <= 1 ? sum : sum * 2 / (n + 1);
+}
+
 // PIZERO-250: with the stereo jumper on, a chip the Symphony-12 last wrote
 // plays on one side only, chips 1 and 2 left and 3 and 4 right, as MAME
 // routes them. A chip the CoCo PSG or Deluxe CoCo wrote stays in the centre.
 // Each side is mixed like the mono bank, by the chips on that side, so one
 // Symphony-12 chip on its own is as loud as a CoCo PSG.
-static inline SOUND_HOT void ayb_render_lr(struct ay_bank *b, uint32_t event_ticks,
-                                 int32_t *left, int32_t *right) {
-    int32_t sl = 0, sr = 0;
-    int nl = 0, nr = 0;
+//
+// PIZERO-253: where each chip's sound goes when the CoCo's multiplexer is
+// modelled (`routed`). The CoCo PSG's chip, and the Symphony-12 in mono,
+// come back through the cartridge's sound line, which the multiplexer
+// switches: *line. The Symphony-12 in stereo plays from its own jacks and
+// the Deluxe CoCo's chip is inside the machine, so neither passes the
+// multiplexer: *left and *right. Unrouted (every source heard at once)
+// everything is in *left and *right and *line is 0.
+static inline SOUND_HOT void ayb_render_routed(struct ay_bank *b, uint32_t event_ticks, bool routed,
+                                               int32_t *line, int32_t *left, int32_t *right) {
+    int32_t sc = 0, sl = 0, sr = 0, sm = 0;
+    int nc = 0, nl = 0, nr = 0, nm = 0;
     const uint8_t panned = b->stereo ? b->sym12 : 0;
     for (int k = 0; k < AY_CHIPS; k++) {
         if (!(b->active & (1u << k))) continue;
         const uint8_t *r = b->chip[k].reg;
         if (!(r[8] | r[9] | r[10])) continue;
         int32_t v = ay_render(&b->chip[k], event_ticks);
-        if (!(panned & (1u << k)))  { sl += v; nl++; sr += v; nr++; }
-        else if (k < AY_CHIPS / 2)  { sl += v; nl++; }
-        else                        { sr += v; nr++; }
+        if (panned & (1u << k)) {
+            if (k < AY_CHIPS / 2) { sl += v; nl++; } else { sr += v; nr++; }
+        } else if (routed && !(k == 0 && b->deluxe)) {
+            sm += v; nm++;
+        } else {
+            sc += v; nc++;
+        }
     }
-    *left = nl <= 1 ? sl : sl * 2 / (nl + 1);
-    *right = nr <= 1 ? sr : sr * 2 / (nr + 1);
+    *line = ayb_scale(sm, nm);
+    *left = ayb_scale(sc + sl, nc + nl);
+    *right = ayb_scale(sc + sr, nc + nr);
+}
+
+static inline SOUND_HOT void ayb_render_lr(struct ay_bank *b, uint32_t event_ticks,
+                                           int32_t *left, int32_t *right) {
+    int32_t line;
+    ayb_render_routed(b, event_ticks, false, &line, left, right);
 }
 
 // The mono mix, which is what the bank gives with the jumper off.

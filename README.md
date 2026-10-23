@@ -40,6 +40,8 @@ which it needs, and launching it switches the board to that machine by itself.
 - The AY-3-8910 sound chips of the CoCo PSG and Symphony-12 cartridges, built in: up to four
   chips and twelve voices, the Symphony-12's in stereo. How to program each one, and what it
   costs: [`docs/sound.md`](docs/sound.md).
+- Every sound source at once, the DAC and the sound cartridges together, where the real CoCo
+  switched between them, and joystick reads that make no sound.
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
 - Auto-repeat for a key held down, which Color BASIC never did.

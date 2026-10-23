@@ -28,6 +28,7 @@
 #include "audio_servo.h"
 #include "audio_integ.h"       // PIZERO-131, host-tested
 #include "audio_lowpass.h"     // PIZERO-212, host-tested
+#include "coco_sound.h"        // PIZERO-253, host-tested
 #include "coco3_bus.h"         // PIZERO-133, host-tested
 #ifdef GIME_TIMER
 #include "gime_timer.h"
@@ -338,9 +339,12 @@ extern "C" void coco_machine_release_all_joysticks(void) {
     g_joy_fire = 0;
 }
 
+static void HOT_FUNC(audio_comparator_read)(void);   // PIZERO-253, with the audio below
+
 extern "C" void HOT_FUNC(coco_pia0_preread_a)(void *sptr) {
     (void)sptr;
     if (!g_m.pia0) return;
+    audio_comparator_read();
     uint8_t col_sel = PIA_VALUE_B(g_m.pia0);
     uint8_t rows = 0xFF;
     for (int c = 0; c < 8; c++) {
@@ -770,6 +774,8 @@ extern "C" { struct cpu_prof g_cpu_prof; }
 
 // PIZERO-18 audio: event-driven resampler hooks (defined in the audio section).
 static inline void audio_update_level(void);
+static inline void audio_pia0_written(void);   // PIZERO-253
+static inline void audio_pia1_written(void);
 // Forced inline (PIZERO-131): with two callers, the hook and the dummy-cycle
 // entry, the compiler made it a real function and put it in flash.
 static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks);
@@ -1130,10 +1136,11 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
         } else if ((A & 0xFFE0) == 0xFF00) {
             mc6821_write(g_m.pia0, A, g_m.cpu->D);
             if (A & 1) g_m.pia_irq_dirty = true;       // CRA/CRB write may change IRQ enable
+            audio_pia0_written();                      // PIZERO-253: the sound source
         } else if ((A & 0xFFE0) == 0xFF20) {
             mc6821_write(g_m.pia1, A, g_m.cpu->D);
             if (A & 1) g_m.pia_irq_dirty = true;
-            audio_update_level();   // DAC / single-bit may have changed -> recache
+            audio_pia1_written();   // DAC / single-bit / enable may have changed (PIZERO-253)
         }
 #ifdef GIME_PALETTE
         else if (g_gime_pal_on && coco_pal_owns(A)) coco_pal_write(&g_pal, A, g_m.cpu->D);
@@ -1317,11 +1324,11 @@ static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_
     switch (coco3_bus_cycle(&g_c3bus, g_gime3->S, g_gime3->RAS, g_gime3->Z, RnW, A, D)) {
     case C3_BUS_PIA0:
         if (RnW) *D = mc6821_read(g_m.pia0, A);
-        else     mc6821_write(g_m.pia0, A, *D);
+        else   { mc6821_write(g_m.pia0, A, *D); audio_pia0_written(); }   // PIZERO-253
         break;
     case C3_BUS_PIA1:
         if (RnW) *D = mc6821_read(g_m.pia1, A);
-        else   { mc6821_write(g_m.pia1, A, *D); audio_update_level(); }
+        else   { mc6821_write(g_m.pia1, A, *D); audio_pia1_written(); }
         break;
     case C3_BUS_CARTIO:
         if (RnW) *D = g_m.cart_banked ? 0xFF : fdc_io_read(A);
@@ -1631,16 +1638,70 @@ static bool g_aud_split;
 // low-pass overshoot). Volumes above 10 may clip on such waveforms.
 #define AUDIO_DAC_GAIN   360
 #define AUDIO_GAIN_X     6         // the same factor for the SN76489
+// PIZERO-253: the line is worked out in millivolts (coco_sound.h), where the
+// DAC's 63 steps span 4,500 mV, so AUDIO_DAC_GAIN a step is 5.04 a mV; Q10.
+#define AUDIO_MV_GAIN_Q10 (AUDIO_DAC_GAIN * 63 * 1024 / 4500)
 // PIZERO-145: the gain is the volume setting, 0-15; 10 is AUDIO_DAC_GAIN.
-static int32_t g_dac_gain = AUDIO_DAC_GAIN;
+static int32_t g_mv_gain = AUDIO_MV_GAIN_Q10;
 static int32_t g_volume = 10;
+
+// PIZERO-253: the sound path (coco_sound.h). g_snd_mode is the
+// sound_sources setting. g_dac6 is the DAC value heard, which is the
+// register's except while a joystick probe is being taken back
+// (joystick_quiet, below). g_line_mv is the line's level, which it holds
+// when nothing drives it; g_cart_q10 the cartridge line's share (0 when
+// the multiplexer has another source).
+static uint8_t g_snd_mode = SND_ALL;
+static uint8_t g_dac6 = 0;
+static int32_t g_line_mv = 0;
+static int32_t g_cart_q10 = 1024;
+
 static inline void audio_update_level(void) {
-    if (!g_m.pia1) return;
-    int dac6 = (PIA_VALUE_A(g_m.pia1) >> 2) & 0x3F;    // 6-bit DAC, 0..63
-    // NB: the real CoCo single-bit sound is PIA1 CB2, not PB1 -- the old PB1 tap
-    // was bogus and only injected a constant DC offset, so it's dropped.
-    g_dac_level = (dac6 - 32) * g_dac_gain;            // centred; +-11520 at volume 10
+    if (!g_m.pia1 || !g_m.pia0) return;
+    struct snd_inputs in;
+    in.dac6 = g_dac6;
+    in.sbs_output = (g_m.pia1->b.direction_register & 2) != 0;     // PB1
+    in.sbs_high = in.sbs_output && (g_m.pia1->b.output_register & 2);
+    in.enable = PIA_VALUE_CB2(g_m.pia1) != 0;
+    in.source = (uint8_t)((PIA_VALUE_CB2(g_m.pia0) ? 2 : 0) | (PIA_VALUE_CA2(g_m.pia0) ? 1 : 0));
+    g_line_mv = snd_line_mv(&in, g_snd_mode, g_line_mv, &g_cart_q10);
+    g_dac_level = (g_line_mv * g_mv_gain) >> 10;
 }
+
+// PIZERO-253: joystick_quiet (snd_probe_* in coco_sound.h): a joystick
+// read's trial DAC values are taken back out of the sound. The sample
+// before the one being integrated is kept back for it (g_held_*).
+static bool     g_joy_quiet = true;
+static struct snd_probe g_probe;
+static uint8_t  g_probe_dac6;           // what was heard before the trial
+static int32_t  g_probe_mv;
+static uint32_t g_probes;               // trials taken back, for telemetry
+static bool     g_held;                 // the sample kept back, before the filters
+static int32_t  g_held_l, g_held_r;
+static uint32_t g_held_tk;
+
+// A write to PIA1: the DAC (and the single-bit output, and the enable) may
+// have changed. A change of the DAC alone may be a joystick trial.
+static inline void audio_pia1_written(void) {
+    uint8_t dac6 = (uint8_t)((PIA_VALUE_A(g_m.pia1) >> 2) & 0x3F);
+    int32_t level = g_dac_level, mv = g_line_mv;
+    uint8_t before = g_dac6;
+    g_dac6 = dac6;
+    audio_update_level();
+    g_probe.armed = false;
+    if (g_joy_quiet && dac6 != before && g_dac_level != level) {
+        snd_probe_write(&g_probe, (uint32_t)event_current_tick, level);
+        g_probe_dac6 = before;
+        g_probe_mv = mv;
+    }
+}
+
+// A write to PIA0: the multiplexer's source may have changed.
+static inline void audio_pia0_written(void) {
+    g_probe.armed = false;
+    audio_update_level();
+}
+
 
 static inline int audio_clamp(int s) {
     return s > 32767 ? 32767 : s < -32768 ? -32768 : s;
@@ -1694,19 +1755,48 @@ static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t t
 #ifdef CPU_PROF
     uint32_t t0 = cpu_prof_now();
 #endif
-    if (g_csg_active) s += sn_render(&g_csg, tk) * g_volume * AUDIO_GAIN_X / 10;   // PIZERO-143/145/223
+    // PIZERO-253: the cartridge's sound line (the SN76489, and the AY chips
+    // that come back through it) is heard as the multiplexer allows.
+    int32_t line = 0;
+    if (g_csg_active) line = sn_render(&g_csg, tk);                                // PIZERO-143/145/223
     int sr = s;
     if (g_ayb.active) {                                                             // PIZERO-149/250
-        int32_t l, r;
-        ayb_render_lr(&g_ayb, tk, &l, &r);
+        int32_t ln, l, r;
+        ayb_render_routed(&g_ayb, tk, g_snd_mode != SND_ALL, &ln, &l, &r);
+        line += ln;
         s += l * g_volume * AUDIO_GAIN_X / 10;
         sr += r * g_volume * AUDIO_GAIN_X / 10;
     }
-    audio_emit(s, sr);
+    if (line) {
+        line = ((line * g_volume * AUDIO_GAIN_X / 10) * g_cart_q10) >> 10;
+        s += line;
+        sr += line;
+    }
+    // Kept back one sample, so a joystick trial that began in it can still
+    // be taken out (audio_comparator_read).
+    if (g_held) audio_emit(g_held_l, g_held_r);
+    g_held = true;
+    g_held_l = s;
+    g_held_r = sr;
+    g_held_tk = tk;
 #ifdef CPU_PROF
     g_cpu_prof.samp_clk += cpu_prof_now() - t0;
     g_cpu_prof.samp_n++;
 #endif
+}
+
+// A read of PIA0 port A (the comparator). If a DAC write came just before,
+// take its sound back: the audio is caught up to this cycle already, so
+// the span since the write is in the sample being built (g_aud) and, past
+// its start, in the sample kept back.
+static void HOT_FUNC(audio_comparator_read)(void) {
+    if (!snd_probe_read(&g_probe, (uint32_t)event_current_tick, g_dac_level, &g_aud.acc, g_aud.tk,
+                        g_held, &g_held_l, &g_held_r, g_held_tk))
+        return;
+    g_dac6 = g_probe_dac6;
+    g_line_mv = g_probe_mv;
+    g_dac_level = g_probe.level;
+    g_probes++;
 }
 
 static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks) {
@@ -2006,9 +2096,21 @@ extern "C" uint8_t coco_machine_ay_active(void) { return g_ayb.active; }
 extern "C" void coco_machine_set_volume(int v) {
     if (v < 0) v = 0; else if (v > 15) v = 15;
     g_volume = v;
-    g_dac_gain = AUDIO_DAC_GAIN * v / 10;
+    g_mv_gain = AUDIO_MV_GAIN_Q10 * v / 10;
     audio_update_level();
 }
+
+// PIZERO-253: the sound_sources and joystick_quiet settings.
+extern "C" void coco_machine_set_sound_sources(bool all) {
+    g_snd_mode = all ? SND_ALL : SND_SWITCHED;
+    g_probe.armed = false;
+    audio_update_level();
+}
+extern "C" void coco_machine_set_joystick_quiet(bool on) {
+    g_joy_quiet = on;
+    g_probe.armed = false;
+}
+extern "C" uint32_t coco_machine_joystick_probes(void) { return g_probes; }
 
 // PIZERO-212: the output low-pass cutoff in Hz, 0 for off. Coefficients are
 // for the nominal rate; the servo moves the real one by under 0.3%.

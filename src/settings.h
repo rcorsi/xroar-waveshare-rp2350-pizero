@@ -13,6 +13,8 @@
 //   symphony12        = on | off              PIZERO-149: Symphony-12's four AYs at $FF60
 //   symphony12_stereo = on | off              PIZERO-250: its chips 1-2 left, 3-4 right
 //   deluxe_psg        = on | off              PIZERO-149: Deluxe CoCo's AY at $FF38
+//   sound_sources     = all | switched        PIZERO-253: every source at once, or the multiplexer
+//   joystick_quiet    = on | off              PIZERO-253: joystick reads not heard
 //   volume            = 0-15                  10 is the old fixed level
 //   audio_lowpass     = 1000-20000 | on | off PIZERO-212: output low-pass cutoff, Hz
 //   artifact_colors   = on | off | swapped    PMODE 4 color, or plain mono
@@ -76,6 +78,8 @@ struct coco_settings {
     bool    symphony12;
     bool    symphony12_stereo;        // PIZERO-250: the card's stereo jumper
     bool    deluxe_psg;
+    bool    sound_all;                // PIZERO-253: sound_sources = all (else switched)
+    bool    joystick_quiet;           // PIZERO-253
     uint8_t volume;                   // 0-15
     uint16_t lowpass_hz;              // PIZERO-212: 0 off, else 1000-20000
     uint8_t artifact;                 // ART_*
@@ -114,8 +118,12 @@ static inline bool settings_is_coco3(const struct coco_settings *s) {
 // on any machine), the AY cartridges' chips (PIZERO-149: the CoCo PSG and
 // the Symphony-12; the Deluxe CoCo's stays off, its addresses being PIA1's
 // mirror on a CoCo 2), the 6847T2 font with true lower case, and auto-repeat
-// (PIZERO-247: the stock machines' BASIC never repeated a key). settings.txt,
-// then a game's own file, go on top, so any of it can be changed.
+// (PIZERO-247: the stock machines' BASIC never repeated a key), every sound
+// source heard at once and joystick reads kept out of the sound (PIZERO-253:
+// the stock machines switch their sources through the multiplexer, and a
+// program that reads the joystick with the sound on is heard doing it).
+// settings.txt, then a game's own file, go on top, so any of it can be
+// changed.
 static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
     bool zero = machine == MACH_COCOZERO;
     s->machine = machine;
@@ -127,6 +135,8 @@ static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
     s->font = zero ? FONT_6847T2 : FONT_CLASSIC;
     s->lowercase = zero;
     s->key_repeat = zero;
+    s->sound_all = zero;
+    s->joystick_quiet = zero;
 }
 
 static inline void settings_defaults(struct coco_settings *s) {
@@ -147,6 +157,8 @@ static inline void settings_defaults(struct coco_settings *s) {
     s->key_repeat = true;
     s->key_repeat_delay = 500;
     s->key_repeat_rate = 10;
+    s->sound_all = true;              // PIZERO-253: improvements are on by default
+    s->joystick_quiet = true;
     pad_map_defaults(&s->pad);
     s->video_hw_encode = true;
     settings_profile(s, MACH_COCOZERO);
@@ -234,6 +246,12 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
     else if (!strcmp(name, "coco_psg"))     { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->coco_psg = b; }
     else if (!strcmp(name, "symphony12"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->symphony12 = b; }
     else if (!strcmp(name, "symphony12_stereo")) { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->symphony12_stereo = b; }
+    else if (!strcmp(name, "sound_sources")) {
+        if (!strcmp(v, "all"))           s->sound_all = true;
+        else if (!strcmp(v, "switched")) s->sound_all = false;
+        else return SET_BAD_VALUE;
+    }
+    else if (!strcmp(name, "joystick_quiet"))    { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->joystick_quiet = b; }
     else if (!strcmp(name, "deluxe_psg"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->deluxe_psg = b; }
     else if (!strcmp(name, "gime_palette")) { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_palette = b; }
     else if (!strcmp(name, "gime_timer"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_timer = b; }
@@ -455,6 +473,8 @@ static inline int settings_template(char *out, size_t n) {
         "# font = %s\n"
         "# lowercase = %s\n"
         "# key_repeat = %s\n"
+        "# sound_sources = %s\n"
+        "# joystick_quiet = %s\n"
         "symphony12_stereo = %s\n"
         "deluxe_psg = %s\n"
         "volume = %u\n"
@@ -475,6 +495,7 @@ static inline int settings_template(char *out, size_t n) {
         d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
         d.font == FONT_CLASSIC ? "classic" : d.font == FONT_6847T1 ? "6847t1" : "6847t2",
         d.lowercase ? "on" : "off", d.key_repeat ? "on" : "off",
+        d.sound_all ? "all" : "switched", d.joystick_quiet ? "on" : "off",
         d.symphony12_stereo ? "on" : "off", d.deluxe_psg ? "on" : "off", d.volume, (unsigned)d.lowpass_hz,
         d.artifact == ART_OFF ? "off" : d.artifact == ART_SWAPPED ? "swapped" : "on",
         d.autorun ? "on" : "off", d.reset_to_basic ? "basic" : "autorun", d.serial_keyboard ? "on" : "off",

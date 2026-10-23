@@ -46,6 +46,12 @@ uint32_t coco_machine_cart_csg_dropped(void);   /* ...of which too fast, ignored
  * the settings page (PIZERO-53) will expose it. */
 void coco_machine_csg_always(_Bool on);
 void coco_machine_set_ay_carts(_Bool psg, _Bool sym12, _Bool deluxe, _Bool sym12_stereo);   /* PIZERO-149/250 */
+/* PIZERO-253: every sound source heard at once (else the multiplexer and the
+ * sound enable pick, as on the real CoCo); joystick trial values kept out of
+ * the sound; and how many trials have been taken out. */
+void coco_machine_set_sound_sources(_Bool all);
+void coco_machine_set_joystick_quiet(_Bool on);
+uint32_t coco_machine_joystick_probes(void);
 uint32_t coco_machine_ay_writes(void);           /* AY register writes since reset */
 uint8_t coco_machine_ay_active(void);            /* bit per AY chip in use */
 
