@@ -15,12 +15,13 @@ mixed sample.
 | AY-3-8910 (CoCo PSG) | 3 tones + noise | `$FF5D`-`$FF5F` | `coco_psg` | on | off | off |
 | 4 x AY-3-8910 (Symphony-12) | 12 tones + 4 noise | `$FF60`-`$FF63` | `symphony12` | on | off | off |
 | AY-3-8913 (Deluxe CoCo) | 3 tones + noise | `$FF38`-`$FF39` | `deluxe_psg` | off | off | off |
+| Orchestra-90CC | 2 DACs, left and right | `$FF7A`-`$FF7B` | `orchestra90` | on | off | off |
 
 \* Loading a Games Master Cartridge image (a bank-switched `.ccc`, 32 KB to
 256 KB) brings its SN76489 on any machine, whatever the setting says.
 
 Everything can play at once: on the CoCo Zero that is the DAC, three SN76489
-tones and its noise, and twelve AY tones, sixteen voices plus the DAC.
+tones and its noise, twelve AY tones and the Orchestra-90's two DACs.
 [`ay-checks/allvoice.bas`](ay-checks/allvoice.bas) does exactly that.
 
 How they reach the speaker, together or picked by the CoCo's multiplexer, is
@@ -128,6 +129,7 @@ Two are never switched off by the multiplexer:
 
 - the Symphony-12 in stereo, which plays from the card's own jacks (as if
   they were plugged into the speakers);
+- the Orchestra-90, which also has its own stereo jacks;
 - the Deluxe CoCo's chip, which is inside that machine.
 
 ### On the CoCo Zero
@@ -267,6 +269,36 @@ them. With it off all four are in the middle. A chip that the CoCo PSG or Deluxe
 CoCo wrote last stays in the middle either way, so a CoCo PSG game is not stuck
 on one side. The DAC and the SN76489 are always in the middle.
 
+## Orchestra-90CC
+
+Tandy's Orchestra-90CC (1985) is two 8-bit DACs and nothing else: write a
+byte to `$FF7A` for the left channel and to `$FF7B` for the right, and that
+level comes out until the next write. Its music program, which mixes several
+voices in software and pushes the samples through the two DACs, is the
+cartridge's ROM: load it as a `.ccc` with **F10**. Any program can use the
+DACs directly, as [`ay-checks/orch90.bas`](ay-checks/orch90.bas) does.
+
+- **Stereo, always.** The left DAC goes to the left speaker and the right to
+  the right. Like XRoar, the card's sound does not pass the multiplexer: it
+  has its own jacks, so `sound_sources` does not affect it.
+- **Exact timing.** Software sample playback depends on each write landing
+  at the right moment, so the two DACs go through the same integrate-and-average
+  as the CoCo's own DAC: the audio integrator carries the left level with the
+  line and the right as its difference (`audio_integ_run2`), and each output
+  sample is the exact average of each DAC over its time.
+- **Full scale** is the whole of the line, 4,700 mV, a little more than the
+  CoCo's DAC, as XRoar has it. A DAC resting at any level is silent: only
+  changes are heard.
+- **Where it lives.** `$FF7A` and `$FF7B` are free on both machines (the CoCo 2
+  decodes nothing at `$FF60`-`$FFBF`, and the CoCo 3's I/O page has no RAM), so
+  `orchestra90` is on for the CoCo Zero. The stock CoCo 2 and CoCo 3 have it
+  off; put `orchestra90 = on` in the cartridge's own file to play it there.
+- The serial log shows `[orch] writes=N` once a program has written it.
+
+Cost: a write is one more check on the bus's slow path. `orch90.bas`'s
+machine-code loop, writing each DAC about 42,000 times a second, took a
+frame to 8.9 ms (6.8 ms at rest), with no underruns.
+
 ## How loud each source is
 
 All sources add into one sample per side, then go through the DC blocker and
@@ -274,7 +306,8 @@ the `audio_lowpass` filter, then a clamp to 16 bits. At the default volume of 10
 
 | Source | Full scale |
 |---|---|
-| DAC | ±11,520 (360 a step around the middle) |
+| DAC | 22,680 from 0 to 63, about 360 a step |
+| Orchestra-90 | 23,700 from 0 to 255 on each side |
 | SN76489 | 5,670 a channel, 22,680 for all four |
 | AY | 7,560 a channel, 22,680 for one chip's three |
 
@@ -295,6 +328,7 @@ All in [`ay-checks/`](ay-checks/), each saved on the card's `AYTEST.DSK`:
 | [`sym12all.bas`](ay-checks/sym12all.bas) | `SYM12ALL` | Symphony-12: all twelve voices |
 | [`stereo.bas`](ay-checks/stereo.bas) | `STEREO` | Symphony-12 stereo: chip 1 left and chip 4 right in turn, then both |
 | [`allvoice.bas`](ay-checks/allvoice.bas) | `ALLVOICE` | everything: twelve AY voices, the SN76489's tones and noise drum, AY envelopes, then the DAC on top |
+| [`orch90.bas`](ay-checks/orch90.bas) | `ORCH90` | Orchestra-90: a buzz on the left DAC, then the right, then two sawtooths at once from machine code |
 
 Lines starting with `'` are comments for the reader and are not typed in.
 
@@ -366,6 +400,7 @@ line shows `sn76489`, `coco_psg`, `symphony12` (`stereo`, `mono` or `off`) and
   microcontroller at `$FF7D`-`$FF7E`, with a speech chip beside it.
 - **Real AY software** (PIZERO-251): Lyra 1.2 with the Symphony 12 Enhancer, and
   the Sierra games' PSG music, which need a 512 KB CoCo 3.
-- **Orchestra-90CC** (PIZERO-148): two 8-bit DACs at `$FF7A`/`$FF7B`.
+- **The Orchestra-90's own music program** has not yet been run on the board
+  (its ROM is not on the card); PIZERO-148's test is `orch90.bas`.
 - **The CoCo 3 at 1.79 MHz** with all four AY chips is not yet measured
   (PIZERO-252).

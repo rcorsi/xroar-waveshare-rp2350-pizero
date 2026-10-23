@@ -52,6 +52,9 @@ void coco_machine_set_ay_carts(_Bool psg, _Bool sym12, _Bool deluxe, _Bool sym12
 void coco_machine_set_sound_sources(_Bool all);
 void coco_machine_set_joystick_quiet(_Bool on);
 uint32_t coco_machine_joystick_probes(void);
+/* PIZERO-148: the Orchestra-90CC's two DACs at $FF7A/$FF7B, and writes to them. */
+void coco_machine_set_orchestra90(_Bool on);
+uint32_t coco_machine_orch_writes(void);
 uint32_t coco_machine_ay_writes(void);           /* AY register writes since reset */
 uint8_t coco_machine_ay_active(void);            /* bit per AY chip in use */
 

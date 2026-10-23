@@ -23,6 +23,7 @@ struct audio_integ {
     int32_t  acc;    // integral of level x ticks this sample
     uint32_t tk;     // ticks accumulated this sample
     uint32_t terr;   // Bresenham accumulator (ticks x rate), below AUDIO_TICK_HZ
+    int32_t  acc2;   // PIZERO-148: a second level's integral (the *2 functions)
 };
 
 // One access of `ticks` at `level`. Returns 1 when a sample boundary falls
@@ -83,6 +84,44 @@ static inline __attribute__((always_inline)) void audio_integ_run(
         int s; uint32_t tk;
         audio_integ_step(a, level, access_ticks, rate, &s, &tk);
         emit(s, tk);
+        n -= k;
+    }
+}
+
+// PIZERO-148: the same with a second level integrated alongside the first,
+// over the same sample boundaries, for a source with its own timing on one
+// side (the Orchestra-90's right DAC, against its left). Exactly the
+// one-level functions for `level`; `level2` is averaged the same way.
+static inline int audio_integ_step2(struct audio_integ *a, int32_t level, int32_t level2,
+                                    uint32_t ticks, uint32_t rate,
+                                    int *s, int *s2, uint32_t *tk) {
+    a->acc2 += level2 * (int32_t)ticks;
+    if (!audio_integ_step(a, level, ticks, rate, s, tk)) return 0;
+    uint32_t over_tk = a->tk;                       // what step carried over
+    int32_t over2 = level2 * (int32_t)over_tk;
+    int32_t acc2 = a->acc2 - over2;
+    *s2 = *tk ? (int)(acc2 / (int32_t)*tk) : (int)level2;
+    a->acc2 = over2;
+    return 1;
+}
+
+typedef void (*audio_integ_emit2_fn)(int s, int s2, uint32_t tk);
+
+static inline __attribute__((always_inline)) void audio_integ_run2(
+        struct audio_integ *a, int32_t level, int32_t level2, uint32_t n, uint32_t access_ticks,
+        uint32_t rate, audio_integ_emit2_fn emit) {
+    while (n) {
+        uint32_t k = audio_integ_accesses_to_boundary(a, rate, access_ticks);
+        if (k > n) {
+            audio_integ_span(a, level, n * access_ticks, rate);
+            a->acc2 += level2 * (int32_t)(n * access_ticks);
+            return;
+        }
+        audio_integ_span(a, level, (k - 1) * access_ticks, rate);
+        a->acc2 += level2 * (int32_t)((k - 1) * access_ticks);
+        int s, s2; uint32_t tk;
+        audio_integ_step2(a, level, level2, access_ticks, rate, &s, &s2, &tk);
+        emit(s, s2, tk);
         n -= k;
     }
 }

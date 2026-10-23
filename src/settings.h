@@ -13,6 +13,7 @@
 //   symphony12        = on | off              PIZERO-149: Symphony-12's four AYs at $FF60
 //   symphony12_stereo = on | off              PIZERO-250: its chips 1-2 left, 3-4 right
 //   deluxe_psg        = on | off              PIZERO-149: Deluxe CoCo's AY at $FF38
+//   orchestra90       = on | off              PIZERO-148: Orchestra-90CC's DACs at $FF7A/$FF7B
 //   sound_sources     = all | switched        PIZERO-253: every source at once, or the multiplexer
 //   joystick_quiet    = on | off              PIZERO-253: joystick reads not heard
 //   volume            = 0-15                  10 is the old fixed level
@@ -78,6 +79,7 @@ struct coco_settings {
     bool    symphony12;
     bool    symphony12_stereo;        // PIZERO-250: the card's stereo jumper
     bool    deluxe_psg;
+    bool    orchestra90;              // PIZERO-148
     bool    sound_all;                // PIZERO-253: sound_sources = all (else switched)
     bool    joystick_quiet;           // PIZERO-253
     uint8_t volume;                   // 0-15
@@ -117,7 +119,7 @@ static inline bool settings_is_coco3(const struct coco_settings *s) {
 // timer, the SN76489 without a cartridge (a Games Master cartridge brings it
 // on any machine), the AY cartridges' chips (PIZERO-149: the CoCo PSG and
 // the Symphony-12; the Deluxe CoCo's stays off, its addresses being PIA1's
-// mirror on a CoCo 2), the 6847T2 font with true lower case, and auto-repeat
+// mirror on a CoCo 2), the Orchestra-90's DACs (PIZERO-148), the 6847T2 font with true lower case, and auto-repeat
 // (PIZERO-247: the stock machines' BASIC never repeated a key), every sound
 // source heard at once and joystick reads kept out of the sound (PIZERO-253:
 // the stock machines switch their sources through the multiplexer, and a
@@ -137,6 +139,7 @@ static inline void settings_profile(struct coco_settings *s, uint8_t machine) {
     s->key_repeat = zero;
     s->sound_all = zero;
     s->joystick_quiet = zero;
+    s->orchestra90 = zero;
 }
 
 static inline void settings_defaults(struct coco_settings *s) {
@@ -157,6 +160,7 @@ static inline void settings_defaults(struct coco_settings *s) {
     s->key_repeat = true;
     s->key_repeat_delay = 500;
     s->key_repeat_rate = 10;
+    s->orchestra90 = true;            // PIZERO-148
     s->sound_all = true;              // PIZERO-253: improvements are on by default
     s->joystick_quiet = true;
     pad_map_defaults(&s->pad);
@@ -251,6 +255,7 @@ static inline int settings_parse_line(struct coco_settings *s, const char *line,
         else if (!strcmp(v, "switched")) s->sound_all = false;
         else return SET_BAD_VALUE;
     }
+    else if (!strcmp(name, "orchestra90"))       { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->orchestra90 = b; }
     else if (!strcmp(name, "joystick_quiet"))    { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->joystick_quiet = b; }
     else if (!strcmp(name, "deluxe_psg"))   { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->deluxe_psg = b; }
     else if (!strcmp(name, "gime_palette")) { if (!settings_bool(v, &b)) return SET_BAD_VALUE; s->gime_palette = b; }
@@ -468,6 +473,7 @@ static inline int settings_template(char *out, size_t n) {
         "# sn76489 = %s\n"
         "# coco_psg = %s\n"
         "# symphony12 = %s\n"
+        "# orchestra90 = %s\n"
         "# gime_palette = %s\n"
         "# gime_timer = %s\n"
         "# font = %s\n"
@@ -492,6 +498,7 @@ static inline int settings_template(char *out, size_t n) {
         "# color_dark_green = #006500\n",
         SETTINGS_MACHINE_NAMES[d.machine],
         d.sn76489 ? "on" : "off", d.coco_psg ? "on" : "off", d.symphony12 ? "on" : "off",
+        d.orchestra90 ? "on" : "off",
         d.gime_palette ? "on" : "off", d.gime_timer ? "on" : "off",
         d.font == FONT_CLASSIC ? "classic" : d.font == FONT_6847T1 ? "6847t1" : "6847t2",
         d.lowercase ? "on" : "off", d.key_repeat ? "on" : "off",

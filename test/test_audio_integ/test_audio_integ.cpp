@@ -216,6 +216,74 @@ static void test_mixed_lengths_caught_up_in_eights(void) {
     TEST_ASSERT_EQUAL_UINT32(so.terr, sn.terr);
 }
 
+// PIZERO-148: the two-level integrator. Each level must come out exactly as
+// a one-level integrator of it alone gives, sample for sample, whether the
+// accesses are stepped one by one (step2) or run in spans (run2).
+static int g_s2n;
+static int g_s2[MAX_SAMPLES / 4][2];
+static uint32_t g_s2tk[MAX_SAMPLES / 4];
+static void emit2(int s, int s2, uint32_t tk) {
+    if (g_s2n < MAX_SAMPLES / 4) { g_s2[g_s2n][0] = s; g_s2[g_s2n][1] = s2; g_s2tk[g_s2n] = tk; g_s2n++; }
+}
+
+static void test_two_levels_match_one_each(void) {
+    struct audio_integ two = {0, 0, 0, 0}, one_a = {0, 0, 0, 0}, one_b = {0, 0, 0, 0}, run = {0, 0, 0, 0};
+    int32_t la = 0, lb = 0;
+    int n = 0;
+    g_s2n = 0;
+    for (int i = 0; i < 400000; i++) {
+        if (rnd() % 23 == 0) la = (int32_t)(rnd() % 40000) - 20000;
+        if (rnd() % 31 == 0) lb = (int32_t)(rnd() % 40000) - 20000;
+        uint32_t ticks = (rnd() % 9 == 0) ? 8 : 16;
+        int s, s2, sa, sb; uint32_t tk, tka, tkb;
+        int got = audio_integ_step2(&two, la, lb, ticks, 48000, &s, &s2, &tk);
+        int ga = audio_integ_step(&one_a, la, ticks, 48000, &sa, &tka);
+        int gb = audio_integ_step(&one_b, lb, ticks, 48000, &sb, &tkb);
+        TEST_ASSERT_EQUAL_INT(ga, got);
+        TEST_ASSERT_EQUAL_INT(gb, got);
+        if (got) {
+            TEST_ASSERT_EQUAL_INT(sa, s);
+            TEST_ASSERT_EQUAL_INT(sb, s2);
+            TEST_ASSERT_EQUAL_UINT32(tka, tk);
+            if (n < MAX_SAMPLES / 4) { g_old[n].s = s; g_new[n].s = s2; g_old[n].tk = tk; n++; }
+        }
+        // The same stream through run2, a whole access at a time.
+        audio_integ_run2(&run, la, lb, 1, ticks, 48000, emit2);
+    }
+    TEST_ASSERT_TRUE(n > 10000);
+    TEST_ASSERT_EQUAL_INT(n, g_s2n);
+    for (int k = 0; k < n; k++) {
+        TEST_ASSERT_EQUAL_INT(g_old[k].s, g_s2[k][0]);
+        TEST_ASSERT_EQUAL_INT(g_new[k].s, g_s2[k][1]);
+        TEST_ASSERT_EQUAL_UINT32(g_old[k].tk, g_s2tk[k]);
+    }
+}
+
+// run2 over a span of equal accesses gives what stepping each one does.
+static void test_run2_spans_match_steps(void) {
+    struct audio_integ stepped = {0, 0, 0, 0}, spanned = {0, 0, 0, 0};
+    int n = 0;
+    g_s2n = 0;
+    int32_t la = 1000, lb = -3000;
+    for (int r = 0; r < 20000; r++) {
+        if (r % 7 == 0) { la = (int32_t)(rnd() % 30000) - 15000; lb = (int32_t)(rnd() % 30000) - 15000; }
+        uint32_t k = 1 + rnd() % 60;
+        for (uint32_t j = 0; j < k; j++) {
+            int s, s2; uint32_t tk;
+            if (audio_integ_step2(&stepped, la, lb, 16, 48000, &s, &s2, &tk) && n < MAX_SAMPLES / 4) {
+                g_old[n].s = s; g_new[n].s = s2; g_old[n].tk = tk; n++;
+            }
+        }
+        audio_integ_run2(&spanned, la, lb, k, 16, 48000, emit2);
+    }
+    TEST_ASSERT_EQUAL_INT(n, g_s2n);
+    for (int k = 0; k < n; k++) {
+        TEST_ASSERT_EQUAL_INT(g_old[k].s, g_s2[k][0]);
+        TEST_ASSERT_EQUAL_INT(g_new[k].s, g_s2[k][1]);
+    }
+    TEST_ASSERT_EQUAL_MEMORY(&stepped, &spanned, sizeof stepped);
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_constant_level_matches);
@@ -226,5 +294,7 @@ int main(int, char **) {
     RUN_TEST(test_events_changing_level_matches);
     RUN_TEST(test_events_odd_accesses_match);
     RUN_TEST(test_mixed_lengths_caught_up_in_eights);
+    RUN_TEST(test_two_levels_match_one_each);
+    RUN_TEST(test_run2_spans_match_steps);
     return UNITY_END();
 }

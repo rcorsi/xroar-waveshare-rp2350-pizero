@@ -1431,6 +1431,7 @@ static void settings_apply(void) {
     const struct coco_settings *st = &g_settings;
     coco_machine_csg_always(st->sn76489);
     coco_machine_set_ay_carts(st->coco_psg, st->symphony12, st->deluxe_psg, st->symphony12_stereo);   // PIZERO-149/250
+    coco_machine_set_orchestra90(st->orchestra90);        // PIZERO-148
     coco_machine_set_sound_sources(st->sound_all);        // PIZERO-253
     coco_machine_set_joystick_quiet(st->joystick_quiet);
     coco_machine_set_volume(st->volume);
@@ -1442,10 +1443,10 @@ static void settings_apply(void) {
     coco_machine_set_lowercase(st->lowercase);
     coco_machine_palette_set_default(st->color_set ? st->color : nullptr, st->color_set);
     dvi_sio_tmds_encode = st->video_hw_encode;   // PIZERO-175: from the next scanline
-    Serial.printf("[settings] machine=%s sn76489=%s coco_psg=%s symphony12=%s deluxe_psg=%s sound_sources=%s joystick_quiet=%s volume=%u audio_lowpass=%u artifact_colors=%s gime_palette=%s gime_timer=%s "
+    Serial.printf("[settings] machine=%s sn76489=%s coco_psg=%s symphony12=%s deluxe_psg=%s orchestra90=%s sound_sources=%s joystick_quiet=%s volume=%u audio_lowpass=%u artifact_colors=%s gime_palette=%s gime_timer=%s "
                   "autorun=%s reset_button=%s serial_keyboard=%s joystick_swap=%s font=%s lowercase=%s key_repeat=%s/%ums/%u video_encoder=%s soak_log=%s colors_overridden=%04x\r\n",
                   SETTINGS_MACHINE_NAMES[st->machine], st->sn76489 ? "on" : "off",
-                  st->coco_psg ? "on" : "off", st->symphony12 ? (st->symphony12_stereo ? "stereo" : "mono") : "off", st->deluxe_psg ? "on" : "off",
+                  st->coco_psg ? "on" : "off", st->symphony12 ? (st->symphony12_stereo ? "stereo" : "mono") : "off", st->deluxe_psg ? "on" : "off", st->orchestra90 ? "on" : "off",
                   st->sound_all ? "all" : "switched", st->joystick_quiet ? "on" : "off", st->volume, (unsigned)st->lowpass_hz,
                   st->artifact == ART_OFF ? "off" : st->artifact == ART_SWAPPED ? "swapped" : "on",
                   st->gime_palette ? "on" : "off", st->gime_timer ? "on" : "off",
@@ -2558,6 +2559,8 @@ void loop() {
         if (coco_machine_ay_writes())
             tprintf("[ay] writes=%lu chips=%x\r\n", (unsigned long)coco_machine_ay_writes(),
                     (unsigned)coco_machine_ay_active());
+        if (coco_machine_orch_writes())                     // PIZERO-148
+            tprintf("[orch] writes=%lu\r\n", (unsigned long)coco_machine_orch_writes());
         if (coco_machine_joystick_probes())                 // PIZERO-253
             tprintf("[snd] joystick_probes=%lu\r\n", (unsigned long)coco_machine_joystick_probes());
 #ifdef VIDEO_BENCH

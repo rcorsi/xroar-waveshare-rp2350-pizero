@@ -174,8 +174,8 @@ Good change-of-pace work between CoCo 3 stages. None waits on anything.
 
 ## Add-on hardware (bigger, unstarted)
 
-- **Sound**: `PIZERO-148` (Orchestra-90CC). (`PIZERO-149`, the AY-3-8910,
-  is done, above.)
+- **Sound**: (`PIZERO-149`, the AY-3-8910, and `PIZERO-148`, the
+  Orchestra-90CC, are done, above.)
 - **Video**: `PIZERO-16` (TMS9918A), `PIZERO-176` (MC6845 80-column card);
   the new-device chain `PIZERO-83` (decision) → `PIZERO-84` (linear 320×240) and
   `PIZERO-89` (wide text).

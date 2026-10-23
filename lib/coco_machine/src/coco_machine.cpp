@@ -803,6 +803,15 @@ static void csg_reset(void) {
 // from the bus, rendered at each audio sample, idle until first written.
 static struct ay_bank g_ayb;
 
+// PIZERO-148: the Orchestra-90CC, two 8-bit DACs, left at $FF7A and right at
+// $FF7B (write only), as XRoar's orch90.c. They play from the card's own
+// jacks, not through the multiplexer. Free addresses on both machines (the
+// CoCo 2 decodes nothing at $FF60-$FFBF, the CoCo 3 has no RAM in its I/O
+// page), so it can stay on.
+static bool g_orch_on = true;
+static inline bool orch_owns(uint16_t a) { return g_orch_on && (a & 0xFFFE) == 0xFF7A; }
+static void orch_write(uint16_t a, uint8_t d);
+
 // Available all the time by default, not only with a GMC in (see
 // csg_on_latch_mirror in cart_gmc.h); the settings page will switch it.
 static bool g_csg_always = true;
@@ -1133,6 +1142,8 @@ extern "C" void HOT_FUNC(coco_mem_cycle)(void *sptr, _Bool RnW, uint16_t A) {
 #endif
         if (ayb_owns(&g_ayb, A)) {
             ayb_write(&g_ayb, A, g_m.cpu->D);           // PIZERO-149
+        } else if (orch_owns(A)) {
+            orch_write(A, g_m.cpu->D);                  // PIZERO-148
         } else if ((A & 0xFFE0) == 0xFF00) {
             mc6821_write(g_m.pia0, A, g_m.cpu->D);
             if (A & 1) g_m.pia_irq_dirty = true;       // CRA/CRB write may change IRQ enable
@@ -1320,6 +1331,8 @@ static void HOT_FUNC(coco3_cpu_cycle)(void *sptr, int ncycles, bool RnW, uint16_
     if (ayb_owns(&g_ayb, A)) {
         if (RnW) *D = ayb_read(&g_ayb, A);
         else     ayb_write(&g_ayb, A, *D);
+    } else if (!RnW && orch_owns(A)) {
+        orch_write(A, *D);                              // PIZERO-148
     } else
     switch (coco3_bus_cycle(&g_c3bus, g_gime3->S, g_gime3->RAS, g_gime3->Z, RnW, A, D)) {
     case C3_BUS_PIA0:
@@ -1656,6 +1669,28 @@ static uint8_t g_dac6 = 0;
 static int32_t g_line_mv = 0;
 static int32_t g_cart_q10 = 1024;
 
+// PIZERO-148: the Orchestra-90's two DACs. Full scale is XRoar's, the whole
+// 4,700 mV of the line, so a DAC swings a little more than the CoCo's. The
+// left level rides with the line in the integrator; the right goes in as
+// its difference from the left (audio_integ_run2), so a sample is the
+// exact average of each.
+static uint8_t g_orch_raw[2] = { 0, 0 };
+static int32_t g_orch_l = 0, g_orch_d = 0;
+static uint32_t g_orch_writes = 0;       // for telemetry
+
+static inline void orch_levels(void) {
+    int32_t l = (int32_t)g_orch_raw[0] * 4700 / 255 * g_mv_gain >> 10;
+    int32_t r = (int32_t)g_orch_raw[1] * 4700 / 255 * g_mv_gain >> 10;
+    g_orch_l = l;
+    g_orch_d = r - l;
+}
+
+static void orch_write(uint16_t a, uint8_t d) {
+    g_orch_raw[a & 1] = d;                // $FF7A left, $FF7B right
+    g_orch_writes++;
+    orch_levels();
+}
+
 static inline void audio_update_level(void) {
     if (!g_m.pia1 || !g_m.pia0) return;
     struct snd_inputs in;
@@ -1751,7 +1786,8 @@ static void HOT_FUNC(audio_emit)(int s, int sr) {
 // ticks past the boundary carry to the next sample) so each emitted sample is
 // the true time-average over its period -- no edge jitter, no residual aliasing.
 // One finished sample from the integrator, tk ticks long.
-static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t tk) {
+// s is the line plus the Orchestra-90's left; s2 its right less its left.
+static inline __attribute__((always_inline)) void audio_sample(int s, int s2, uint32_t tk) {
 #ifdef CPU_PROF
     uint32_t t0 = cpu_prof_now();
 #endif
@@ -1759,7 +1795,7 @@ static inline __attribute__((always_inline)) void audio_sample(int s, uint32_t t
     // that come back through it) is heard as the multiplexer allows.
     int32_t line = 0;
     if (g_csg_active) line = sn_render(&g_csg, tk);                                // PIZERO-143/145/223
-    int sr = s;
+    int sr = s + s2;                                                                // PIZERO-148
     if (g_ayb.active) {                                                             // PIZERO-149/250
         int32_t ln, l, r;
         ayb_render_routed(&g_ayb, tk, g_snd_mode != SND_ALL, &ln, &l, &r);
@@ -1800,9 +1836,9 @@ static void HOT_FUNC(audio_comparator_read)(void) {
 }
 
 static inline __attribute__((always_inline)) void audio_integrate(uint32_t ticks) {
-    int s; uint32_t tk;
-    if (audio_integ_step(&g_aud, g_dac_level, ticks, g_aud_rate, &s, &tk))
-        audio_sample(s, tk);
+    int s, s2 = 0; uint32_t tk;
+    if (audio_integ_step2(&g_aud, g_dac_level + g_orch_l, g_orch_d, ticks, g_aud_rate, &s, &s2, &tk))
+        audio_sample(s, s2, tk);
 }
 
 // PIZERO-131 step (c). Cycles that end before coco_fastbus.deadline only
@@ -1832,7 +1868,7 @@ static void HOT_FUNC(audio_catch_up_run)(uint32_t pend) {
         // tick cycles in one run. At one level the integrator gives the same
         // samples however the ticks are split, so take them 8 at a time.
         const uint32_t t = g_c3 ? coco_fastbus.ticks : 8;
-        audio_integ_run(&g_aud, g_dac_level, pend / t, t, g_aud_rate, audio_sample);
+        audio_integ_run2(&g_aud, g_dac_level + g_orch_l, g_orch_d, pend / t, t, g_aud_rate, audio_sample);
         if (pend % t) audio_integrate(pend % t);   // never expected: keep time exact
         g_m.total_mem_cycles += pend / coco_fastbus.ticks;
         g_aud_tick = event_current_tick;
@@ -2098,6 +2134,7 @@ extern "C" void coco_machine_set_volume(int v) {
     g_volume = v;
     g_mv_gain = AUDIO_MV_GAIN_Q10 * v / 10;
     audio_update_level();
+    orch_levels();                        // PIZERO-148
 }
 
 // PIZERO-253: the sound_sources and joystick_quiet settings.
@@ -2111,6 +2148,13 @@ extern "C" void coco_machine_set_joystick_quiet(bool on) {
     g_probe.armed = false;
 }
 extern "C" uint32_t coco_machine_joystick_probes(void) { return g_probes; }
+
+// PIZERO-148: the orchestra90 setting. Off, the DACs fall silent.
+extern "C" void coco_machine_set_orchestra90(bool on) {
+    g_orch_on = on;
+    if (!on) { g_orch_raw[0] = g_orch_raw[1] = 0; orch_levels(); }
+}
+extern "C" uint32_t coco_machine_orch_writes(void) { return g_orch_writes; }
 
 // PIZERO-212: the output low-pass cutoff in Hz, 0 for off. Coefficients are
 // for the nominal rate; the servo moves the real one by under 0.3%.
