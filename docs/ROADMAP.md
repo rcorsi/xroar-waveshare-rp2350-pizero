@@ -135,12 +135,14 @@ Related CPU-speed item: **`PIZERO-211`** (RAM back from the fast 6809 core).
 the CoCo PSG (`$FF5E`), the Symphony-12 (PIA at `$FF60`) and the Deluxe CoCo
 (`$FF38`, off by default), on in the CoCo Zero. **`PIZERO-250`** put the
 Symphony-12 in stereo and **`PIZERO-248`** cut the chips' cost (every voice at
-once now takes 9.3-9.7 ms a frame, from 15.4-16.7), both done the same day. All
-of it is written up in [`sound.md`](sound.md). Left: **`PIZERO-251`** (real
-software: Lyra 1.2, the Sierra PSG games), **`PIZERO-252`** (the SN76489's
-silent cost, and four AY chips measured on a CoCo 3 at 1.79 MHz),
-**`PIZERO-249`** (the Speech/Sound Cartridge), **`PIZERO-253`** (the single-bit
-sound and the sound multiplexer).
+once now takes 9.3-9.7 ms a frame, from 15.4-16.7), both done the same day.
+**`PIZERO-253`** added the real CoCo's sound multiplexer, sound enable and
+single-bit output, with every source heard at once on the CoCo Zero
+(`sound_sources = all`) and joystick reads kept out of the sound
+(`joystick_quiet`). All of it is written up in [`sound.md`](sound.md). Left:
+**`PIZERO-251`** (real software: Lyra 1.2, the Sierra PSG games),
+**`PIZERO-252`** (the SN76489's silent cost, and four AY chips measured on a
+CoCo 3 at 1.79 MHz), **`PIZERO-249`** (the Speech/Sound Cartridge).
 
 ## Hardware direction
 
