@@ -2741,9 +2741,96 @@ static bool pad_addr(uint8_t daddr) {
 // TinyUSB looks up these weak symbols by C name; extern "C" prevents mangling.
 extern "C" {
 
+#ifdef USB_DESC_DUMP
+// PIZERO-255 spike: every device's configuration descriptor, decoded where
+// it is audio, and in raw hex, so a USB headphone DAC's formats, rates and
+// endpoint sync types can be read off the serial log. One fetch at a time
+// (the buffer is shared), queued as devices mount.
+static uint8_t  g_dd_buf[1024];
+static uint8_t  g_dd_queue[8];
+static uint8_t  g_dd_n = 0;
+static bool     g_dd_busy = false;
+
+static void dd_start(void);
+
+static void dd_print(uint8_t daddr, const uint8_t *p, uint16_t len) {
+    uint16_t vid = 0, pid = 0;
+    tuh_vid_pid_get(daddr, &vid, &pid);
+    static const char *const sp[] = { "full", "low", "high" };
+    tusb_speed_t s = tuh_speed_get(daddr);
+    Serial.printf("[usbdesc] addr=%u vid=%04X pid=%04X speed=%s config_len=%u\r\n", daddr, vid, pid,
+                  (unsigned)s < 3 ? sp[s] : "?", len);
+    uint8_t cls = 0, sub = 0;
+    for (uint16_t i = 0; i + 2 <= len && p[i] >= 2 && i + p[i] <= len; i += p[i]) {
+        const uint8_t *d = p + i;
+        uint8_t dl = d[0], ty = d[1];
+        if (ty == 0x04 && dl >= 9) {
+            cls = d[5]; sub = d[6];
+            Serial.printf("[usbdesc]  interface %u alt %u class %02X/%02X/%02X endpoints %u%s\r\n",
+                          d[2], d[3], d[5], d[6], d[7], d[4],
+                          d[5] == 1 ? (d[6] == 1 ? " (audio control)" : d[6] == 2 ? " (audio streaming)" : " (audio)") :
+                          d[5] == 3 ? " (HID)" : d[5] == 9 ? " (hub)" : "");
+        } else if (ty == 0x05 && dl >= 7) {
+            static const char *const tt[] = { "control", "isochronous", "bulk", "interrupt" };
+            static const char *const st[] = { "none", "async", "adaptive", "sync" };
+            static const char *const ut[] = { "data", "feedback", "implicit fb", "?" };
+            uint16_t mps = (uint16_t)(d[4] | (d[5] << 8));
+            Serial.printf("[usbdesc]   endpoint %02X %s %s sync=%s usage=%s max=%u interval=%u\r\n",
+                          d[2], (d[2] & 0x80) ? "IN" : "OUT", tt[d[3] & 3],
+                          st[(d[3] >> 2) & 3], ut[(d[3] >> 4) & 3], mps & 0x7FF, d[6]);
+        } else if (ty == 0x24 && cls == 1 && sub == 2 && dl >= 6 && d[2] == 2) {
+            // AS FORMAT_TYPE: UAC1 carries the rates here; UAC2 does not.
+            if (dl >= 8 && d[3] == 1 && dl == 8 + 3 * d[7]) {
+                Serial.printf("[usbdesc]   UAC1 format type I: channels=%u subframe=%u bits=%u rates=",
+                              d[4], d[5], d[6]);
+                if (d[7] == 0) Serial.printf("%lu-%lu (continuous)",
+                    (unsigned long)(d[8] | d[9] << 8 | d[10] << 16), (unsigned long)(d[11] | d[12] << 8 | d[13] << 16));
+                for (unsigned k = 0; k < d[7]; k++)
+                    Serial.printf("%s%lu", k ? "," : "", (unsigned long)(d[8+3*k] | d[9+3*k] << 8 | d[10+3*k] << 16));
+                Serial.print("\r\n");
+            } else if (dl == 6 && d[3] == 1) {
+                Serial.printf("[usbdesc]   UAC2 format type I: subslot=%u bits=%u\r\n", d[4], d[5]);
+            }
+        } else if (ty == 0x24 && cls == 1 && sub == 1 && dl >= 3) {
+            Serial.printf("[usbdesc]   audio control subtype %02X%s\r\n", d[2],
+                          d[2] == 1 ? (dl >= 5 && d[3] == 0 && d[4] == 2 ? " header UAC2" : " header UAC1") : "");
+        }
+        Serial.print("[usbdesc]    raw");
+        for (uint8_t k = 0; k < dl; k++) Serial.printf(" %02X", d[k]);
+        Serial.print("\r\n");
+    }
+}
+
+static void dd_done(tuh_xfer_t *x) {
+    uint8_t daddr = (uint8_t)x->user_data;
+    if (x->result == XFER_RESULT_SUCCESS) {
+        uint16_t total = (uint16_t)(g_dd_buf[2] | (g_dd_buf[3] << 8));
+        if (total > sizeof g_dd_buf) total = sizeof g_dd_buf;
+        dd_print(daddr, g_dd_buf, total);
+    } else {
+        Serial.printf("[usbdesc] addr=%u configuration descriptor fetch failed (%d)\r\n", daddr, (int)x->result);
+    }
+    g_dd_busy = false;
+    dd_start();
+}
+
+static void dd_start(void) {
+    if (g_dd_busy || !g_dd_n) return;
+    uint8_t daddr = g_dd_queue[0];
+    for (uint8_t k = 1; k < g_dd_n; k++) g_dd_queue[k - 1] = g_dd_queue[k];
+    g_dd_n--;
+    g_dd_busy = tuh_descriptor_get_configuration(daddr, 0, g_dd_buf, sizeof g_dd_buf, dd_done, daddr);
+    if (!g_dd_busy) { Serial.printf("[usbdesc] addr=%u fetch not started\r\n", daddr); dd_start(); }
+}
+#endif
+
 void tuh_mount_cb(uint8_t daddr) {
     g_usb_devices++;
     Serial.printf("[usb] device attached, addr=%u\r\n", daddr);
+#ifdef USB_DESC_DUMP
+    if (g_dd_n < sizeof g_dd_queue) g_dd_queue[g_dd_n++] = daddr;
+    dd_start();
+#endif
 }
 
 void tuh_umount_cb(uint8_t daddr) {

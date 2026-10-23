@@ -6,7 +6,12 @@
 # hub chips chained, and with CFG_TUH_HUB 1 the second one is refused ("All
 # addresses are occupied"), so nothing behind it ever enumerates.
 #
-# This wraps those three defines in #ifndef guards in the downloaded library
+# PIZERO-255: CFG_TUH_ENUMERATION_BUFSIZE too. Enumeration reads a device's
+# whole configuration descriptor into that buffer and quietly drops any device
+# whose descriptor is longer (usbh.c's TU_ASSERT on total_len), and a USB audio
+# device's is often over the library's 256 bytes.
+#
+# This wraps those defines in #ifndef guards in the downloaded library
 # before it compiles. It is idempotent, and prints what it changed. Wired in
 # as a pre: extra_script in platformio.ini.
 
@@ -15,7 +20,7 @@ Import("env")  # noqa: F821  (provided by PlatformIO)
 import os
 import re
 
-GUARDED = ("CFG_TUH_HUB", "CFG_TUH_DEVICE_MAX", "CFG_TUH_HID")
+GUARDED = ("CFG_TUH_HUB", "CFG_TUH_DEVICE_MAX", "CFG_TUH_HID", "CFG_TUH_ENUMERATION_BUFSIZE")
 REL = os.path.join("src", "arduino", "ports", "rp2040", "tusb_config_rp2040.h")
 
 

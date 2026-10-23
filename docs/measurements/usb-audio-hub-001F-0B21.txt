@@ -1,0 +1,85 @@
+USB audio in a 4-port USB-C hub with a headphone jack (PIZERO-255 spike, 2026-10-23)
+
+Hub: Genesys Logic GL850G, VID 05E3 PID 0608, 4 ports. The audio chip below
+appears on hub port 3 only while a plug is in the headphone jack.
+
+Captured with the pizero_usbdump env ([usbdesc] lines; TinyUSB host log at
+level 2 for the raw bytes). Full speed. Configuration descriptor, 423 bytes,
+which is over TinyUSB's default 256-byte enumeration buffer.
+
+Decoded:
+  AC header UAC2. Clock sources 9 (playback) and 10 (capture), internal
+  programmable (bmAttributes 07). Feature unit 2 (playback): master mute,
+  volume per channel.
+  Interface 1 (playback, terminal 1, stereo):
+    alt 1: 24-bit (subslot 3), EP 03 OUT isochronous synchronous, 288 bytes
+    alt 2: 16-bit (subslot 2), EP 03 OUT isochronous synchronous, 192 bytes
+           = 48 samples x 2 channels x 2 bytes: 48 kHz
+  Interface 2 (capture, mono): alt 1 16-bit 96 bytes, alt 2 24-bit 144 bytes,
+    EP 83 IN isochronous synchronous.
+  Interfaces 3 and 4: HID, interrupt IN 81 and 82 (likely the volume keys).
+
+[usbdesc] lines from the board:
+  [usbdesc] addr=2 vid=001F pid=0B21 speed=full config_len=423
+  [usbdesc]  interface 0 alt 0 class 01/01/20 endpoints 0 (audio control)
+  [usbdesc]   audio control subtype 01 header UAC2
+  [usbdesc]   audio control subtype 02
+  [usbdesc]   audio control subtype 06
+  [usbdesc]   audio control subtype 03
+  [usbdesc]   audio control subtype 02
+  [usbdesc]   audio control subtype 06
+  [usbdesc]   audio control subtype 03
+  [usbdesc]   audio control subtype 06
+  [usbdesc]   audio control subtype 04
+  [usbdesc]   audio control subtype 0A
+  [usbdesc]   audio control subtype 0A
+  [usbdesc]  interface 1 alt 0 class 01/02/20 endpoints 0 (audio streaming)
+  [usbdesc]  interface 1 alt 1 class 01/02/20 endpoints 1 (audio streaming)
+  [usbdesc]   endpoint 03 OUT isochronous sync=sync usage=data max=288 interval=1
+  [usbdesc]  interface 1 alt 2 class 01/02/20 endpoints 1 (audio streaming)
+  [usbdesc]   endpoint 03 OUT isochronous sync=sync usage=data max=192 interval=1
+  [usbdesc]  interface 2 alt 0 class 01/02/20 endpoints 0 (audio streaming)
+  [usbdesc]  interface 2 alt 1 class 01/02/20 endpoints 1 (audio streaming)
+  [usbdesc]   endpoint 83 IN isochronous sync=sync usage=data max=96 interval=1
+  [usbdesc]  interface 2 alt 2 class 01/02/20 endpoints 1 (audio streaming)
+  [usbdesc]   endpoint 83 IN isochronous sync=sync usage=data max=144 interval=1
+  [usbdesc]  interface 3 alt 0 class 03/00/00 endpoints 1 (HID)
+  [usbdesc]   endpoint 81 IN interrupt sync=none usage=data max=64 interval=1
+  [usbdesc]  interface 4 alt 0 class 03/00/00 endpoints 1 (HID)
+  [usbdesc]   endpoint 82 IN interrupt sync=none usage=data max=64 interval=1
+  [usbdesc]  interface 0 alt 0 class 03/01/01 endpoints 1 (HID)
+  [usbdesc]   endpoint 81 IN interrupt sync=none usage=data max=8 interval=1
+  [usbdesc]  interface 1 alt 0 class 03/00/00 endpoints 2 (HID)
+  [usbdesc]   endpoint 82 IN interrupt sync=none usage=data max=32 interval=1
+  [usbdesc]   endpoint 02 OUT interrupt sync=none usage=data max=32 interval=1
+  [usbdesc]  interface 2 alt 0 class 03/00/00 endpoints 1 (HID)
+  [usbdesc]   endpoint 83 IN interrupt sync=none usage=data max=32 interval=1
+
+Raw bytes:
+  0000: 09 02 A7 01 05 01 00 A0 96 08 0B 00 03 01 00 20
+  0010: 00 09 04 00 00 00 01 01 20 00 09 24 01 00 02 04
+  0020: 91 00 00 11 24 02 01 01 01 00 09 02 03 00 00 00
+  0030: 00 00 00 00 12 24 06 02 08 03 00 00 00 0C 00 00
+  0040: 00 0C 00 00 00 00 0C 24 03 03 02 04 04 02 09 00
+  0050: 00 00 11 24 02 04 02 04 03 0A 01 04 00 00 00 00
+  0060: 00 00 00 0E 24 06 05 04 03 00 00 00 0C 00 00 00
+  0070: 00 0C 24 03 06 01 01 00 05 0A 00 00 00 0E 24 06
+  0080: 07 04 03 00 00 00 0C 00 00 00 00 10 24 04 08 02
+  0090: 01 07 02 03 00 00 00 00 00 00 00 08 24 0A 09 07
+  00A0: 07 00 00 08 24 0A 0A 07 07 00 00 09 04 01 00 00
+  00B0: 01 02 20 04 09 04 01 01 01 01 02 20 04 10 24 01
+  00C0: 01 05 01 01 00 00 00 02 03 00 00 00 00 06 24 02
+  00D0: 01 03 18 07 05 03 0D 20 01 01 08 25 01 00 00 01
+  00E0: 64 00 09 04 01 02 01 01 02 20 04 10 24 01 01 05
+  00F0: 01 01 00 00 00 02 03 00 00 00 00 06 24 02 01 02
+  0100: 10 07 05 03 0D C0 00 01 08 25 01 00 00 01 64 00
+  0110: 09 04 02 00 00 01 02 20 05 09 04 02 01 01 01 02
+  0120: 20 05 10 24 01 06 05 01 01 00 00 00 01 04 00 00
+  0130: 00 00 06 24 02 01 02 10 07 05 83 0D 60 00 01 08
+  0140: 25 01 00 00 01 64 00 09 04 02 02 01 01 02 20 05
+  0150: 10 24 01 06 05 01 01 00 00 00 01 04 00 00 00 00
+  0160: 06 24 02 01 03 18 07 05 83 0D 90 00 01 08 25 01
+  0170: 00 00 01 64 00 09 04 03 00 01 03 00 00 00 09 21
+  0180: 11 01 00 01 22 38 00 07 05 81 03 40 00 01 09 04
+  0190: 04 00 01 03 00 00 00 09 21 11 01 00 01 22 2A 00
+  01A0: 07 05 82 03 40 00 01
