@@ -38,37 +38,130 @@ nearly every game use it. The level is picked up the moment the CPU writes the
 port and averaged over each output sample, so edges land in the right place
 and high tones do not alias.
 
-### Which sources are heard: `sound_sources`
+## The sound multiplexer
 
-On the real CoCo a multiplexer picks what reaches the TV. PIA0 CA2 and CB2
-select one of four sources, 0 the DAC, 1 the cassette input, 2 the
-cartridge's sound line, 3 nothing, and PIA1 CB2 is the sound enable. The same
-two select lines pick the joystick axis for the comparator, so reading a
-joystick switches the sound source too. The single-bit output, PIA1 port B
-bit 1 (`$FF22`), counts while that pin is an output: it shifts each source's
-level and, with the multiplexer off, drives the line on its own. With nothing
-driving it the line holds its last level. The levels are XRoar's, measured
-on a real Dragon, whose sound section is the CoCo's (`coco_sound.h`).
+![The real CoCo's sound multiplexer, and the CoCo Zero's way](images/sound-mux.svg)
 
-Color BASIC leaves PB1 an input and the sound enable off at rest; `SOUND`
-and `PLAY` turn the enable on and select the DAC. A Games Master or CoCo PSG
-game selects the cartridge line and turns the enable on itself.
+### On the real CoCo
+
+Only one sound source at a time reaches the TV. A multiplexer chip picks it,
+and a sound enable turns its output on and off:
+
+- **The select lines** are PIA0's two control lines, CA2 (`$FF01` bit 3) and
+  CB2 (`$FF03` bit 3). Read as a number, CB2 then CA2, they pick source 0
+  the DAC, 1 the cassette input, 2 the cartridge's sound line, or 3 nothing.
+- **The sound enable** is PIA1 CB2 (`$FF23` bit 3). Off, the multiplexer's
+  output is cut.
+- **The single-bit output** is PIA1 port B bit 1 (`$FF22`). It counts only
+  while its direction bit makes it an output. Then it adds to the line and
+  changes how loud the selected source is; with the enable off it drives
+  the line on its own.
+- With nothing driving it, the line holds its last level, so turning the
+  enable off is silent rather than a click.
+
+The multiplexer chip has a second half that switches the same way, on the
+same two select lines: it picks the joystick axis that the comparator
+weighs against the DAC. So the select lines always choose a sound source and
+a joystick axis together:
+
+| CB2 | CA2 | Sound source | Joystick axis (`JOYSTK`) |
+|---|---|---|---|
+| 0 | 0 | the DAC | right X (0) |
+| 0 | 1 | the cassette input | right Y (1) |
+| 1 | 0 | the cartridge's sound line | left X (2) |
+| 1 | 1 | nothing | left Y (3) |
+
+That is why reading a joystick changes what is heard. A program reading the
+right joystick's X axis with the sound on hears its own trial values (the
+buzz in Double Back); reading the left X axis puts the cartridge's sound on
+the line for a moment.
+
+The levels, in millivolts, are XRoar's measurements of a real Dragon, whose
+sound section is the CoCo's. Each source's level is its input times a gain,
+plus an offset, and both depend on the single-bit output:
+
+| Source | PB1 an input | PB1 an output, low | PB1 an output, high |
+|---|---|---|---|
+| DAC (0-63) | 4,500 x DAC/63 + 200 | 2,840 x DAC/63 + 180 | 3,400 x DAC/63 + 1,300 |
+| Cassette | 2,050 | 1,600 | 2,350 |
+| Cartridge line | its sound x 1.0 | its sound x 0.60 + 180 | its sound x 0.72 + 1,300 |
+| Nothing | 0 | 0 | 0 |
+| Enable off | holds | 0 | 3,900 |
+
+The cassette input carries nothing here (no tape is played), so it gives only
+its offset. Only changes are heard: the DC blocker after the mix takes out
+any steady offset.
+
+**What Color BASIC does with it**, checked in the ROMs:
+
+- At start-up it leaves PB1 an input and the sound enable off.
+- `SOUND` (`$A951`) and `PLAY` (`$9A2C` in Extended BASIC) select the DAC and
+  turn the enable on before they play.
+- `JOYSTK` turns the enable off (`$A974`) before it reads, so BASIC's own
+  joystick reads are silent on a real CoCo.
+- `CSAVE` never turns the enable on, so its tones go out to the cassette
+  without reaching the TV.
+
+**What a sound cartridge game has to do** is select the cartridge line and
+turn the enable on, because otherwise its chip is not heard. A Games Master
+or CoCo PSG game does this itself. From BASIC, keeping the other bits of each
+control register as they are:
+
+```basic
+10 POKE &HFF01,PEEK(&HFF01) AND &HF7
+20 POKE &HFF03,PEEK(&HFF03) OR 8
+30 POKE &HFF23,PEEK(&HFF23) OR 8
+```
+
+Line 10 sets CA2 low, line 20 sets CB2 high (together, source 2), and line 30
+turns the sound on. The next `SOUND` or `PLAY` selects the DAC again.
+
+Under `sound_sources = switched` (the stock `coco2` and `coco3` profiles),
+the board does all of this as the real machine does. These come through the
+cartridge line, so the multiplexer decides whether they are heard:
+
+- the SN76489;
+- the CoCo PSG;
+- the Symphony-12 in mono.
+
+Two are never switched off by the multiplexer:
+
+- the Symphony-12 in stereo, which plays from the card's own jacks (as if
+  they were plugged into the speakers);
+- the Deluxe CoCo's chip, which is inside that machine.
+
+### On the CoCo Zero
+
+Under `sound_sources = all` (the `cocozero` default) every source is heard at
+once:
+
+- **Heard together:** the DAC, the single-bit output, and every sound
+  cartridge, in mono or in stereo.
+- **The select lines** still pick the joystick axis for the comparator, so
+  joysticks read exactly as before, but they no longer choose the sound.
+- **The sound enable** is ignored.
+- **The single-bit output** still shapes the DAC as the table above shows.
+
+This lets a program do what the real machine could not: play `SOUND` or
+`PLAY` over Games Master or Symphony-12 music, or mix the DAC with a sound
+cartridge, without choosing between them. A cartridge game that forgets to
+select the cartridge line is heard anyway.
+
+**What `all` gives up:** anything a program writes to the DAC while a real
+CoCo would have the sound off is heard here:
+
+- `CSAVE`'s tones;
+- a game's joystick reads (`joystick_quiet`, below, takes those out again).
+
+A game that relies on the multiplexer to keep something quiet can have the
+real behaviour back with `sound_sources = switched` in its own file.
 
 | `sound_sources` | What is heard | Default on |
 |---|---|---|
-| `switched` | As the real CoCo: the source the multiplexer picks, while the enable is on. The single-bit output as above. | `coco2`, `coco3` |
-| `all` | Everything at once: the DAC, the single-bit output and every cartridge chip, whatever the multiplexer and the enable say. A program that would have to choose between the DAC and its sound cartridge can play both. | `cocozero` |
+| `switched` | As the real CoCo: the source the multiplexer picks, while the enable is on, and the single-bit output. | `coco2`, `coco3` |
+| `all` | Everything at once, whatever the multiplexer and the enable say. | `cocozero` |
 
-Which chips come through the cartridge line under `switched`: the SN76489,
-the CoCo PSG, and the Symphony-12 in mono. The Symphony-12 in stereo plays
-from its own jacks and the Deluxe CoCo's chip is inside that machine, so
-those are always heard, as if the stereo jacks were plugged into the
-speakers.
-
-The cassette input carries nothing (no tape is played), so selecting it
-gives only its small offset.
-
-### Joystick reads: `joystick_quiet`
+## Joystick reads: `joystick_quiet`
 
 A program reads an analog joystick by writing trial values to the DAC and
 testing the comparator (PIA0 PA7) after each, six or so per axis. With the
