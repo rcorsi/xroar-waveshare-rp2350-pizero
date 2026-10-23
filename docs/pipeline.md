@@ -26,12 +26,17 @@ core 0  (emulation + audio generation)        core 1  (display + audio encode)
   │    └─ blit → 320×240 RGB565 ───── g_front ─────┘   (sampled once per frame)
   │
   └─ 6-bit DAC (PIA1) integrate-and-dump (+ SN76489, + AY bank)
-       └─ 48 kHz L/R → SPSC ring ───── g_audio_w/g_audio_r ──┐
-                                                              ▼
-                                          per line (active + vblank), DMA IRQ:
-                                          meter → full 4-sample packet every
-                                          ~2.6 lines → audio island → repoint
-                                          (ACR + InfoFrames every 8th vblank line)
+       └─ 48 kHz L/R → SPSC ring ┬──── g_audio_w/g_audio_r ──┐
+                                 │                            ▼
+                                 │        per line (active + vblank), DMA IRQ:
+                                 │        meter → full 4-sample packet every
+                                 │        ~2.6 lines → audio island → repoint
+                                 │        (ACR + InfoFrames every 8th vblank line)
+                                 │
+                                 └─ or, with a USB headphone DAC (PIZERO-255):
+                                    USB frame interrupt, core 0, every 1 ms:
+                                    48 pairs → isochronous OUT packet
+                                    (the video stream then sends silence)
 ```
 
 - **core 0** runs the emulator and produces both a video framebuffer and a stream of
@@ -292,6 +297,7 @@ Symbols rather than line numbers, since the files move.
 | Audio mix and ring            | `lib/coco_machine/src/coco_machine.cpp` : `audio_sample` / `audio_emit` / `coco_machine_audio_read_lr` |
 | Data-island encoder           | `lib/libdvi/dvi_data_island.c`                                       |
 | Per-line streaming delivery   | `src/main.cpp` : `stream_audio_cb` / `g_meter_step`                  |
+| USB headphone DAC             | `src/usb_audio.cpp`; `src/main.cpp` : `usb_audio_fill`; `lib/pico_pio_usb` isochronous OUT ([`sound.md`](sound.md)) |
 
 ## See also
 

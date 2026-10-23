@@ -28,6 +28,10 @@ How they reach the speaker, together or picked by the CoCo's multiplexer, is
 the `sound_sources` setting (below): `all` on the CoCo Zero, `switched`, as
 the real machine, on the stock CoCo 2 and CoCo 3.
 
+The mixed sound plays from the TV through the video cable, or from a USB
+headphone DAC plugged in at power-on; the volume keys of a USB keyboard turn
+it up and down (both below).
+
 The settings are lines in `/coco/settings.txt`, or in a game's own file beside it
 (`STARCAST.TXT` for `STARCAST.DSK`); see [`../SETTINGS.md`](../SETTINGS.md). The
 machine profile sets the defaults above, and a line in either file overrides them.
@@ -299,51 +303,112 @@ Cost: a write is one more check on the bus's slow path. `orch90.bas`'s
 machine-code loop, writing each DAC about 42,000 times a second, took a
 frame to 8.9 ms (6.8 ms at rest), with no underruns.
 
-## Sound out of a USB headphone DAC
+## Where the sound comes out
 
-Plug a USB headphone DAC (a USB-C headphone dongle, or a hub with its own
-headphone jack) into the hub before switching on, and the sound plays from it
-instead of the video cable. Most class-compliant DACs work: the board looks
-for a USB Audio Class 1 or 2 playback setting that takes 16-bit stereo at
-48 kHz, which is what the CoCo Zero makes, and streams 48 sample pairs to it
-every millisecond.
+The sound goes out on one of two outputs, never both at once:
 
-- **`usb_audio = on`** (the default) gives the sound to a DAC found at boot.
-  With none, or with `usb_audio = off`, the sound stays on the video cable.
-  It goes to one or the other, not both.
-- **`usb_audio_db`** (default -10) sets the DAC's own volume when it starts,
-  -60 to 0 dB, and its mute off. The machine's sound is pitched for a TV, and
-  at a DAC's full 0 dB that is hot in headphones (the hub's chip powers up at
-  0 dB). The log shows the chip's range and the level it came up at:
-  `[uac] addr=2 volume: range -60.00 to 0.00 dB, came up at 0.00 dB, set to -10.00 dB`.
-- **Plug in before power-on.** The board does not yet see devices plugged in
-  later (PIZERO-51). Some hubs only show their headphone chip while something
-  is plugged into the jack, so plug the headphones in too.
-- **Tested:** a USB-C headphone dongle (UAC1, adaptive) and the headphone jack
-  of a four-port USB-C hub (UAC2, synchronous); their descriptors are in
-  [`measurements/usb-audio-dongle-001F-0B21.txt`](measurements/usb-audio-dongle-001F-0B21.txt)
-  and [`measurements/usb-audio-hub-001F-0B21.txt`](measurements/usb-audio-hub-001F-0B21.txt).
-- **Cost:** sending the stream takes about 2.3 ms of each 16.7 ms frame on the
-  emulator's core, more under heavy sound. `allvoice.bas` runs over the frame
-  for a few seconds at its loudest with the DAC in use.
-- The serial log shows `[uac] streaming packets=N (1000/s) under=N/s`.
+| Output | When |
+|---|---|
+| The video cable, to the TV or monitor's speakers | The normal case: no USB headphone DAC at power-on, or `usb_audio = off` |
+| A USB headphone DAC | One is plugged in at power-on and `usb_audio = on` (the default) |
 
-How it works: Pico-PIO-USB, the USB host, is kept in `lib/pico_pio_usb` with
-an isochronous OUT stream added (`PROVENANCE.md` there lists the changes).
-`src/usb_audio.cpp` finds the playback setting, selects it, sets 48 kHz and
-starts the stream, which takes its samples from the same ring the video
-cable's sound uses. The ring's rate servo holds it half full against
-whichever output drains it, so the machine follows the USB clock.
+While the DAC has the sound, the video cable carries silence. Unplug the DAC,
+or set `usb_audio = off` in the settings editor, and the sound goes back to
+the video cable.
 
-## Volume keys
+### Using a USB headphone DAC
 
-The volume keys of a USB keyboard and the buttons of a USB headphone DAC
-change the `volume` setting while you play: Volume Up and Down step it by one
-(0 to 15), and Mute silences the sound until Mute, Up or Down is pressed
-again. The new level is written into `settings.txt` two seconds after the
-last press; mute is not saved. Any USB device that sends the Consumer page's
-Volume Increment, Volume Decrement or Mute works, whatever its report layout
-(`src/hid_consumer.h`, tested by `test_hid_consumer`).
+1. Plug the DAC into the hub, with the keyboard and gamepad, and plug the
+   headphones into the DAC.
+2. Switch on (or reboot). The board does not yet notice USB devices plugged in
+   later (PIZERO-51), so the DAC has to be there at power-on.
+3. Play something. The serial log shows `[uac] ... streaming` when the DAC has
+   the sound.
+
+What works: a class-compliant USB Audio Class 1 or 2 device with a playback
+setting for 16-bit stereo at 48 kHz, which is what the CoCo Zero makes; the
+board sends it 48 sample pairs every millisecond. Two have been tried, both
+working:
+
+| Device | Kind | Notes |
+|---|---|---|
+| A USB-C headphone dongle | UAC1, adaptive | Its descriptor: [`measurements/usb-audio-dongle-001F-0B21.txt`](measurements/usb-audio-dongle-001F-0B21.txt) |
+| The headphone jack of a four-port USB-C hub | UAC2, synchronous | Its audio chip only appears while a plug is in the jack, so plug the headphones in before switching on. Its descriptor: [`measurements/usb-audio-hub-001F-0B21.txt`](measurements/usb-audio-hub-001F-0B21.txt) |
+
+A DAC that only works at high speed cannot work: the board's USB runs at full
+speed (12 Mbit/s).
+
+**What it costs.** Feeding the DAC takes about 2.3 ms of each 16.7 ms frame on
+the emulator's core, and more under heavy sound. Ordinary programs are
+unaffected; `allvoice.bas`, with every voice at once, runs over the frame for
+a few seconds at its loudest while a DAC has the sound.
+
+## Turning it up and down
+
+Three levels multiply together:
+
+| Level | Range | Set by | Affects |
+|---|---|---|---|
+| `volume` | 0-15 (10 is the reference) | settings.txt, the settings editor, or the volume keys while playing | Both outputs |
+| `usb_audio_db` | -60 to 0 dB (default -10) | settings.txt or the settings editor, put into effect when the DAC starts | Only the USB DAC |
+| The TV or monitor's own volume | | its remote or buttons | Only the video cable |
+
+**The volume keys.** A USB keyboard's Volume Up, Volume Down and Mute keys
+(or a knob that sends them) work while you play:
+
+- Volume Up and Down step `volume` by one, 0 to 15.
+- Mute silences the sound; Mute again, or Up or Down, brings it back to the
+  level it was at.
+- The new level is written into `settings.txt` two seconds after the last
+  press, so it is there next time; mute is not saved. The serial log shows
+  `[settings] volume = N`.
+
+Any USB device that sends the standard volume usages works, whatever the
+layout of its reports: the board reads each device's report descriptor when it
+is plugged in (`src/hid_consumer.h`). A USB headphone DAC's own buttons count
+too, when they send them.
+
+**Headset buttons.** The buttons on a headset's cable reach the board only
+through the DAC, and only if the DAC can read them. With the headphones tried
+so far:
+
+- the dongle read every button as Play/Pause, which the board leaves alone, so
+  the buttons do nothing;
+- the hub's jack sent nothing for any button.
+
+A DAC reads a headset's buttons through the microphone contact of a 4-pole
+plug, by their resistance, as the CTIA (Android) standard sets them; other
+headsets' buttons may read as one button or not at all. The keyboard's keys
+always work.
+
+**Why `usb_audio_db` starts at -10 dB.** The CoCo Zero's sound is pitched for
+a TV's speakers. A USB DAC at its own 0 dB plays that loud in headphones, and
+the hub's chip powers up at exactly 0 dB, its top. So when a DAC starts, the
+board sets the DAC's own volume to `usb_audio_db` and turns its mute off. The
+log shows the chip's range and where it started:
+`[uac] addr=2 volume: range -60.00 to 0.00 dB, came up at 0.00 dB, set to -10.00 dB`.
+Too quiet or too loud in your headphones: change `usb_audio_db` (a step of 6 dB
+halves or doubles the level) and switch off and on.
+
+### How the USB output is built
+
+- **The USB host** is Pico-PIO-USB, kept in `lib/pico_pio_usb` with an
+  isochronous OUT stream added; `PROVENANCE.md` there lists the changes. Each
+  1 ms USB frame, its frame handler asks for the next packet, builds it, and
+  sends it with no handshake, as audio packets go.
+- **The driver,** `src/usb_audio.cpp`, reads each device's configuration
+  descriptor when it is plugged in, finds a playback setting for 16-bit stereo
+  at 48 kHz, selects it, sets the rate, sets the DAC's own volume and unmute,
+  and starts the stream.
+- **The samples** come from the same buffer the video cable's sound uses;
+  `usb_audio_fill` in `src/main.cpp` takes 48 pairs a frame. The buffer's rate
+  servo holds it half full against whichever output drains it, so the
+  machine's sound follows the USB clock when the DAC has it.
+- **The test builds:** `pizero_usbtone` plays a 440 Hz tone to the DAC, and
+  `pizero_usbdump` prints every USB device's descriptors and HID reports
+  (`docs/BUILD.md`).
+- **The serial log** shows `[uac] streaming packets=N (1000/s) under=N/s`
+  once a second while the DAC has the sound.
 
 ## How loud each source is
 
@@ -389,6 +454,8 @@ Lines starting with `'` are comments for the reader and are not typed in.
 | Bus hookup | `lib/coco_machine/src/coco_machine.cpp` : `csg_bus_write`; `ayb_owns` in the CoCo 2 read and write paths and in `coco3_cpu_cycle` |
 | The multiplexer, enable, single-bit, joystick trials | `lib/coco_machine/src/coco_sound.h` : `snd_line_mv`, `snd_probe_write`, `snd_probe_read`; in the machine `audio_update_level`, `audio_pia1_written`, `audio_comparator_read` |
 | Mixing, filters, stereo ring | `lib/coco_machine/src/coco_machine.cpp` : `audio_sample`, `audio_emit`, `coco_machine_audio_read_lr` |
+| USB headphone DAC | `src/usb_audio.cpp` : `ua_find`, `ua_vol_run`, `ua_stream`; `src/main.cpp` : `usb_audio_fill`; `lib/pico_pio_usb/src/pio_usb_host.c` : `pio_usb_host_iso_out_stream` |
+| Volume keys | `src/hid_consumer.h` : `hidc_parse`, `hidc_decode`; `src/main.cpp` : `volume_keys`, `volume_save_due` |
 | Settings | `src/settings.h` : `settings_profile`; applied in `src/main.cpp` : `settings_apply` |
 
 Both chip models are plain integer C, tested on the host (`pio test -e native -f
@@ -450,3 +517,5 @@ line shows `sn76489`, `coco_psg`, `symphony12` (`stereo`, `mono` or `off`) and
   (its ROM is not on the card); PIZERO-148's test is `orch90.bas`.
 - **The CoCo 3 at 1.79 MHz** with all four AY chips is not yet measured
   (PIZERO-252).
+- **The video cable and a USB DAC at once,** an on-screen volume display, and
+  a DAC plugged in after power-on (PIZERO-255, PIZERO-51).

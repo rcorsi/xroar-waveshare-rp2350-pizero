@@ -43,8 +43,8 @@ which it needs, and launching it switches the board to that machine by itself.
   what it costs: [`docs/sound.md`](docs/sound.md).
 - Every sound source at once, the DAC and the sound cartridges together, where the real CoCo
   switched between them, and joystick reads that make no sound.
-- Sound from a USB headphone DAC as well as the video cable, with the volume on the keyboard's
-  volume keys or the DAC's buttons.
+- Sound from a USB headphone DAC plugged in at power-on, in place of the video cable, and the
+  volume on the keyboard's volume keys ([`docs/sound.md`](docs/sound.md)).
 - The CoCo 3's palette registers and timer.
 - True lower case on screen, in the 6847T2 font.
 - Auto-repeat for a key held down, which Color BASIC never did.
@@ -167,6 +167,7 @@ fitted is the plan; see [`docs/coco-zero-2-proposal.md`](docs/coco-zero-2-propos
 | Rename the highlighted disk | **R** | |
 | Save a screenshot | **Print Screen** | **M** (GameSir pads) |
 | Change the artifact colors (on, swapped, off), saved for the running game (CoCo 2) | **F8** | |
+| Volume up and down (0 to 15, saved), mute | the keyboard's **Volume Up**, **Volume Down** and **Mute** keys | |
 
 **In BASIC:** Caps Lock switches upper and lower case, Home is CLEAR, Esc is BREAK, and Backspace
 deletes. The CoCo's keyboard has no way to type `{ } | ~` or a backtick, so those keys do
