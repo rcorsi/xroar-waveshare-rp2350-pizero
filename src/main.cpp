@@ -1715,6 +1715,16 @@ static bool overlay_launch_request(int kind, const char *path, char *msg, size_t
     default:
         return false;
     }
+#ifdef COCO3
+    // PIZERO-261: a game set to the other machine needs that machine's ROM.
+    // Without it, say which and stay in the list, rather than run the game on
+    // the wrong machine (machine_available logs the reason on serial too).
+    bool want = machine_wanted(path);
+    if (want != IS_COCO3() && !machine_available(want)) {
+        snprintf(msg, msg_sz, "NEEDS %s IN /COCO/ROMS", want ? "COCO3.ROM" : "BAS12.ROM");
+        return false;
+    }
+#endif
     g_launch_kind = kind;
     strcpy(g_launch_path, path);
     return true;
@@ -2226,7 +2236,9 @@ void setup() {
     }
     Serial.printf("[mem] free heap %d bytes before the machine\r\n", rp2040.getFreeHeap());
     if (!coco_machine_init(g_coco_rom, IS_COCO3() ? 32768 : 16384)) {
-        Serial.print("coco_machine_init failed\r\n");
+        // PIZERO-262: the CoCo 3 takes 64 KB of its RAM from the heap.
+        Serial.printf("coco_machine_init failed: free heap %d bytes now; a CoCo 3 needs 65536 and a few KB more\r\n",
+                      rp2040.getFreeHeap());
         // Deliberately different wording from the missing-ROM case: this one
         // is a real fault, and confusing the two would send someone hunting
         // for a file that is already there.

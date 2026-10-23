@@ -1585,9 +1585,13 @@ extern "C" _Bool coco_machine_init(const uint8_t *rom, size_t rom_len) {
 // of ~924 samples is pushed during coco_machine_run_cycles, then drained steadily
 // by the core-1 IRQ). 8192 samples = ~170 ms = 16 KB (cheap now the streaming
 // build freed ~126 KB). Too-shallow caused overflow-skips -> pitch up + distortion.
-// PIZERO-250: a sample is a left and right pair now (32 KB), for the
-// Symphony-12 in stereo. Everything else puts the same value on both sides.
-#define AUDIO_RING_SAMPLES   8192u                     // pow2
+// PIZERO-250: a sample is a left and right pair now, for the Symphony-12 in
+// stereo. Everything else puts the same value on both sides.
+// PIZERO-262: 4096 pairs (16 KB, as the mono ring was). At 8192 pairs the
+// ring's 32 KB came out of the heap the CoCo 3 needs for its second 64 KB,
+// and it no longer started. Half full is about 43 ms, over five frames'
+// bursts; the servo (PIZERO-121) aims at half of whatever the size is.
+#define AUDIO_RING_SAMPLES   4096u                     // pow2
 
 static int16_t           g_audio_ring[AUDIO_RING_SAMPLES][2];
 static volatile uint32_t g_audio_w = 0;                // monotonic write index

@@ -41,7 +41,10 @@ a build flag.
   PIZERO-135 it is a CoCo 2 or a 128 KB CoCo 3, picked by `machine` in settings.txt or a game's
   own file), so a bare `pio run` builds it. `pizero_stream` (off-spec 52 Hz audio) is kept as the
   fallback; the rest are diagnostics tied to open issues. Before committing a
-  change that adds RAM, also build `pizero_stream` and `pizero_wavmeas` (every
+  change that adds RAM, boot it as a CoCo 3 and read the serial line `[mem] free heap N bytes
+  with the CoCo 3's 128 KB`: the CoCo 3 takes 64 KB of its RAM from the heap, so static RAM
+  growth stops it starting (PIZERO-262: at 85.7% it failed; 82.6% leaves about 9.7 KB). Also
+  build `pizero_stream` and `pizero_wavmeas` (every
   env is single-buffered, about 81% RAM for the product since PIZERO-135). Test both machines
   on hardware when a change touches video, input or the machine core. Use a real env, never a
   one-off `PLATFORMIO_BUILD_FLAGS` (it links stale objects, see BUILD.md §4b).

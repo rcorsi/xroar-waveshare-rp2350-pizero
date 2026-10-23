@@ -174,7 +174,7 @@ caught up the next time a cycle takes the full path: at the next event, which co
 least once a scanline, or at a level change (`audio_catch_up`). Since PIZERO-220 that
 catch-up emits every sample boundary the run crossed (`audio_integ_run` in
 `audio_integ.h`), exactly as stepping each access would; `test_audio_integ` checks it
-sample for sample. The samples reach the ring in small bursts, which the 8192-deep
+sample for sample. The samples reach the ring in small bursts, which the 4096-deep
 ring absorbs.
 
 The **SN76489** sound chip (PIZERO-143) is the second source. Writes to `$FF41` reach
@@ -200,7 +200,7 @@ times the pre-PIZERO-223 level (PIZERO-223 tripled it, PIZERO-230 doubled it), s
 by the `volume` setting. At volume 10 a full DAC swing peaks near -3 dBFS in the
 worst AC-coupled case; volumes above 10 may clip on such waveforms.
 
-Samples go into an 8192-deep **SPSC ring** of left and right pairs (`audio_emit`,
+Samples go into a 4096-deep **SPSC ring** of left and right pairs (`audio_emit`,
 `AUDIO_RING_SAMPLES`; `coco_machine_audio_read_lr` reads pairs, and
 `coco_machine_audio_read` their average for the WAV dump).
 Core 0 owns the write index `g_audio_w` and publishes with a `__dmb()`; the consumer
