@@ -1272,8 +1272,13 @@ extern "C" void coco_boot_card_center(int row, const char *s) {
     coco_boot_card_text(card_center_col(len), row, s);
 }
 
-// Render the card into the framebuffer, ink on paper, using the live palette
-// so a recolored machine recolors the diagnostic too.
+// Render the card into the framebuffer, ink on paper. PIZERO-256: in the
+// factory colors, green on black, whatever a program or a color setting has
+// done to the machine's palette (it used the live palette, so a recolored
+// green could leave the overlay unreadable). The machine's palette is not
+// touched, so its colors are as they were when the card goes away.
+#define CARD_INK   0x07E0      // the VDG's green
+#define CARD_PAPER 0x0000      // black
 // Draw `s` wrapped into the card from `row` down, at most `max_rows` rows.
 // Returns the row after the last one used, so a caller can stack blocks.
 extern "C" int coco_boot_card_wrap(int col, int row, int width, int max_rows,
@@ -1292,9 +1297,8 @@ extern "C" int coco_boot_card_wrap(int col, int row, int width, int max_rows,
 }
 
 extern "C" void coco_boot_card_present(uint16_t *fb) {
-    const uint16_t *pal = coco_machine_palette();
-    const uint16_t ink = pal[0];      // VDG green
-    const uint16_t paper = pal[8];    // black
+    const uint16_t ink = CARD_INK;
+    const uint16_t paper = CARD_PAPER;
     for (int r = 0; r < CARD_ROWS; r++) {
         for (int sub = 0; sub < 12; sub++) {
             int y = r * 12 + sub;
@@ -1314,9 +1318,8 @@ extern "C" void coco_boot_card_present(uint16_t *fb) {
 }
 
 extern "C" void coco_boot_card_present8(uint8_t *fb, uint16_t *pal565, int base) {
-    const uint16_t *pal = coco_machine_palette();
-    pal565[base] = pal[0];            // VDG green
-    pal565[base + 1] = pal[8];        // black
+    pal565[base] = CARD_INK;          // the card's own two slots
+    pal565[base + 1] = CARD_PAPER;
     const uint8_t ink = (uint8_t)base, paper = (uint8_t)(base + 1);
     for (int r = 0; r < CARD_ROWS; r++) {
         for (int sub = 0; sub < 12; sub++) {
